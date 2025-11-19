@@ -1,0 +1,1078 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="users-container-modern">
+    <!-- Page Header -->
+    <div class="users-header-modern">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="page-title-modern">
+                        <i class="bi bi-people-fill me-3"></i>
+                        Connect with Users
+                    </h1>
+                    <p class="page-subtitle-modern">Start conversations and build connections</p>
+                </div>
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                    <div class="users-stats-badge">
+                        <div class="stat-icon">
+                            <i class="bi bi-person-check-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <span class="stat-number">{{ users|length - 1 }}</span>
+                            <span class="stat-label">Available Users</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        <!-- Search and Filter Section -->
+        <div class="search-filter-section">
+            <div class="search-box-wrapper">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" 
+                       id="userSearchInput" 
+                       class="search-input-field" 
+                       placeholder="Search users by name or email...">
+                <button class="clear-search-btn" id="clearSearchBtn" style="display: none;">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
+            </div>
+            
+            <div class="filter-options">
+                <button class="filter-btn active" data-filter="all">
+                    <i class="bi bi-people-fill me-2"></i>All Users
+                </button>
+                <button class="filter-btn" data-filter="tenant">
+                    <i class="bi bi-person-fill me-2"></i>Tenants
+                </button>
+                <button class="filter-btn" data-filter="landlord">
+                    <i class="bi bi-house-fill me-2"></i>Landlords
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Count -->
+        <div class="results-count-bar">
+            <span id="resultsCount">Showing {{ users|length - 1 }} users</span>
+        </div>
+
+        <!-- Users List -->
+        {% if users %}
+            <div class="users-grid-modern">
+                {% for u in users %}
+                    {% if u.id != session['user_id'] %}
+                        <div class="user-card-modern" 
+                             data-user-name="{{ u.name|lower }}" 
+                             data-user-email="{{ u.email|lower }}" 
+                             data-user-role="{{ u.role|lower if u.role else 'user' }}">
+                            <div class="card-inner">
+                                <div class="user-header-section">
+                                    <div class="user-avatar-large">
+                                        <!-- Display profile picture if available, otherwise show initial -->
+                                        {% if u.profile_pic %}
+                                            <img src="{{ url_for('static', filename='uploads/' ~ u.profile_pic) }}" 
+                                                 alt="{{ u.name }}" 
+                                                 class="avatar-image">
+                                        {% else %}
+                                            <div class="avatar-circle">
+                                                {{ u.name[0].upper() }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="online-status"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="user-body-section">
+                                    <h4 class="user-name-modern">{{ u.name }}</h4>
+                                    
+                                    <div class="user-details-list">
+                                        <div class="detail-item-modern">
+                                            <i class="bi bi-envelope-fill"></i>
+                                            <span>{{ u.email }}</span>
+                                        </div>
+                                        <div class="detail-item-modern">
+                                            <i class="bi bi-person-badge-fill"></i>
+                                            <span>{{ u.role|title if u.role else 'User' }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="user-role-badge">
+                                        <i class="bi bi-shield-fill-check me-1"></i>
+                                        {{ u.role|title if u.role else 'Member' }}
+                                    </div>
+                                </div>
+                                
+                                <div class="user-footer-section">
+                                    <a href="{{ url_for('messages', user_id=u.id) }}" class="btn-start-chat">
+                                        <i class="bi bi-chat-dots-fill me-2"></i>
+                                        Start Chat
+                                    </a>
+                                    <button class="btn-more-options" title="More options">
+                                        <i class="bi bi-three-dots"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state-modern">
+                <div class="empty-content">
+                    <div class="empty-icon-wrapper">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h3 class="empty-title-text">No Users Found</h3>
+                    <p class="empty-description-text">There are currently no other users to connect with. Check back later!</p>
+                </div>
+            </div>
+        {% endif %}
+        
+        <!-- No Results State (hidden by default) -->
+        <div class="no-results-state" id="noResultsState" style="display: none;">
+            <div class="empty-content">
+                <div class="empty-icon-wrapper">
+                    <i class="bi bi-search"></i>
+                </div>
+                <h3 class="empty-title-text">No Users Match Your Search</h3>
+                <p class="empty-description-text">Try adjusting your search or filter to find what you're looking for.</p>
+                <button class="btn-reset-search" id="resetSearchBtn">
+                    <i class="bi bi-arrow-counterclockwise me-2"></i>Reset Search
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ===== FACEBOOK-INSPIRED DESIGN ===== */
+:root {
+    --fb-blue: #1877f2;
+    --fb-blue-hover: #166fe5;
+    --fb-blue-light: #e7f3ff;
+    --fb-blue-dark: #0c5ecf;
+    --success-green: #31a24c;
+    --success-light: #d4edda;
+    --gray-50: #f8f9fa;
+    --gray-100: #f0f2f5;
+    --gray-200: #e4e6eb;
+    --gray-300: #ced0d4;
+    --gray-600: #65676b;
+    --gray-800: #1c1e21;
+    --white: #ffffff;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+    --shadow-hover: 0 8px 24px rgba(24, 119, 242, 0.15);
+}
+
+body {
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--gray-100);
+    color: var(--gray-800);
+}
+
+.users-container-modern {
+    min-height: 100vh;
+    background-color: var(--gray-100);
+}
+
+/* Page Header */
+.users-header-modern {
+    background: linear-gradient(135deg, var(--fb-blue) 0%, #4267B2 100%);
+    padding: 3rem 0;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.users-header-modern::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 8s ease-in-out infinite;
+}
+
+.page-title-modern {
+    color: white;
+    font-size: 2.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.page-title-modern i {
+    font-size: 3rem;
+}
+
+.page-subtitle-modern {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.users-stats-badge {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    color: var(--fb-blue);
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 0.25rem;
+}
+
+/* Search and Filter Section */
+.search-filter-section {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.search-box-wrapper {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-600);
+    font-size: 1.25rem;
+    pointer-events: none;
+}
+
+.search-input-field {
+    width: 100%;
+    padding: 1rem 3.5rem 1rem 3.5rem;
+    background: var(--gray-50);
+    border: 2px solid var(--gray-200);
+    border-radius: 50px;
+    font-size: 1rem;
+    color: var(--gray-800);
+    transition: all 0.3s ease;
+}
+
+.search-input-field:focus {
+    outline: none;
+    border-color: var(--fb-blue);
+    background: var(--white);
+    box-shadow: 0 0 0 4px rgba(24, 119, 242, 0.1);
+}
+
+.search-input-field::placeholder {
+    color: var(--gray-600);
+}
+
+.clear-search-btn {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--gray-600);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.clear-search-btn:hover {
+    color: var(--fb-blue);
+    background: var(--gray-100);
+}
+
+.filter-options {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 0.75rem 1.5rem;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border: 2px solid var(--gray-200);
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+.filter-btn:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-300);
+    color: var(--gray-800);
+}
+
+.filter-btn.active {
+    background: var(--fb-blue);
+    color: white;
+    border-color: var(--fb-blue);
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+}
+
+.filter-btn i {
+    font-size: 1.1rem;
+}
+
+.results-count-bar {
+    background: var(--fb-blue-light);
+    border: 1px solid var(--fb-blue);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    color: var(--fb-blue-dark);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.results-count-bar::before {
+    content: '✓';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--fb-blue);
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.no-results-state {
+    min-height: 50vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+}
+
+.btn-reset-search {
+    margin-top: 1.5rem;
+    padding: 1rem 2rem;
+    background: var(--fb-blue);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-reset-search:hover {
+    background: var(--fb-blue-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.4);
+}
+
+/* Hidden class for filtering */
+.user-card-modern.hidden {
+    display: none;
+}
+
+/* Users Grid */
+.users-grid-modern {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.user-card-modern {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    animation: slideInUp 0.6s ease forwards;
+}
+
+/* Staggered animation */
+.user-card-modern:nth-child(1) { animation-delay: 0.1s; }
+.user-card-modern:nth-child(2) { animation-delay: 0.15s; }
+.user-card-modern:nth-child(3) { animation-delay: 0.2s; }
+.user-card-modern:nth-child(4) { animation-delay: 0.25s; }
+.user-card-modern:nth-child(5) { animation-delay: 0.3s; }
+.user-card-modern:nth-child(6) { animation-delay: 0.35s; }
+.user-card-modern:nth-child(7) { animation-delay: 0.4s; }
+.user-card-modern:nth-child(8) { animation-delay: 0.45s; }
+.user-card-modern:nth-child(9) { animation-delay: 0.5s; }
+.user-card-modern:nth-child(10) { animation-delay: 0.55s; }
+
+.user-card-modern:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--fb-blue);
+}
+
+.card-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.user-header-section {
+    background: linear-gradient(135deg, var(--fb-blue-light) 0%, #dbeafe 100%);
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+}
+
+.user-avatar-large {
+    position: relative;
+    display: inline-block;
+}
+
+/* Avatar Circle for users without profile pic */
+.avatar-circle {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, var(--fb-blue) 0%, #4267B2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 4px 16px rgba(24, 119, 242, 0.3);
+    border: 4px solid white;
+    transition: transform 0.3s ease;
+}
+
+.user-card-modern:hover .avatar-circle {
+    transform: scale(1.05);
+}
+
+/* Profile Image Styling */
+.avatar-image {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 4px 16px rgba(24, 119, 242, 0.3);
+    border: 4px solid white;
+    transition: transform 0.3s ease;
+    background: var(--gray-100);
+}
+
+.user-card-modern:hover .avatar-image {
+    transform: scale(1.05);
+}
+
+.online-status {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    background: var(--success-green);
+    border: 4px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    animation: pulse 2s infinite;
+    z-index: 10;
+}
+
+.user-body-section {
+    padding: 1.75rem;
+    flex: 1;
+}
+
+.user-name-modern {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 1.25rem;
+    text-align: center;
+}
+
+.user-details-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.detail-item-modern {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    background: var(--gray-50);
+    border-radius: 10px;
+    border: 1px solid var(--gray-200);
+    transition: all 0.3s ease;
+}
+
+.detail-item-modern:hover {
+    background: var(--fb-blue-light);
+    border-color: var(--fb-blue);
+}
+
+.detail-item-modern i {
+    color: var(--fb-blue);
+    font-size: 1.1rem;
+    width: 24px;
+    text-align: center;
+}
+
+.detail-item-modern span {
+    color: var(--gray-600);
+    font-size: 0.95rem;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.user-role-badge {
+    display: inline-flex;
+    align-items: center;
+    background: var(--success-light);
+    color: var(--success-green);
+    padding: 0.625rem 1.25rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: 1px solid var(--success-green);
+}
+
+.user-role-badge i {
+    color: var(--success-green);
+}
+
+.user-footer-section {
+    padding: 1.5rem;
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-start-chat {
+    flex: 1;
+    padding: 1rem 1.5rem;
+    background: var(--fb-blue);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-start-chat::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn-start-chat:hover::before {
+    left: 100%;
+}
+
+.btn-start-chat:hover {
+    background: var(--fb-blue-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.4);
+    text-decoration: none;
+    color: white;
+}
+
+.btn-more-options {
+    width: 50px;
+    height: 50px;
+    background: white;
+    color: var(--gray-600);
+    border: 2px solid var(--gray-300);
+    border-radius: 10px;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-more-options:hover {
+    background: var(--gray-100);
+    border-color: var(--fb-blue);
+    color: var(--fb-blue);
+    transform: rotate(90deg);
+}
+
+/* Empty State */
+.empty-state-modern {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+}
+
+.empty-content {
+    text-align: center;
+    max-width: 500px;
+}
+
+.empty-icon-wrapper {
+    margin-bottom: 2rem;
+}
+
+.empty-icon-wrapper i {
+    font-size: 8rem;
+    color: var(--gray-300);
+    opacity: 0.5;
+}
+
+.empty-title-text {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 1rem;
+}
+
+.empty-description-text {
+    font-size: 1.1rem;
+    color: var(--gray-600);
+    line-height: 1.6;
+}
+
+/* Animations */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes float {
+    0%, 100% { 
+        transform: translate(0, 0); 
+    }
+    50% { 
+        transform: translate(-20px, -20px); 
+    }
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(49, 162, 76, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(49, 162, 76, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(49, 162, 76, 0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .page-title-modern {
+        font-size: 2.25rem;
+    }
+    
+    .users-stats-badge {
+        justify-content: center;
+        margin-top: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .users-header-modern {
+        padding: 2rem 0;
+    }
+    
+    .page-title-modern {
+        font-size: 2rem;
+        text-align: center;
+        justify-content: center;
+    }
+    
+    .page-subtitle-modern {
+        text-align: center;
+    }
+    
+    .users-grid-modern {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .users-header-modern {
+        padding: 1.5rem 0;
+    }
+    
+    .page-title-modern {
+        font-size: 1.75rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .page-title-modern i {
+        font-size: 2.5rem;
+    }
+    
+    .users-stats-badge {
+        padding: 1rem;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
+    
+    .stat-number {
+        font-size: 1.75rem;
+    }
+    
+    .avatar-circle,
+    .avatar-image {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .avatar-circle {
+        font-size: 2rem;
+    }
+    
+    .user-footer-section {
+        flex-direction: column;
+    }
+    
+    .btn-more-options {
+        width: 100%;
+    }
+}
+
+/* Hover Effects for Links */
+a.btn-start-chat:focus {
+    outline: 2px solid var(--fb-blue);
+    outline-offset: 2px;
+}
+
+button:focus {
+    outline: 2px solid var(--fb-blue);
+    outline-offset: 2px;
+}
+
+/* Loading State */
+.user-card-modern.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Success Toast */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    border-left: 4px solid var(--success-green);
+    z-index: 9999;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('👥 Connect with Users - Facebook Style Loaded with Profile Pictures');
+    
+    // Add smooth scroll to top on page load
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // ===== SEARCH FUNCTIONALITY =====
+    const searchInput = document.getElementById('userSearchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const resetSearchBtn = document.getElementById('resetSearchBtn');
+    const userCards = document.querySelectorAll('.user-card-modern');
+    const usersGrid = document.querySelector('.users-grid-modern');
+    const noResultsState = document.getElementById('noResultsState');
+    const resultsCount = document.getElementById('resultsCount');
+    
+    let currentFilter = 'all';
+    
+    // Search input event
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            
+            // Show/hide clear button
+            if (searchTerm) {
+                clearSearchBtn.style.display = 'flex';
+            } else {
+                clearSearchBtn.style.display = 'none';
+            }
+            
+            filterUsers(searchTerm, currentFilter);
+        });
+    }
+    
+    // Clear search button
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            this.style.display = 'none';
+            filterUsers('', currentFilter);
+            searchInput.focus();
+        });
+    }
+    
+    // Reset search button
+    if (resetSearchBtn) {
+        resetSearchBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            clearSearchBtn.style.display = 'none';
+            currentFilter = 'all';
+            
+            // Reset filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-filter') === 'all') {
+                    btn.classList.add('active');
+                }
+            });
+            
+            filterUsers('', 'all');
+            searchInput.focus();
+        });
+    }
+    
+    // ===== FILTER FUNCTIONALITY =====
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active state
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Get filter value
+            currentFilter = this.getAttribute('data-filter');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            
+            filterUsers(searchTerm, currentFilter);
+        });
+    });
+    
+    // ===== MAIN FILTER FUNCTION =====
+    function filterUsers(searchTerm, roleFilter) {
+        let visibleCount = 0;
+        
+        userCards.forEach(card => {
+            const userName = card.getAttribute('data-user-name') || '';
+            const userEmail = card.getAttribute('data-user-email') || '';
+            const userRole = card.getAttribute('data-user-role') || '';
+            
+            // Check search match
+            const matchesSearch = !searchTerm || 
+                                userName.includes(searchTerm) || 
+                                userEmail.includes(searchTerm);
+            
+            // Check role filter
+            const matchesRole = roleFilter === 'all' || userRole === roleFilter;
+            
+            // Show or hide card
+            if (matchesSearch && matchesRole) {
+                card.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+        
+        // Update results count
+        if (resultsCount) {
+            resultsCount.textContent = `Showing ${visibleCount} user${visibleCount !== 1 ? 's' : ''}`;
+        }
+        
+        // Show/hide no results state
+        if (visibleCount === 0) {
+            if (usersGrid) usersGrid.style.display = 'none';
+            if (noResultsState) noResultsState.style.display = 'flex';
+        } else {
+            if (usersGrid) usersGrid.style.display = 'grid';
+            if (noResultsState) noResultsState.style.display = 'none';
+        }
+    }
+    
+    // ===== MORE OPTIONS BUTTON =====
+    const moreButtons = document.querySelectorAll('.btn-more-options');
+    moreButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('More options clicked');
+            // You can add a dropdown menu here
+        });
+    });
+    
+    // ===== LOADING STATE FOR CHAT BUTTONS =====
+    const chatButtons = document.querySelectorAll('.btn-start-chat');
+    chatButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const card = this.closest('.user-card-modern');
+            card.classList.add('loading');
+        });
+    });
+    
+    // ===== INTERSECTION OBSERVER FOR LAZY ANIMATION =====
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+    
+    // Observe all user cards
+    userCards.forEach(card => {
+        observer.observe(card);
+    });
+    
+    // ===== KEYBOARD SHORTCUTS =====
+    document.addEventListener('keydown', function(e) {
+        // Focus search on Ctrl/Cmd + K
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }
+        
+        // Clear search on Escape
+        if (e.key === 'Escape' && searchInput && searchInput.value) {
+            searchInput.value = '';
+            clearSearchBtn.style.display = 'none';
+            filterUsers('', currentFilter);
+        }
+    });
+    
+    // ===== IMAGE ERROR HANDLING =====
+    // Handle profile image loading errors
+    const avatarImages = document.querySelectorAll('.avatar-image');
+    avatarImages.forEach(img => {
+        img.addEventListener('error', function() {
+            // If image fails to load, replace with initial circle
+            const userName = this.alt;
+            const initial = userName ? userName[0].toUpperCase() : '?';
+            
+            // Create avatar circle
+            const avatarCircle = document.createElement('div');
+            avatarCircle.className = 'avatar-circle';
+            avatarCircle.textContent = initial;
+            
+            // Replace image with circle
+            this.parentNode.replaceChild(avatarCircle, this);
+        });
+    });
+    
+    console.log('✅ Search, Filter, and Profile Picture functionality loaded');
+});
+</script>
+{% endblock %}

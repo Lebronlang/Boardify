@@ -1,0 +1,28 @@
+<h2>Monthly Invoice - {{ selected_month }}/{{ selected_year }}</h2>
+<p>User: {{ user.name }}</p>
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>Tenant / Property</th>
+        <th>Amount</th>
+        <th>Status</th>
+        <th>Due Date</th>
+        <th>Discount</th>
+        <th>Penalty</th>
+    </tr>
+    {% for bill in bills %}
+    <tr>
+        <td>{{ bill.tenant.name if user.role=='landlord' else bill.property.title }}</td>
+        <td>{{ bill.amount }}</td>
+        <td>{{ bill.status }}</td>
+        <td>{{ bill.due_date }}</td>
+        <td>{{ (bill.amount*0.05)|round(2) if bill.status=='paid' and bill.payment_date <= bill.due_date else 0 }}</td>
+        <td>{{ ((date.today() - bill.due_date).days * 50) if bill.status=='unpaid' and bill.due_date < date.today() else 0 }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<p>Total Amount: {{ total_amount }}</p>
+<p>Total Discount: {{ total_discount }}</p>
+<p>Total Penalty: {{ total_penalty }}</p>
+<p>Net Total: {{ total_amount - total_discount + total_penalty }}</p>

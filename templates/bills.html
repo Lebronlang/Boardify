@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ user.name }}'s Bills</h2>
+    <div class="content-wrapper mt-3">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    {% if user.role == 'landlord' %}
+                        <th>Tenant</th>
+                    {% endif %}
+                    <th>Property</th>
+                    <th>Months Booked</th>
+                    <th>Monthly Rate</th>
+                    <th>Total Amount</th>
+                    <th>Discount</th>
+                    <th>Penalty</th>
+                    <th>Final Amount</th>
+                    <th>Status</th>
+                    <th>Due Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bill in bills %}
+                <tr>
+                    {% if user.role == 'landlord' %}
+                        <td>{{ bill.tenant.name }}</td>
+                    {% endif %}
+                    <td>{{ bill.property.title }}</td>
+                    <td>{{ bill.months_booked if bill.months_booked else 1 }}</td>
+                    <td>{{ "%.2f"|format(bill.monthly_rate) }}</td>
+                    <td>{{ "%.2f"|format(bill.total_amount) }}</td>
+                    <td>{{ "%.2f"|format(bill.current_discount) }}</td>
+                    <td>{{ "%.2f"|format(bill.current_penalty) }}</td>
+                    <td>{{ "%.2f"|format(bill.total_amount - bill.current_discount + bill.current_penalty) }}</td>
+                    <td>{{ bill.status }}</td>
+                    <td>{{ bill.due_date.strftime('%Y-%m-%d') if bill.due_date else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

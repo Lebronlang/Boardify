@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Boardify Admin - System Control{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-green: #00ff41;
+            --neon-cyan: #00d4ff;
+            --neon-yellow: #ffcc00;
+            --neon-pink: #ff00ff;
+            --dark-bg: #0a0e27;
+            --card-bg: rgba(10, 14, 39, 0.95);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            background: var(--dark-bg) !important;
+            min-height: 100vh;
+        }
+        
+        body {
+            font-family: 'Share Tech Mono', monospace !important;
+            background: var(--dark-bg) !important;
+            color: var(--neon-green) !important;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Matrix Rain Background */
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        /* Scan Lines Effect */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            animation: scanline 8s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(10px); }
+        }
+
+        /* Grid Background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Ensure all content is above background */
+        nav, .admin-header, .admin-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .container, .container-fluid, .row, .col, [class*="col-"] {
+            background: transparent !important;
+        }
+        
+        /* Navigation Bar */
+        .navbar {
+            background: var(--card-bg) !important;
+            border-bottom: 2px solid var(--neon-green);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .navbar-brand {
+            font-family: 'Orbitron', monospace !important;
+            color: var(--neon-green) !important;
+            font-weight: 900;
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px var(--neon-green);
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand:hover {
+            color: var(--neon-cyan) !important;
+            text-shadow: 0 0 20px var(--neon-cyan);
+            transform: scale(1.05);
+        }
+
+        .navbar-brand i {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        .nav-link {
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--neon-cyan) !important;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem !important;
+            border: 1px solid transparent;
+            border-radius: 5px;
+            margin: 0 0.25rem;
+        }
+
+        .nav-link:hover {
+            color: var(--neon-green) !important;
+            border-color: var(--neon-green);
+            background: rgba(0, 255, 65, 0.1);
+            text-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .nav-link i {
+            margin-right: 0.5rem;
+        }
+        
+        /* Admin Header */
+        .admin-header {
+            background: var(--card-bg) !important;
+            border: 2px solid var(--neon-green);
+            border-radius: 10px;
+            color: var(--neon-green) !important;
+            padding: 2rem 0;
+            margin: 2rem 0;
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .admin-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(0, 255, 65, 0.05),
+                transparent
+            );
+            animation: headerGlow 3s linear infinite;
+        }
+
+        @keyframes headerGlow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .admin-header .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .admin-header h1 {
+            font-family: 'Orbitron', monospace !important;
+            font-weight: 900;
+            color: var(--neon-green) !important;
+            text-shadow: 0 0 15px var(--neon-green), 0 0 30px var(--neon-green);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .admin-header h1 i {
+            color: var(--neon-cyan);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .admin-header .lead {
+            color: var(--neon-cyan) !important;
+            font-family: 'Share Tech Mono', monospace;
+            text-shadow: 0 0 5px var(--neon-cyan);
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+        
+        /* Container */
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: calc(100vh - 400px);
+        }
+        
+        /* Back Link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--neon-green) !important;
+            text-decoration: none !important;
+            font-weight: 600;
+            margin-top: 30px;
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--neon-green);
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            font-family: 'Orbitron', monospace;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .back-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--neon-green);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+
+        .back-link:hover::before {
+            left: 0;
+        }
+        
+        .back-link:hover {
+            color: var(--dark-bg) !important;
+            box-shadow: 0 0 20px var(--neon-green);
+            transform: translateX(-5px);
+        }
+
+        .back-link i {
+            transition: transform 0.3s ease;
+        }
+
+        .back-link:hover i {
+            transform: translateX(-5px);
+        }
+
+        /* Custom Scrollbar */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-green) var(--dark-bg);
+        }
+
+        *::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: var(--dark-bg);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background: var(--neon-green);
+            border-radius: 5px;
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-cyan);
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Orbitron', monospace !important;
+            color: var(--neon-green) !important;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        p, span:not(.badge), div {
+            color: var(--neon-cyan) !important;
+        }
+
+        /* Glowing text effect */
+        .glow-text {
+            text-shadow: 0 0 5px currentColor, 0 0 10px currentColor;
+        }
+
+        /* Override Bootstrap defaults */
+        .text-white {
+            color: var(--neon-green) !important;
+        }
+
+        .text-muted {
+            color: var(--neon-cyan) !important;
+            opacity: 0.7;
+        }
+
+        .bg-dark {
+            background: var(--card-bg) !important;
+        }
+
+        .bg-light, .bg-white {
+            background: transparent !important;
+        }
+
+        /* Loading animation for page transitions */
+        .page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--dark-bg);
+            z-index: 9999;
+            overflow: hidden;
+        }
+
+        .page-loader::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, var(--neon-green), transparent);
+            animation: pageLoad 1.5s ease-in-out;
+        }
+
+        @keyframes pageLoad {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <canvas id="matrix-bg"></canvas>
+    <div class="scanlines"></div>
+    <div class="grid-bg"></div>
+    <div class="page-loader"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-house-gear me-2"></i>BOARDIFY_ADMIN
+            </a>
+           
+                <a class="nav-link" href="{{ url_for('logout') }}">
+                    <i class="bi bi-box-arrow-right"></i>LOGOUT
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <div class="admin-header">
+        <div class="container">
+            <h1><i class="bi {% block header_icon %}bi-speedometer2{% endblock %} me-2"></i>{% block header_title %}Admin Dashboard{% endblock %}</h1>
+            <p class="lead mb-0">{% block header_subtitle %}Welcome to the admin panel{% endblock %}</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-container">
+        {% block content %}{% endblock %}
+        
+        <!-- Back to Dashboard -->
+        <a href="{{ url_for('dashboard') }}" class="back-link">
+            <i class="bi bi-arrow-left"></i> BACK TO DASHBOARD
+        </a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Matrix Rain Effect
+        const canvas = document.getElementById('matrix-bg');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+        const fontSize = 14;
+        const columns = canvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(10, 14, 39, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00ff41';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrix, 50);
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

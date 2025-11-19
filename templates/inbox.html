@@ -1,0 +1,623 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="inbox-container">
+    <div class="inbox-layout">
+        <!-- Inbox Header -->
+        <div class="inbox-header">
+            <div class="header-content">
+                <h4><i class="bi bi-chat-dots-fill"></i> Messages</h4>
+                <button class="btn-new-message" title="New message">
+                    <i class="bi bi-pencil-square"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-container">
+            <div class="search-box">
+                <i class="bi bi-search"></i>
+                <input type="text" id="searchInput" placeholder="Search messages..." />
+            </div>
+        </div>
+
+        <!-- Chat List -->
+        <div class="chat-list">
+            {% if partners %}
+                {% for partner in partners %}
+                <a href="{{ url_for('messages', user_id=partner.id) }}" class="chat-item">
+                    <div class="chat-avatar">
+                        <span>{{ partner.name[0] }}</span>
+                        {% if partner.is_online %}
+                        <div class="online-badge"></div>
+                        {% endif %}
+                    </div>
+                    <div class="chat-info">
+                        <div class="chat-top">
+                            <h6>{{ partner.name }}</h6>
+                            <span class="chat-time">
+                                {% if partner.last_message_time %}
+                                    {{ partner.last_message_time.strftime('%I:%M %p') }}
+                                {% else %}
+                                    Now
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="chat-bottom">
+                            <p class="last-message">
+                                {% if partner.last_message %}
+                                    {{ partner.last_message[:50] }}{% if partner.last_message|length > 50 %}...{% endif %}
+                                {% else %}
+                                    Start a conversation
+                                {% endif %}
+                            </p>
+                            {% if partner.unread_count and partner.unread_count > 0 %}
+                            <span class="unread-badge">{{ partner.unread_count }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="empty-inbox">
+                    <i class="bi bi-inbox"></i>
+                    <h5>No messages yet</h5>
+                    <p>When you start chatting with someone, your conversations will appear here.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f0f2f5;
+    overflow-x: hidden;
+}
+
+.inbox-container {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+}
+
+.inbox-layout {
+    width: 100%;
+    max-width: 680px;
+    min-height: 100vh;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Inbox Header */
+.inbox-header {
+    background: #fff;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e4e6eb;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.inbox-header h4 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #050505;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.inbox-header h4 i {
+    color: #1877f2;
+}
+
+.btn-new-message {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: #1877f2;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(24, 119, 242, 0.3);
+}
+
+.btn-new-message:hover {
+    background: #166fe5;
+    transform: scale(1.05);
+}
+
+.btn-new-message:active {
+    transform: scale(0.95);
+}
+
+.btn-new-message i {
+    font-size: 18px;
+}
+
+/* Search Bar */
+.search-container {
+    padding: 12px 16px;
+    background: #fff;
+    border-bottom: 1px solid #e4e6eb;
+    position: sticky;
+    top: 73px;
+    z-index: 99;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f0f2f5;
+    border-radius: 20px;
+    padding: 10px 16px;
+}
+
+.search-box i {
+    color: #65676b;
+    font-size: 16px;
+}
+
+.search-box input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 15px;
+    color: #050505;
+    outline: none;
+}
+
+.search-box input::placeholder {
+    color: #65676b;
+}
+
+/* Chat List */
+.chat-list {
+    flex: 1;
+    overflow-y: auto;
+    background: #fff;
+}
+
+.chat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid #e4e6eb;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.chat-item:hover {
+    background: #f0f2f5;
+}
+
+.chat-item:active {
+    background: #e4e6eb;
+}
+
+.chat-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1877f2, #0e64d1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 20px;
+    text-transform: uppercase;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.online-badge {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    background: #42b72a;
+    border: 3px solid #fff;
+    border-radius: 50%;
+}
+
+.chat-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chat-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-info h6 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #050505;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-time {
+    font-size: 12px;
+    color: #65676b;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.chat-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.last-message {
+    margin: 0;
+    font-size: 14px;
+    color: #65676b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.chat-item:has(.unread-badge) .last-message {
+    color: #050505;
+    font-weight: 600;
+}
+
+.chat-item:has(.unread-badge) h6 {
+    font-weight: 700;
+}
+
+.unread-badge {
+    background: #1877f2;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    min-width: 20px;
+    text-align: center;
+}
+
+/* Empty Inbox */
+.empty-inbox {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 40px;
+    min-height: 400px;
+}
+
+.empty-inbox i {
+    font-size: 80px;
+    color: #bcc0c4;
+    margin-bottom: 20px;
+}
+
+.empty-inbox h5 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #050505;
+    margin: 0 0 8px 0;
+}
+
+.empty-inbox p {
+    font-size: 15px;
+    color: #65676b;
+    margin: 0;
+    max-width: 300px;
+    line-height: 1.4;
+}
+
+/* Scrollbar */
+.chat-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-list::-webkit-scrollbar-thumb {
+    background: #bcc0c4;
+    border-radius: 3px;
+}
+
+.chat-list::-webkit-scrollbar-thumb:hover {
+    background: #8a8d91;
+}
+
+/* Desktop View */
+@media (min-width: 769px) {
+    .inbox-container {
+        padding: 20px;
+    }
+
+    .inbox-layout {
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        min-height: calc(100vh - 40px);
+        max-height: 900px;
+    }
+
+    .inbox-header {
+        border-radius: 8px 8px 0 0;
+    }
+
+    .chat-item:hover {
+        background: #f0f2f5;
+    }
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .inbox-container {
+        padding: 0;
+    }
+
+    .inbox-layout {
+        border-radius: 0;
+    }
+
+    .inbox-header {
+        padding: 12px 16px;
+    }
+
+    .inbox-header h4 {
+        font-size: 20px;
+    }
+
+    .search-container {
+        padding: 10px 12px;
+        top: 61px;
+    }
+
+    .chat-avatar {
+        width: 50px;
+        height: 50px;
+        font-size: 18px;
+    }
+
+    .online-badge {
+        width: 12px;
+        height: 12px;
+    }
+
+    .chat-item {
+        padding: 10px 12px;
+    }
+
+    .chat-info h6 {
+        font-size: 15px;
+    }
+
+    .last-message {
+        font-size: 13px;
+    }
+
+    .chat-time {
+        font-size: 11px;
+    }
+
+    .empty-inbox {
+        padding: 40px 24px;
+        min-height: 300px;
+    }
+
+    .empty-inbox i {
+        font-size: 64px;
+    }
+
+    .empty-inbox h5 {
+        font-size: 18px;
+    }
+
+    .empty-inbox p {
+        font-size: 14px;
+    }
+}
+
+/* Small Mobile */
+@media (max-width: 380px) {
+    .chat-avatar {
+        width: 46px;
+        height: 46px;
+        font-size: 16px;
+    }
+
+    .chat-info h6 {
+        font-size: 14px;
+    }
+
+    .last-message {
+        font-size: 12px;
+    }
+}
+
+/* Handle notch for iPhone X and newer */
+@supports (padding: max(0px)) {
+    .inbox-header {
+        padding-top: max(16px, env(safe-area-inset-top));
+    }
+}
+
+/* Prevent zoom on input focus (iOS) */
+@media (max-width: 768px) {
+    input {
+        font-size: 16px !important;
+    }
+}
+
+/* Loading state */
+.chat-item.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Smooth animations */
+.chat-item {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Active state feedback */
+.chat-item:active {
+    transform: scale(0.98);
+}
+
+.btn-new-message:active {
+    transform: scale(0.9);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    const chatItems = document.querySelectorAll('.chat-item');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+
+            chatItems.forEach(item => {
+                const name = item.querySelector('h6').textContent.toLowerCase();
+                const message = item.querySelector('.last-message').textContent.toLowerCase();
+
+                if (name.includes(searchTerm) || message.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    // Add ripple effect on chat item click
+    chatItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            const ripple = document.createElement('div');
+            ripple.style.position = 'absolute';
+            ripple.style.width = '10px';
+            ripple.style.height = '10px';
+            ripple.style.background = 'rgba(24, 119, 242, 0.3)';
+            ripple.style.borderRadius = '50%';
+            ripple.style.transform = 'scale(0)';
+            ripple.style.animation = 'ripple 0.6s ease-out';
+            ripple.style.pointerEvents = 'none';
+
+            const rect = this.getBoundingClientRect();
+            ripple.style.left = (e.clientX - rect.left) + 'px';
+            ripple.style.top = (e.clientY - rect.top) + 'px';
+
+            this.style.position = 'relative';
+            this.appendChild(ripple);
+
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+
+    // New message button (placeholder)
+    const btnNewMessage = document.querySelector('.btn-new-message');
+    if (btnNewMessage) {
+        btnNewMessage.addEventListener('click', function() {
+            // Add functionality to start new conversation
+            alert('New message feature - to be implemented');
+        });
+    }
+
+    // Mark as read on click (optional)
+    chatItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const unreadBadge = this.querySelector('.unread-badge');
+            if (unreadBadge) {
+                unreadBadge.style.opacity = '0';
+                setTimeout(() => unreadBadge.remove(), 300);
+            }
+        });
+    });
+
+    // Pull to refresh simulation (optional)
+    let startY = 0;
+    const chatList = document.querySelector('.chat-list');
+
+    if (chatList && 'ontouchstart' in window) {
+        chatList.addEventListener('touchstart', function(e) {
+            startY = e.touches[0].pageY;
+        });
+
+        chatList.addEventListener('touchmove', function(e) {
+            const currentY = e.touches[0].pageY;
+            const diff = currentY - startY;
+
+            if (diff > 80 && this.scrollTop === 0) {
+                // Trigger refresh
+                console.log('Pull to refresh triggered');
+            }
+        });
+    }
+});
+
+// Add CSS for ripple animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(40);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

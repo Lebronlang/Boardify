@@ -1,0 +1,1264 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex" style="min-height: 100vh;">
+    <!-- Sidebar -->
+    <nav class="sidebar text-white p-4 d-flex flex-column">
+        <div class="mb-4">
+            <h3 class="mb-0">
+                <i class="bi bi-house-heart-fill me-2"></i>Boardify
+            </h3>
+        </div>
+
+        <div class="nav-links flex-grow-1">
+            <a href="{{ url_for('dashboard') }}" class="nav-link d-flex align-items-center active">
+                <i class="bi bi-speedometer2 me-3"></i> Dashboard
+            </a>
+            <a href="{{ url_for('viewproperties') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-building me-3"></i> Properties
+            </a>
+            {% if user.role == 'landlord' %}
+            <a href="{{ url_for('add_property') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-plus-circle me-3"></i> Add Property
+            </a>
+            <a href="{{ url_for('approved_bookings') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-check2-square me-3"></i> Approvals
+            </a>
+            {% else %}
+            <a href="{{ url_for('my_bookings_tenant_page') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-calendar-check me-3"></i> My Bookings
+            </a>
+            {% endif %}
+            <a href="{{ url_for('billing') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-receipt me-3"></i> Bills
+            </a>
+            <a href="{{ url_for('policies') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-file-text me-3"></i> Policies
+            </a>
+        </div>
+
+        <div class="mt-auto">
+            <a href="{{ url_for('help_support') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-question-circle me-3"></i> Help & Support
+            </a>
+            <a href="{{ url_for('logout') }}" class="nav-link d-flex align-items-center text-danger">
+                <i class="bi bi-box-arrow-right me-3"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="flex-grow-1 main-content">
+        <div class="p-4">
+            <!-- Welcome Banner -->
+            <div class="welcome-banner text-center p-5">
+                <h1 class="mb-3">Welcome back, {{ user.name }}!</h1>
+                <p class="mb-0">Manage your properties, bookings, billing, and more with ease.</p>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row g-4 mb-5">
+                <div class="col-lg-4 col-md-6">
+                    <div class="stats-card text-center">
+                        <div class="stats-icon-wrapper mb-3">
+                            {% if user.role == 'landlord' %}
+                                <i class="bi bi-building-fill stats-icon"></i>
+                            {% else %}
+                                <i class="bi bi-calendar-check-fill stats-icon"></i>
+                            {% endif %}
+                        </div>
+                        <h3 class="stats-number">{{ properties|length }}</h3>
+                        <h6 class="stats-label">{% if user.role == 'landlord' %}Total Properties{% else %}Total Bookings{% endif %}</h6>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="stats-card text-center">
+                        <div class="stats-icon-wrapper mb-3">
+                            <i class="bi bi-clock-history stats-icon-warning"></i>
+                        </div>
+                        <h3 class="stats-number">{{ pending_bookings|length }}</h3>
+                        <h6 class="stats-label">Pending Bookings</h6>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="stats-card text-center">
+                        <div class="stats-icon-wrapper mb-3">
+                            <i class="bi bi-receipt-cutoff stats-icon-success"></i>
+                        </div>
+                        <h3 class="stats-number">{{ tenant_bills|length }}</h3>
+                        <h6 class="stats-label">Total Bills</h6>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions Section -->
+            <div class="mb-5">
+                <h2 class="section-title">
+                    <i class="bi bi-lightning-charge-fill me-2"></i>Quick Actions
+                </h2>
+                <div class="row g-3">
+                    {% if user.role == 'landlord' %}
+                        <div class="col-md-3 col-sm-6">
+                            <a href="{{ url_for('add_property') }}" class="quick-action-card">
+                                <div class="action-icon-wrapper">
+                                    <i class="bi bi-plus-circle-fill"></i>
+                                </div>
+                                <h6>Add Property</h6>
+                                <small>List a new property</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <a href="{{ url_for('approved_bookings') }}" class="quick-action-card">
+                                <div class="action-icon-wrapper">
+                                    <i class="bi bi-check2-square"></i>
+                                </div>
+                                <h6>Review Bookings</h6>
+                                <small>Approve pending requests</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <a href="{{ url_for('billing') }}" class="quick-action-card">
+                                <div class="action-icon-wrapper">
+                                    <i class="bi bi-receipt-cutoff"></i>
+                                </div>
+                                <h6>Create Bill</h6>
+                                <small>Generate tenant bills</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <a href="{{ url_for('inbox') }}" class="quick-action-card">
+                                <div class="action-icon-wrapper">
+                                    <i class="bi bi-chat-dots-fill"></i>
+                                </div>
+                                <h6>Messages</h6>
+                                <small>Chat with tenants</small>
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="col-md-3 col-sm-6">
+                            <a href="{{ url_for('viewproperties') }}" class="quick-action-card">
+                                <div class="action-icon-wrapper">
+                                    <i class="bi bi-search"></i>
+                                </div>
+                                <h6>Find Properties</h6>
+                                <small>Browse available listings</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <a href="{{ url_for('my_bookings_tenant_page') }}" class="quick-action-card">
+                                <div class="action-icon-wrapper">
+                                    <i class="bi bi-calendar-check-fill"></i>
+                                </div>
+                                <h6>My Bookings</h6>
+                                <small>View your reservations</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <a href="{{ url_for('billing') }}" class="quick-action-card">
+                                <div class="action-icon-wrapper">
+                                    <i class="bi bi-credit-card-fill"></i>
+                                </div>
+                                <h6>Pay Bills</h6>
+                                <small>Manage your payments</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <a href="{{ url_for('inbox') }}" class="quick-action-card">
+                                <div class="action-icon-wrapper">
+                                    <i class="bi bi-envelope-heart-fill"></i>
+                                </div>
+                                <h6>Messages</h6>
+                                <small>Chat with landlords</small>
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Activity Feed -->
+            <div class="row mb-5">
+                <div class="col-lg-8">
+                    <div class="activity-section">
+                        <h2 class="section-title">
+                            <i class="bi bi-activity me-2"></i>Recent Activity
+                        </h2>
+                        <div class="activity-feed">
+                            {% if pending_bookings %}
+                                {% for booking in pending_bookings[:3] %}
+                                <div class="activity-item">
+                                    <div class="activity-icon booking-icon">
+                                        <i class="bi bi-calendar-plus"></i>
+                                    </div>
+                                    <div class="activity-content">
+                                        <h6 class="activity-title">New Booking Request</h6>
+                                        <p class="activity-description">
+                                            {% if user.role == 'landlord' %}
+                                                {{ booking.tenant.name if booking.tenant else 'A tenant' }} requested to book <strong>{{ booking.property.title }}</strong>
+                                            {% else %}
+                                                You requested to book <strong>{{ booking.property.title }}</strong>
+                                            {% endif %}
+                                        </p>
+                                        <small class="activity-time">
+                                            <i class="bi bi-clock me-1"></i>
+                                            {{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') if booking.created_at else 'Recently' }}
+                                        </small>
+                                    </div>
+                                    <div class="activity-actions">
+                                        {% if user.role == 'landlord' and booking.status == 'pending' %}
+                                            <a href="{{ url_for('approved_bookings') }}" class="btn btn-sm btn-primary">Review</a>
+                                        {% else %}
+                                            <span class="badge status-{{ booking.status }}">{{ booking.status.capitalize() }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+
+                            {% if tenant_bills %}
+                                {% for bill in tenant_bills[:3] %}
+                                <div class="activity-item">
+                                    <div class="activity-icon bill-icon">
+                                        <i class="bi bi-receipt"></i>
+                                    </div>
+                                    <div class="activity-content">
+                                        <h6 class="activity-title">Bill Generated</h6>
+                                        <p class="activity-description">
+                                            {% if user.role == 'landlord' %}
+                                                Bill for <strong>{{ bill.property.title }}</strong> sent to {{ bill.tenant.name if bill.tenant else 'tenant' }}
+                                            {% else %}
+                                                New bill for <strong>{{ bill.property.title }}</strong> - ₱{{ bill.amount }}
+                                            {% endif %}
+                                        </p>
+                                        <small class="activity-time">
+                                            <i class="bi bi-clock me-1"></i>
+                                            {{ bill.created_at.strftime('%B %d, %Y at %I:%M %p') if bill.created_at else 'Recently' }}
+                                        </small>
+                                    </div>
+                                    <div class="activity-actions">
+                                        {% if user.role != 'landlord' and bill.status != 'paid' %}
+                                            <a href="{{ url_for('billing') }}" class="btn btn-sm btn-success">Pay Now</a>
+                                        {% else %}
+                                            <span class="badge status-{{ bill.status }}">{{ bill.status.capitalize() }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+
+                            {% if not pending_bookings and not tenant_bills %}
+                                <div class="empty-activity">
+                                    <i class="bi bi-inbox"></i>
+                                    <h5>No recent activity</h5>
+                                    <p class="text-muted">Your recent activities will appear here as you use the platform.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <button class="btn btn-outline-primary">
+                                <i class="bi bi-arrow-clockwise me-2"></i>View All Activity
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Payments Sidebar -->
+                <div class="col-lg-4">
+                    <div class="payments-section">
+                        <h3 class="section-title-small">
+                            <i class="bi bi-wallet2 me-2"></i>Upcoming Payments
+                        </h3>
+                        <div class="payments-list">
+                            {% if tenant_bills %}
+                                {% for bill in tenant_bills %}
+                                    {% if bill.status != 'paid' %}
+                                    <div class="payment-item">
+                                        <div class="payment-info">
+                                            <h6 class="payment-property">{{ bill.property.title }}</h6>
+                                            <p class="payment-amount">₱{{ bill.amount }}</p>
+                                            <small class="payment-due">
+                                                <i class="bi bi-calendar3 me-1"></i>
+                                                {% if bill.due_date %}
+                                                    Due: {{ bill.due_date.strftime('%B %d') }}
+                                                {% else %}
+                                                    Due: Not specified
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        {% if user.role != 'landlord' %}
+                                            <form method="POST" action="{{ url_for('pay_bill', bill_id=bill.id) }}" class="d-inline">
+                                                <button class="btn btn-sm btn-success">
+                                                    <i class="bi bi-check-circle me-1"></i>Pay
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-payments">
+                                    <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
+                                    <p class="text-muted mt-3 mb-0">All bills are up to date!</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Recent Messages -->
+                    <div class="messages-section mt-4">
+                        <h3 class="section-title-small">
+                            <i class="bi bi-chat-left-text-fill me-2"></i>Recent Messages
+                        </h3>
+                        <div class="messages-preview">
+                            {% if messages %}
+                                {% for message in messages[:3] %}
+                                <div class="message-preview-item">
+                                    <div class="message-avatar">
+                                        {{ message.sender_name[0] if message.sender_name else 'U' }}
+                                    </div>
+                                    <div class="message-preview-content">
+                                        <h6>{{ message.sender_name or 'Unknown User' }}</h6>
+                                        <p>{{ message.content[:50] }}...</p>
+                                        <small>
+                                            <i class="bi bi-clock me-1"></i>
+                                            {{ message.timestamp.strftime('%I:%M %p') if message.timestamp else 'Recently' }}
+                                        </small>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-messages">
+                                    <i class="bi bi-chat-square-dots text-muted" style="font-size: 2.5rem;"></i>
+                                    <p class="text-muted mt-3 mb-0">No recent messages</p>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="text-center mt-3">
+                                <a href="{{ url_for('inbox') }}" class="btn btn-sm btn-outline-primary w-100">
+                                    <i class="bi bi-envelope me-1"></i>View All Messages
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Policies Section -->
+            <div class="policies-section">
+                <h2 class="section-title">
+                    <i class="bi bi-file-earmark-text-fill me-2"></i>Property Policies
+                </h2>
+                {% if policies %}
+                    <div class="accordion" id="policiesAccordion">
+                        {% for policy in policies %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ policy.id }}">
+                                <button class="accordion-button collapsed" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#collapse{{ policy.id }}" 
+                                        aria-expanded="false" 
+                                        aria-controls="collapse{{ policy.id }}">
+                                    <i class="bi bi-file-text me-2"></i>
+                                    {{ policy.title }}
+                                </button>
+                            </h2>
+                            <div id="collapse{{ policy.id }}" 
+                                 class="accordion-collapse collapse" 
+                                 aria-labelledby="heading{{ policy.id }}" 
+                                 data-bs-parent="#policiesAccordion">
+                                <div class="accordion-body">
+                                    <p>{{ policy.content }}</p>
+                                    <small class="text-muted">
+                                        <i class="bi bi-person-badge me-1"></i>
+                                        Applicable to: {{ policy.applicable_role|capitalize }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <h5>No policies available</h5>
+                        <p class="text-muted">Property policies will be displayed here when available.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sidebar Overlay for Mobile -->
+<div class="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+
+<style>
+    :root {
+        --fb-primary: #1877f2;
+        --fb-primary-hover: #166fe5;
+        --fb-secondary: #42b72a;
+        --fb-light-blue: #e7f3ff;
+        --bg-primary: #ffffff;
+        --bg-secondary: #f0f2f5;
+        --bg-tertiary: #e4e6eb;
+        --bg-hover: #f2f3f5;
+        --text-primary: #050505;
+        --text-secondary: #65676b;
+        --text-tertiary: #8a8d91;
+        --border-color: #ced0d4;
+        --divider-color: #e4e6eb;
+        --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.1);
+        --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.1);
+        --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.1);
+        --shadow-hover: 0 8px 24px rgba(24, 119, 242, 0.2);
+        --success: #31a24c;
+        --danger: #e74c3c;
+        --warning: #f39c12;
+    }
+
+    body {
+        font-family: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+
+    .sidebar {
+        background: var(--bg-primary);
+        width: 280px;
+        min-width: 280px;
+        box-shadow: var(--shadow-2);
+        border-right: 1px solid var(--border-color);
+    }
+
+    .sidebar h3 {
+        font-weight: 700;
+        font-size: 1.8rem;
+        color: var(--fb-primary);
+    }
+
+    .sidebar .nav-link {
+        color: var(--text-secondary) !important;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+        font-weight: 600;
+        text-decoration: none;
+        font-size: 0.95rem;
+    }
+
+    .sidebar .nav-link.active {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary) !important;
+    }
+
+    .sidebar .nav-link:hover {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary) !important;
+    }
+
+    .sidebar .nav-link.text-danger {
+        color: var(--danger) !important;
+    }
+
+    .sidebar .nav-link.text-danger:hover {
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    .sidebar .nav-link i {
+        width: 20px;
+        text-align: center;
+    }
+
+    .main-content {
+        background: var(--bg-secondary);
+        min-height: 100vh;
+    }
+
+    .welcome-banner {
+        background: linear-gradient(135deg, var(--fb-primary) 0%, #4a90e2 100%);
+        border-radius: 18px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--shadow-3);
+        margin-bottom: 25px;
+    }
+
+    .welcome-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+        animation: float 8s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        33% { transform: translate(-30px, -30px) rotate(120deg); }
+        66% { transform: translate(30px, -20px) rotate(240deg); }
+    }
+
+    .welcome-banner h1 {
+        font-weight: 700;
+        font-size: 2.3rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .welcome-banner p {
+        opacity: 0.95;
+        font-size: 1.15rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .stats-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.8rem;
+        box-shadow: var(--shadow-2);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-hover);
+        border-color: var(--fb-primary);
+    }
+
+    .stats-icon-wrapper {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--fb-light-blue);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
+
+    .stats-icon {
+        font-size: 1.8rem;
+        color: var(--fb-primary);
+    }
+
+    .stats-icon-warning {
+        font-size: 1.8rem;
+        color: var(--warning);
+    }
+
+    .stats-icon-success {
+        font-size: 1.8rem;
+        color: var(--success);
+    }
+
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 1rem 0 0.5rem;
+    }
+
+    .stats-label {
+        color: var(--text-secondary);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.8rem;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .section-title i {
+        color: var(--fb-primary);
+    }
+
+    .section-title-small {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .section-title-small i {
+        color: var(--fb-primary);
+    }
+
+    .quick-action-card {
+        display: block;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-decoration: none;
+        color: var(--text-primary);
+        box-shadow: var(--shadow-2);
+        transition: all 0.3s ease;
+        text-align: center;
+        height: 100%;
+    }
+
+    .quick-action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-hover);
+        color: var(--text-primary);
+        border-color: var(--fb-primary);
+    }
+
+    .action-icon-wrapper {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--fb-light-blue);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+
+    .action-icon-wrapper i {
+        font-size: 1.5rem;
+        color: var(--fb-primary);
+    }
+
+    .quick-action-card h6 {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .quick-action-card small {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+
+    .activity-section, .payments-section, .messages-section {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: var(--shadow-2);
+    }
+
+    .activity-feed {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .activity-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 1.5rem 0;
+        border-bottom: 1px solid var(--divider-color);
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+
+    .booking-icon {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary);
+    }
+
+    .bill-icon {
+        background: rgba(49, 162, 76, 0.1);
+        color: var(--success);
+    }
+
+    .activity-content {
+        flex-grow: 1;
+    }
+
+    .activity-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .activity-description {
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .activity-description strong {
+        color: var(--fb-primary);
+        font-weight: 600;
+    }
+
+    .activity-time {
+        color: var(--text-tertiary);
+        font-size: 0.85rem;
+    }
+
+    .empty-activity, .empty-payments, .empty-messages {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-tertiary);
+    }
+
+    .empty-activity i, .empty-payments i, .empty-messages i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .payment-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--divider-color);
+    }
+
+    .payment-item:last-child {
+        border-bottom: none;
+    }
+
+    .payment-property {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        font-size: 0.95rem;
+    }
+
+    .payment-amount {
+        color: var(--fb-primary);
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+        font-size: 1.1rem;
+    }
+
+    .payment-due {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+    }
+
+    .message-preview-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--divider-color);
+        transition: background 0.2s ease;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+    }
+
+    .message-preview-item:last-child {
+        border-bottom: none;
+    }
+
+    .message-preview-item:hover {
+        background: var(--bg-hover);
+        padding-left: 0.5rem;
+    }
+
+    .message-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--fb-primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        margin-right: 0.75rem;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .message-preview-content {
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .message-preview-content h6 {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .message-preview-content p {
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .message-preview-content small {
+        color: var(--text-tertiary);
+        font-size: 0.75rem;
+    }
+
+    .status-pending {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning);
+        padding: 0.35rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 1px solid var(--warning);
+    }
+
+    .status-approved {
+        background: rgba(49, 162, 76, 0.1);
+        color: var(--success);
+        padding: 0.35rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 1px solid var(--success);
+    }
+
+    .status-paid {
+        background: rgba(49, 162, 76, 0.1);
+        color: var(--success);
+        padding: 0.35rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 1px solid var(--success);
+    }
+
+    .status-unpaid {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger);
+        padding: 0.35rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 1px solid var(--danger);
+    }
+
+    .policies-section {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: var(--shadow-2);
+    }
+
+    .accordion-item {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        margin-bottom: 0.75rem;
+        border-radius: 8px !important;
+        overflow: hidden;
+    }
+
+    .accordion-button {
+        background: var(--bg-primary);
+        border: none;
+        padding: 1rem 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+
+    .accordion-button:not(.collapsed) {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary);
+        box-shadow: none;
+    }
+
+    .accordion-button:focus {
+        box-shadow: none;
+        border: none;
+    }
+
+    .accordion-body {
+        background: var(--bg-primary);
+        padding: 1.25rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        border-top: 1px solid var(--divider-color);
+    }
+
+    .btn-primary {
+        background: var(--fb-primary);
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        color: white;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary:hover {
+        background: var(--fb-primary-hover);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .btn-outline-primary {
+        color: var(--fb-primary);
+        border: 2px solid var(--fb-primary);
+        background: transparent;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-outline-primary:hover {
+        background: var(--fb-primary);
+        border-color: var(--fb-primary);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .btn-success {
+        background: var(--success);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .btn-success:hover {
+        background: #2a8f42;
+        transform: translateY(-1px);
+        color: white;
+    }
+
+    .btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-tertiary);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-state h5 {
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    .activity-feed::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .activity-feed::-webkit-scrollbar-track {
+        background: var(--bg-secondary);
+        border-radius: 10px;
+    }
+
+    .activity-feed::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 10px;
+    }
+
+    .activity-feed::-webkit-scrollbar-thumb:hover {
+        background: var(--fb-primary);
+    }
+
+    .text-muted {
+        color: var(--text-secondary) !important;
+    }
+
+    .mobile-header {
+        display: none;
+    }
+
+    .sidebar-overlay {
+        display: none;
+    }
+
+    @media (max-width: 992px) {
+        body {
+            overflow-x: hidden;
+        }
+
+        .mobile-header {
+            display: flex !important;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-1);
+        }
+        
+        .hamburger-btn {
+            background: var(--bg-tertiary);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 1.3rem;
+            transition: all 0.2s ease;
+        }
+        
+        .hamburger-btn:hover {
+            background: var(--fb-primary);
+            color: white;
+        }
+        
+        .sidebar {
+            position: fixed;
+            left: -280px;
+            top: 0;
+            height: 100vh;
+            z-index: 1001;
+            transition: left 0.3s ease;
+        }
+        
+        .sidebar.show {
+            left: 0;
+        }
+        
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .sidebar-overlay.show {
+            display: block !important;
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .main-content {
+            width: 100% !important;
+            padding: 0 !important;
+        }
+        
+        .main-content > div {
+            padding: 1rem !important;
+        }
+        
+        .welcome-banner {
+            padding: 1.75rem 1.25rem !important;
+            margin-bottom: 1.5rem !important;
+        }
+        
+        .welcome-banner h1 {
+            font-size: 1.6rem !important;
+        }
+        
+        .stats-card {
+            padding: 1.5rem !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .welcome-banner h1 {
+            font-size: 1.4rem !important;
+        }
+        
+        .activity-item {
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+        
+        .activity-actions {
+            width: 100%;
+            margin-top: 0.875rem;
+        }
+        
+        .activity-actions .btn {
+            width: 100%;
+        }
+        
+        .payment-item {
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+        
+        .payment-item form {
+            width: 100%;
+            margin-top: 0.75rem;
+        }
+        
+        .payment-item .btn {
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .main-content > div {
+            padding: 0.75rem !important;
+        }
+        
+        .welcome-banner {
+            padding: 1.25rem 0.875rem !important;
+        }
+        
+        .welcome-banner h1 {
+            font-size: 1.25rem !important;
+        }
+        
+        .stats-number {
+            font-size: 2rem !important;
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .stats-card, .quick-action-card {
+        animation: fadeInUp 0.5s ease-out;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initializeMobileMenu();
+    
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(initializeMobileMenu, 250);
+    });
+});
+
+function initializeMobileMenu() {
+    const windowWidth = window.innerWidth;
+    const sidebar = document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    
+    if (!sidebar || !mainContent) return;
+    
+    if (windowWidth <= 992) {
+        if (!document.querySelector('.mobile-header')) {
+            addMobileHeader();
+        }
+        if (!document.querySelector('.sidebar-overlay')) {
+            addOverlay();
+        }
+    } else {
+        const mobileHeader = document.querySelector('.mobile-header');
+        const overlay = document.querySelector('.sidebar-overlay');
+        
+        if (mobileHeader) mobileHeader.remove();
+        if (overlay) overlay.remove();
+        
+        sidebar.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+}
+
+function addMobileHeader() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    const mobileHeader = document.createElement('div');
+    mobileHeader.className = 'mobile-header';
+    mobileHeader.innerHTML = `
+        <button class="hamburger-btn" onclick="toggleMobileSidebar()">
+            <i class="bi bi-list"></i>
+        </button>
+        <h3 style="margin: 0; font-size: 1.2rem; color: var(--fb-primary); display: flex; align-items: center;">
+            <i class="bi bi-house-heart-fill me-2"></i>Boardify
+        </h3>
+        <div style="width: 40px;"></div>
+    `;
+    
+    mainContent.insertBefore(mobileHeader, mainContent.firstChild);
+}
+
+function addOverlay() {
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    overlay.onclick = toggleMobileSidebar;
+    document.body.appendChild(overlay);
+}
+
+function toggleMobileSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    
+    if (!sidebar || !overlay) return;
+    
+    const isOpen = sidebar.classList.contains('show');
+    
+    if (isOpen) {
+        sidebar.classList.remove('show');
+        overlay.classList.remove('show');
+        document.body.style.overflow = '';
+    } else {
+        sidebar.classList.add('show');
+        overlay.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.sidebar .nav-link')) {
+        if (window.innerWidth <= 992) {
+            setTimeout(toggleMobileSidebar, 200);
+        }
+    }
+});
+
+console.log('🎨 Boardify Dashboard loaded successfully!');
+</script>
+
+{% endblock %}

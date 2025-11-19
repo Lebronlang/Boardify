@@ -1,0 +1,1306 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid bookings-page-wrapper">
+    <!-- Page Header -->
+    <div class="page-header-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="page-main-title">
+                        <i class="bi bi-bookmark-check-fill me-3"></i>My Bookings
+                    </h1>
+                    <p class="page-subtitle">Track and manage all your property reservations</p>
+                </div>
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                    {% set pending_bookings = bookings|selectattr("status", "equalto", "pending")|list %}
+                    {% set processed_bookings = bookings|rejectattr("status", "equalto", "pending")|list %}
+                    <div class="bookings-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">{{ pending_bookings|length }}</span>
+                            <span class="stat-label">Pending</span>
+                        </div>
+                        <div class="stat-divider"></div>
+                        <div class="stat-item">
+                            <span class="stat-number">{{ processed_bookings|length }}</span>
+                            <span class="stat-label">Processed</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="messages-container mb-4">
+                    {% for category, message in messages %}
+                        <div class="custom-alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            <div class="alert-icon">
+                                <i class="bi bi-{% if category == 'success' %}check-circle-fill{% elif category == 'danger' %}x-circle-fill{% elif category == 'warning' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %}"></i>
+                            </div>
+                            <div class="alert-content">
+                                <strong>{% if category == 'success' %}Success!{% elif category == 'danger' %}Error!{% elif category == 'warning' %}Warning!{% else %}Info{% endif %}</strong>
+                                <p>{{ message }}</p>
+                            </div>
+                            <button type="button" class="alert-close-btn" data-bs-dismiss="alert">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Pending Bookings Section -->
+        {% if pending_bookings %}
+            <div class="bookings-section mb-5">
+                <div class="section-header-modern">
+                    <div class="section-title-wrapper">
+                        <div class="section-icon-circle bg-warning">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                        <div>
+                            <h3 class="section-title">Pending Approval</h3>
+                            <p class="section-description">Waiting for landlord response</p>
+                        </div>
+                    </div>
+                    <span class="section-count-badge bg-warning">{{ pending_bookings|length }}</span>
+                </div>
+                
+                <div class="row g-4">
+                    {% for booking in pending_bookings %}
+                    <div class="col-12 col-md-6 col-xl-4">
+                        <div class="booking-card-modern pending-card">
+                            <div class="card-status-bar status-pending"></div>
+                            
+                            <div class="card-header-modern">
+                                <div class="property-image-wrapper">
+                                    {% if booking.property.images and booking.property.images|length > 0 %}
+                                        <img src="{{ url_for('static', filename='uploads/' + booking.property.images[0].filename) }}" 
+                                             alt="{{ booking.property.title }}" class="property-thumbnail">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename='uploads/' + (booking.property.image if booking.property.image else 'default.jpg')) }}" 
+                                             alt="{{ booking.property.title }}" class="property-thumbnail">
+                                    {% endif %}
+                                    <div class="status-overlay">
+                                        <span class="status-badge badge-pending">
+                                            <i class="bi bi-clock-history me-1"></i>Pending
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card-body-modern">
+                                <h5 class="property-title-card">
+                                    <i class="bi bi-house-door-fill me-2"></i>{{ booking.property.title }}
+                                </h5>
+                                
+                                <div class="booking-info-grid">
+                                    <div class="info-item">
+                                        <div class="info-icon bg-success-subtle">
+                                            <i class="bi bi-calendar-check-fill text-success"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <span class="info-label">Check-in</span>
+                                            <span class="info-value">{{ booking.start_date.strftime('%b %d, %Y') }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if booking.end_date %}
+                                    <div class="info-item">
+                                        <div class="info-icon bg-danger-subtle">
+                                            <i class="bi bi-calendar-x-fill text-danger"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <span class="info-label">Check-out</span>
+                                            <span class="info-value">{{ booking.end_date.strftime('%b %d, %Y') }}</span>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="duration-display">
+                                    <i class="bi bi-moon-stars-fill me-2"></i>
+                                    {% if booking.end_date %}
+                                        <strong>{{ (booking.end_date - booking.start_date).days }}</strong> nights stay
+                                    {% else %}
+                                        Duration not specified
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="booking-price">
+                                    <span class="price-label">Total Amount:</span>
+                                    <span class="price-value">₱{{ "{:,}".format(booking.property.price) }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="card-footer-modern">
+                                <button class="btn-view-details" 
+                                        data-booking-id="{{ booking.id }}"
+                                        data-property-title="{{ booking.property.title|escape }}"
+                                        data-checkin="{{ booking.start_date.strftime('%B %d, %Y') }}"
+                                        data-checkout="{% if booking.end_date %}{{ booking.end_date.strftime('%B %d, %Y') }}{% else %}Not specified{% endif %}"
+                                        data-status="{{ booking.status }}"
+                                        data-location="{{ booking.property.location|escape if booking.property.location else 'Not specified' }}"
+                                        data-price="{{ booking.property.price }}">
+                                    <i class="bi bi-eye-fill me-2"></i>View Details
+                                </button>
+                                {% if booking.property.owner and booking.property.owner.email %}
+                                <a href="mailto:{{ booking.property.owner.email }}?subject=Inquiry about {{ booking.property.title|urlencode }}" 
+                                   class="btn-contact-host" title="Contact Host">
+                                    <i class="bi bi-chat-dots-fill"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Processed Bookings Section -->
+        {% if processed_bookings %}
+            <div class="bookings-section">
+                <div class="section-header-modern">
+                    <div class="section-title-wrapper">
+                        <div class="section-icon-circle bg-primary">
+                            <i class="bi bi-check2-square"></i>
+                        </div>
+                        <div>
+                            <h3 class="section-title">Processed Bookings</h3>
+                            <p class="section-description">Completed booking requests</p>
+                        </div>
+                    </div>
+                    <span class="section-count-badge bg-secondary">{{ processed_bookings|length }}</span>
+                </div>
+                
+                <div class="row g-4">
+                    {% for booking in processed_bookings %}
+                    <div class="col-12 col-md-6 col-xl-4">
+                        <div class="booking-card-modern {% if booking.status == 'approved' %}approved-card{% else %}rejected-card{% endif %}">
+                            <div class="card-status-bar {% if booking.status == 'approved' %}status-approved{% else %}status-rejected{% endif %}"></div>
+                            
+                            <div class="card-header-modern">
+                                <div class="property-image-wrapper">
+                                    {% if booking.property.images and booking.property.images|length > 0 %}
+                                        <img src="{{ url_for('static', filename='uploads/' + booking.property.images[0].filename) }}" 
+                                             alt="{{ booking.property.title }}" class="property-thumbnail">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename='uploads/' + (booking.property.image if booking.property.image else 'default.jpg')) }}" 
+                                             alt="{{ booking.property.title }}" class="property-thumbnail">
+                                    {% endif %}
+                                    <div class="status-overlay">
+                                        {% if booking.status == 'approved' %}
+                                            <span class="status-badge badge-approved">
+                                                <i class="bi bi-check-circle-fill me-1"></i>Approved
+                                            </span>
+                                        {% else %}
+                                            <span class="status-badge badge-rejected">
+                                                <i class="bi bi-x-circle-fill me-1"></i>Rejected
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card-body-modern">
+                                <h5 class="property-title-card">
+                                    <i class="bi bi-house-door-fill me-2"></i>{{ booking.property.title }}
+                                </h5>
+                                
+                                <div class="booking-info-grid">
+                                    <div class="info-item">
+                                        <div class="info-icon bg-success-subtle">
+                                            <i class="bi bi-calendar-check-fill text-success"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <span class="info-label">Check-in</span>
+                                            <span class="info-value">{{ booking.start_date.strftime('%b %d, %Y') }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if booking.end_date %}
+                                    <div class="info-item">
+                                        <div class="info-icon bg-danger-subtle">
+                                            <i class="bi bi-calendar-x-fill text-danger"></i>
+                                        </div>
+                                        <div class="info-content">
+                                            <span class="info-label">Check-out</span>
+                                            <span class="info-value">{{ booking.end_date.strftime('%b %d, %Y') }}</span>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="duration-display">
+                                    <i class="bi bi-moon-stars-fill me-2"></i>
+                                    {% if booking.end_date %}
+                                        <strong>{{ (booking.end_date - booking.start_date).days }}</strong> nights stay
+                                    {% else %}
+                                        Duration not specified
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="booking-price">
+                                    <span class="price-label">Total Amount:</span>
+                                    <span class="price-value">₱{{ "{:,}".format(booking.property.price) }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="card-footer-modern">
+                                <button class="btn-view-details"
+                                        data-booking-id="{{ booking.id }}"
+                                        data-property-title="{{ booking.property.title|escape }}"
+                                        data-checkin="{{ booking.start_date.strftime('%B %d, %Y') }}"
+                                        data-checkout="{% if booking.end_date %}{{ booking.end_date.strftime('%B %d, %Y') }}{% else %}Not specified{% endif %}"
+                                        data-status="{{ booking.status }}"
+                                        data-location="{{ booking.property.location|escape if booking.property.location else 'Not specified' }}"
+                                        data-price="{{ booking.property.price }}">
+                                    <i class="bi bi-eye-fill me-2"></i>View Details
+                                </button>
+                                {% if booking.status == 'approved' and booking.property.owner and booking.property.owner.email %}
+                                <a href="mailto:{{ booking.property.owner.email }}?subject=Inquiry about {{ booking.property.title|urlencode }}" 
+                                   class="btn-contact-host" title="Contact Host">
+                                    <i class="bi bi-chat-dots-fill"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Empty State -->
+        {% if bookings|length == 0 %}
+            <div class="empty-state-modern">
+                <div class="empty-state-content">
+                    <div class="empty-icon-wrapper">
+                        <i class="bi bi-inbox"></i>
+                    </div>
+                    <h3 class="empty-title">No Bookings Yet</h3>
+                    <p class="empty-description">You haven't made any property reservations. Start exploring amazing properties today!</p>
+                    <a href="{{ url_for('viewproperties') }}" class="btn-browse-properties">
+                        <i class="bi bi-search me-2"></i>Browse Properties
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Booking Details Modal -->
+<div class="modal fade" id="bookingDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content modal-modern">
+            <div class="modal-header modal-header-modern">
+                <h5 class="modal-title-modern">
+                    <i class="bi bi-info-circle-fill me-2"></i>Booking Details
+                </h5>
+                <button type="button" class="btn-close-modern" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="modal-body modal-body-modern">
+                <div class="booking-detail-grid">
+                    <div class="detail-card">
+                        <div class="detail-icon bg-primary-subtle">
+                            <i class="bi bi-house-fill text-primary"></i>
+                        </div>
+                        <div class="detail-info">
+                            <span class="detail-label">Property</span>
+                            <span class="detail-value" id="modal-property-title">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-card">
+                        <div class="detail-icon bg-info-subtle">
+                            <i class="bi bi-geo-alt-fill text-info"></i>
+                        </div>
+                        <div class="detail-info">
+                            <span class="detail-label">Location</span>
+                            <span class="detail-value" id="modal-location">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-card">
+                        <div class="detail-icon bg-success-subtle">
+                            <i class="bi bi-calendar-check-fill text-success"></i>
+                        </div>
+                        <div class="detail-info">
+                            <span class="detail-label">Check-in Date</span>
+                            <span class="detail-value" id="modal-checkin">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-card">
+                        <div class="detail-icon bg-danger-subtle">
+                            <i class="bi bi-calendar-x-fill text-danger"></i>
+                        </div>
+                        <div class="detail-info">
+                            <span class="detail-label">Check-out Date</span>
+                            <span class="detail-value" id="modal-checkout">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-card">
+                        <div class="detail-icon bg-warning-subtle">
+                            <i class="bi bi-cash-stack text-warning"></i>
+                        </div>
+                        <div class="detail-info">
+                            <span class="detail-label">Total Amount</span>
+                            <span class="detail-value" id="modal-price">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-card">
+                        <div class="detail-icon" id="modal-status-icon">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <div class="detail-info">
+                            <span class="detail-label">Booking Status</span>
+                            <span class="detail-value" id="modal-status">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="booking-timeline mt-4">
+                    <h6 class="timeline-title">Booking Timeline</h6>
+                    <div class="timeline-items">
+                        <div class="timeline-item completed">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>Booking Submitted</strong>
+                                <small>Your booking request was sent</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item" id="timeline-review">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>Under Review</strong>
+                                <small>Landlord is reviewing your request</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item" id="timeline-decision">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>Decision Made</strong>
+                                <small>Booking status finalized</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-modern">
+                <button type="button" class="btn-modal-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ===== FACEBOOK-INSPIRED MODERN THEME ===== */
+:root {
+    --fb-blue: #1877f2;
+    --fb-blue-hover: #166fe5;
+    --fb-blue-light: #e7f3ff;
+    --success-green: #31a24c;
+    --warning-orange: #f59e0b;
+    --danger-red: #ef4444;
+    --gray-50: #f8f9fa;
+    --gray-100: #f0f2f5;
+    --gray-200: #e4e6eb;
+    --gray-300: #ced0d4;
+    --gray-600: #65676b;
+    --gray-800: #1c1e21;
+}
+
+body {
+    background-color: var(--gray-100);
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Page Header */
+.bookings-page-wrapper {
+    min-height: 100vh;
+}
+
+.page-header-section {
+    background: linear-gradient(135deg, var(--fb-blue) 0%, #4267B2 100%);
+    padding: 2.5rem 0;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.page-main-title {
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.page-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.bookings-stats {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    justify-content: flex-end;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 0.25rem;
+}
+
+.stat-divider {
+    width: 1px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Flash Messages */
+.custom-alert {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    animation: slideInDown 0.4s ease-out;
+}
+
+.custom-alert.alert-success {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border-left: 4px solid var(--success-green);
+}
+
+.custom-alert.alert-danger {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-left: 4px solid var(--danger-red);
+}
+
+.custom-alert.alert-warning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left: 4px solid var(--warning-orange);
+}
+
+.alert-icon {
+    font-size: 1.75rem;
+}
+
+.alert-success .alert-icon {
+    color: var(--success-green);
+}
+
+.alert-danger .alert-icon {
+    color: var(--danger-red);
+}
+
+.alert-warning .alert-icon {
+    color: var(--warning-orange);
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-content strong {
+    display: block;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    color: var(--gray-800);
+}
+
+.alert-content p {
+    margin: 0;
+    color: var(--gray-600);
+    font-size: 0.95rem;
+}
+
+.alert-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+    border-radius: 50%;
+}
+
+.alert-close-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    transform: rotate(90deg);
+}
+
+/* Section Headers */
+.section-header-modern {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.section-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.section-icon-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.section-icon-circle.bg-warning {
+    background: linear-gradient(135deg, var(--warning-orange) 0%, #f59e0b 100%);
+}
+
+.section-icon-circle.bg-primary {
+    background: linear-gradient(135deg, var(--fb-blue) 0%, #4267B2 100%);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin: 0;
+}
+
+.section-description {
+    font-size: 0.9rem;
+    color: var(--gray-600);
+    margin: 0;
+}
+
+.section-count-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: white;
+}
+
+/* Booking Cards */
+.booking-card-modern {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.booking-card-modern:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+}
+
+.card-status-bar {
+    height: 4px;
+    width: 100%;
+}
+
+.status-pending {
+    background: linear-gradient(90deg, var(--warning-orange) 0%, #fbbf24 100%);
+}
+
+.status-approved {
+    background: linear-gradient(90deg, var(--success-green) 0%, #22c55e 100%);
+}
+
+.status-rejected {
+    background: linear-gradient(90deg, var(--danger-red) 0%, #f87171 100%);
+}
+
+.card-header-modern {
+    padding: 0;
+}
+
+.property-image-wrapper {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.property-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.booking-card-modern:hover .property-thumbnail {
+    transform: scale(1.1);
+}
+
+.status-overlay {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    backdrop-filter: blur(10px);
+    display: inline-flex;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.badge-pending {
+    background: rgba(245, 158, 11, 0.95);
+    color: white;
+}
+
+.badge-approved {
+    background: rgba(49, 162, 76, 0.95);
+    color: white;
+}
+
+.badge-rejected {
+    background: rgba(239, 68, 68, 0.95);
+    color: white;
+}
+
+.card-body-modern {
+    padding: 1.5rem;
+    flex: 1;
+}
+
+.property-title-card {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+}
+
+.property-title-card i {
+    color: var(--fb-blue);
+}
+
+.booking-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.info-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.info-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.duration-display {
+    padding: 1rem;
+    background: var(--gray-100);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    color: var(--gray-600);
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.duration-display i {
+    color: var(--fb-blue);
+}
+
+.booking-price {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--fb-blue-light) 0%, #dbeafe 100%);
+    border-radius: 10px;
+}
+
+.price-label {
+    font-size: 0.9rem;
+    color: var(--gray-600);
+    font-weight: 600;
+}
+
+.price-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--fb-blue);
+}
+
+.card-footer-modern {
+    padding: 1rem 1.5rem;
+    background: var(--gray-50);
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-view-details {
+    flex: 1;
+    padding: 0.875rem 1.5rem;
+    background: var(--fb-blue);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-view-details:hover {
+    background: var(--fb-blue-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+}
+
+.btn-contact-host {
+    width: 50px;
+    height: 50px;
+    padding: 0;
+    background: white;
+    color: var(--fb-blue);
+    border: 2px solid var(--fb-blue);
+    border-radius: 10px;
+    font-size: 1.25rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-contact-host:hover {
+    background: var(--fb-blue);
+    color: white;
+    transform: rotate(15deg) scale(1.1);
+}
+
+/* Empty State */
+.empty-state-modern {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+}
+
+.empty-state-content {
+    text-align: center;
+    max-width: 500px;
+}
+
+.empty-icon-wrapper {
+    margin-bottom: 2rem;
+}
+
+.empty-icon-wrapper i {
+    font-size: 8rem;
+    color: var(--gray-300);
+    opacity: 0.5;
+}
+
+.empty-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 1rem;
+}
+
+.empty-description {
+    font-size: 1.1rem;
+    color: var(--gray-600);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.btn-browse-properties {
+    display: inline-flex;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: var(--fb-blue);
+    color: white;
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+}
+
+.btn-browse-properties:hover {
+    background: var(--fb-blue-hover);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(24, 119, 242, 0.4);
+}
+
+/* Modal Styles */
+.modal-modern {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.modal-header-modern {
+    background: linear-gradient(135deg, var(--fb-blue) 0%, #4267B2 100%);
+    padding: 1.5rem;
+    border-bottom: none;
+}
+
+.modal-title-modern {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.btn-close-modern {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.btn-close-modern:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.modal-body-modern {
+    padding: 2rem;
+}
+
+.booking-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.detail-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--gray-50);
+    border-radius: 12px;
+    border: 2px solid var(--gray-200);
+    transition: all 0.3s ease;
+}
+
+.detail-card:hover {
+    border-color: var(--fb-blue);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.detail-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.detail-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.detail-label {
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.detail-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+/* Booking Timeline */
+.booking-timeline {
+    background: var(--gray-50);
+    padding: 1.5rem;
+    border-radius: 12px;
+}
+
+.timeline-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 1.5rem;
+}
+
+.timeline-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.timeline-item {
+    display: flex;
+    align-items: start;
+    gap: 1rem;
+    position: relative;
+    padding-left: 2.5rem;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 35px;
+    width: 2px;
+    height: calc(100% + 1.5rem);
+    background: var(--gray-300);
+}
+
+.timeline-item:last-child::before {
+    display: none;
+}
+
+.timeline-marker {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--gray-300);
+    border: 4px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: absolute;
+    left: 0;
+    top: 0;
+    transition: all 0.3s ease;
+}
+
+.timeline-item.completed .timeline-marker {
+    background: var(--success-green);
+}
+
+.timeline-item.active .timeline-marker {
+    background: var(--warning-orange);
+    animation: pulse 2s infinite;
+}
+
+.timeline-content {
+    flex: 1;
+}
+
+.timeline-content strong {
+    display: block;
+    font-size: 1rem;
+    color: var(--gray-800);
+    margin-bottom: 0.25rem;
+}
+
+.timeline-content small {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--gray-600);
+}
+
+.modal-footer-modern {
+    padding: 1.5rem;
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.btn-modal-secondary {
+    padding: 0.875rem 1.5rem;
+    background: white;
+    color: var(--gray-600);
+    border: 2px solid var(--gray-300);
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+.btn-modal-secondary:hover {
+    background: var(--gray-100);
+    border-color: var(--gray-600);
+    color: var(--gray-800);
+}
+
+/* Animations */
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .page-main-title {
+        font-size: 2rem;
+    }
+    
+    .bookings-stats {
+        justify-content: center;
+        margin-top: 1.5rem;
+    }
+    
+    .booking-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header-section {
+        padding: 1.5rem 0;
+    }
+    
+    .page-main-title {
+        font-size: 1.75rem;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .section-header-modern {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .booking-info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .card-footer-modern {
+        flex-direction: column;
+    }
+    
+    .btn-contact-host {
+        width: 100%;
+        height: 50px;
+    }
+}
+
+@media (max-width: 576px) {
+    .page-main-title {
+        font-size: 1.5rem;
+    }
+    
+    .bookings-stats {
+        width: 100%;
+    }
+    
+    .empty-icon-wrapper i {
+        font-size: 5rem;
+    }
+    
+    .empty-title {
+        font-size: 1.5rem;
+    }
+    
+    .modal-footer-modern {
+        flex-direction: column;
+    }
+    
+    .btn-modal-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+// View Booking Details using data attributes
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to all view details buttons
+    const viewDetailsButtons = document.querySelectorAll('.btn-view-details');
+    
+    viewDetailsButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Get data from button attributes
+            const bookingId = this.getAttribute('data-booking-id');
+            const propertyTitle = this.getAttribute('data-property-title');
+            const checkin = this.getAttribute('data-checkin');
+            const checkout = this.getAttribute('data-checkout');
+            const status = this.getAttribute('data-status');
+            const location = this.getAttribute('data-location');
+            const price = parseFloat(this.getAttribute('data-price'));
+            
+            // Update modal content
+            document.getElementById('modal-property-title').textContent = propertyTitle;
+            document.getElementById('modal-location').textContent = location;
+            document.getElementById('modal-checkin').textContent = checkin;
+            document.getElementById('modal-checkout').textContent = checkout;
+            document.getElementById('modal-price').textContent = '₱' + price.toLocaleString();
+            
+            // Update status display
+            const statusElement = document.getElementById('modal-status');
+            const statusIcon = document.getElementById('modal-status-icon');
+            const timelineReview = document.getElementById('timeline-review');
+            const timelineDecision = document.getElementById('timeline-decision');
+            
+            // Reset timeline
+            timelineReview.classList.remove('completed', 'active');
+            timelineDecision.classList.remove('completed', 'active');
+            
+            if (status === 'pending') {
+                statusElement.innerHTML = '<span class="badge badge-pending"><i class="bi bi-clock-history me-1"></i>Pending</span>';
+                statusIcon.className = 'detail-icon bg-warning-subtle';
+                statusIcon.innerHTML = '<i class="bi bi-clock-history text-warning"></i>';
+                timelineReview.classList.add('active');
+            } else if (status === 'approved') {
+                statusElement.innerHTML = '<span class="badge badge-approved"><i class="bi bi-check-circle-fill me-1"></i>Approved</span>';
+                statusIcon.className = 'detail-icon bg-success-subtle';
+                statusIcon.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+                timelineReview.classList.add('completed');
+                timelineDecision.classList.add('completed');
+            } else if (status === 'rejected') {
+                statusElement.innerHTML = '<span class="badge badge-rejected"><i class="bi bi-x-circle-fill me-1"></i>Rejected</span>';
+                statusIcon.className = 'detail-icon bg-danger-subtle';
+                statusIcon.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
+                timelineReview.classList.add('completed');
+                timelineDecision.classList.add('completed');
+            }
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('bookingDetailsModal'));
+            modal.show();
+        });
+    });
+    
+    // Auto-dismiss alerts after 5 seconds
+    const alerts = document.querySelectorAll('.custom-alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            if (bsAlert) {
+                bsAlert.close();
+            }
+        }, 5000);
+    });
+});
+
+// Smooth scroll to top on page load
+window.addEventListener('load', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+console.log('✨ My Bookings Page - Facebook Style Loaded Successfully!');
+</script>
+{% endblock %}

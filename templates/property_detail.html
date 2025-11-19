@@ -1,0 +1,3429 @@
+property details:
+    {% extends "base.html" %}
+
+    {% block content %}
+    <div class="d-flex" style="min-height: 100vh;">
+        <!-- Sidebar (Same as Dashboard) -->
+        <nav class="sidebar text-white p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="mb-0">
+                    <i class="bi bi-house-heart-fill me-2"></i>Boardify
+                </h3>
+                <button class="theme-toggle-btn" id="themeToggle" onclick="toggleTheme()">
+                    <i class="bi bi-sun-fill" id="themeIcon"></i>
+                </button>
+            </div>
+
+            <div class="nav-links flex-grow-1">
+                <a href="{{ url_for('dashboard') }}" class="nav-link d-flex align-items-center">
+                    <i class="bi bi-speedometer2 me-3"></i> Dashboard
+                </a>
+                <a href="{{ url_for('viewproperties') }}" class="nav-link d-flex align-items-center active">
+                    <i class="bi bi-building me-3"></i> Properties
+                </a>
+                {% if current_user.is_authenticated and current_user.role == 'landlord' %}
+                <a href="{{ url_for('add_property') }}" class="nav-link d-flex align-items-center">
+                    <i class="bi bi-plus-circle me-3"></i> Add Property
+                </a>
+                <a href="{{ url_for('approved_bookings') }}" class="nav-link d-flex align-items-center">
+                    <i class="bi bi-check2-square me-3"></i> Approvals
+                </a>
+                {% elif current_user.is_authenticated %}
+                <a href="{{ url_for('my_bookings_tenant_page') }}" class="nav-link d-flex align-items-center">
+                    <i class="bi bi-calendar-check me-3"></i> My Bookings
+                </a>
+                {% endif %}
+                <a href="{{ url_for('billing') }}" class="nav-link d-flex align-items-center">
+                    <i class="bi bi-receipt me-3"></i> Bills
+                </a>
+                <a href="{{ url_for('policies') }}" class="nav-link d-flex align-items-center">
+                    <i class="bi bi-file-text me-3"></i> Policies
+                </a>
+            </div>
+
+            <div class="mt-auto">
+                <a href="{{ url_for('help_support') }}" class="nav-link d-flex align-items-center">
+                    <i class="bi bi-question-circle me-3"></i> Help & Support
+                </a>
+                <a href="{{ url_for('logout') }}" class="nav-link d-flex align-items-center text-danger">
+                    <i class="bi bi-box-arrow-right me-3"></i> Logout
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="flex-grow-1 main-content">
+            <!-- Back Navigation -->
+            <div class="back-navigation-bar">
+                <div class="container-fluid">
+                    <a href="{{ url_for('viewproperties') }}" class="back-link-btn">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Properties
+                    </a>
+                </div>
+            </div>
+
+            <div class="container-fluid p-4">
+                <!-- Property Header Card -->
+                <div class="property-header-card mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-lg-8">
+                            <div class="property-title-section">
+                                <h1 class="property-title">{{ property.title }}</h1>
+                                {% if property.location %}
+                                <div class="location-badge">
+                                    <i class="bi bi-geo-alt-fill me-2"></i>{{ property.location }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-lg-4 text-end">
+                            <div class="price-tag-display mb-3">
+                                <span class="price-amount">₱{{ "{:,}".format(property.price) }}</span>
+                                <span class="price-label">/ month</span>
+                            </div>
+                            <button class="save-property-btn" data-property-id="{{ property.id }}">
+                                <i class="bi bi-heart"></i>
+                                <span>Save Property</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Left Column: Gallery & Details -->
+                    <div class="col-lg-8">
+                        <!-- Image Gallery Section -->
+                        <div class="gallery-card mb-4">
+                            {% set property_images = property.images if property.images else [] %}
+                            {% set total_images = property_images|length if property_images else 1 %}
+                            
+                            <!-- Main Image Display -->
+                            <div class="main-gallery-container">
+                                {% if property_images %}
+                                    {% for image in property_images %}
+                                    <img 
+                                        src="{{ url_for('static', filename='uploads/' + image.filename) }}" 
+                                        class="gallery-main-image {% if loop.index0 == 0 %}active{% endif %}" 
+                                        alt="{{ property.title }} - Image {{ loop.index }}"
+                                        data-index="{{ loop.index0 }}"
+                                    >
+                                    {% endfor %}
+                                {% else %}
+                                    <img 
+                                        src="{{ url_for('static', filename='uploads/' + (property.image if property.image else 'default.jpg')) }}" 
+                                        class="gallery-main-image active" 
+                                        alt="{{ property.title }}"
+                                        data-index="0"
+                                    >
+                                {% endif %}
+                                
+                                {% if total_images > 1 %}
+                                <button class="gallery-arrow-btn prev-arrow" data-direction="-1">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="gallery-arrow-btn next-arrow" data-direction="1">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                                
+                                <div class="image-count-badge">
+                                    <span class="current-image-num">1</span> / <span class="total-image-num">{{ total_images }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                <button class="fullscreen-btn" data-action="fullscreen">
+                                    <i class="bi bi-arrows-fullscreen"></i>
+                                </button>
+                            </div>
+
+                            <!-- Thumbnail Strip -->
+                            <!-- Thumbnail Strip -->
+    {% if total_images > 1 %}
+    <div class="thumbnail-strip">
+        <div class="thumbnail-wrapper">
+            {% for image in property_images %}
+            <div class="thumbnail-box {% if loop.index0 == 0 %}active{% endif %}" 
+                data-index="{{ loop.index0 }}">
+                <img 
+                    src="{{ url_for('static', filename='uploads/' + image.filename) }}" 
+                    alt="Thumbnail {{ loop.index }}"
+                    class="thumbnail-image"
+                >
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+                        </div>
+
+                        <!-- Property Information Tabs -->
+                        <div class="info-tabs-card mb-4">
+                            <ul class="custom-nav-tabs" role="tablist">
+                                <li class="custom-nav-item">
+                                    <button class="custom-tab-btn active" data-tab="overview">
+                                        <i class="bi bi-info-circle me-2"></i>Overview
+                                    </button>
+                                </li>
+                                <li class="custom-nav-item">
+                                    <button class="custom-tab-btn" data-tab="amenities">
+                                        <i class="bi bi-star me-2"></i>Amenities
+                                    </button>
+                                </li>
+                                <li class="custom-nav-item">
+                                    <button class="custom-tab-btn" data-tab="details">
+                                        <i class="bi bi-building me-2"></i>Details
+                                    </button>
+                                </li>
+                            </ul>
+
+                            <div class="tab-content-area">
+                                <!-- Overview Tab -->
+                                <div class="tab-panel active" id="overview-tab">
+                                    <h3 class="content-section-title">
+                                        <i class="bi bi-file-text me-2"></i>Property Overview
+                                    </h3>
+                                    <p class="property-description">{{ property.description }}</p>
+                                    
+                                    <!-- Property Stats Grid -->
+                                    <div class="property-stats-grid">
+                                        {% if property.bedrooms %}
+                                        <div class="stat-box">
+                                            <div class="stat-icon-wrapper">
+                                                <i class="bi bi-door-closed-fill"></i>
+                                            </div>
+                                            <div class="stat-info">
+                                                <span class="stat-value">{{ property.bedrooms }}</span>
+                                                <span class="stat-label">Bedrooms</span>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if property.bathrooms %}
+                                        <div class="stat-box">
+                                            <div class="stat-icon-wrapper">
+                                                <i class="bi bi-droplet-fill"></i>
+                                            </div>
+                                            <div class="stat-info">
+                                                <span class="stat-value">{{ property.bathrooms }}</span>
+                                                <span class="stat-label">Bathrooms</span>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="stat-box">
+                                            <div class="stat-icon-wrapper">
+                                                <i class="bi bi-building-fill"></i>
+                                            </div>
+                                            <div class="stat-info">
+                                                <span class="stat-value">{{ property.property_type|title }}</span>
+                                                <span class="stat-label">Property Type</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="stat-box">
+                                            <div class="stat-icon-wrapper">
+                                                <i class="bi bi-people-fill"></i>
+                                            </div>
+                                            <div class="stat-info">
+                                                <span class="stat-value">{{ slots_left }}/{{ total_slots }}</span>
+                                                <span class="stat-label">Available Slots</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="stat-box">
+                                            <div class="stat-icon-wrapper">
+                                                <i class="bi bi-gender-ambiguous"></i>
+                                            </div>
+                                            <div class="stat-info">
+                                                <span class="stat-value">
+                                                    {% if property.gender_preference|lower == 'female' %}
+                                                    Girls Only
+                                                    {% elif property.gender_preference|lower == 'male' %}
+                                                    Boys Only
+                                                    {% else %}
+                                                    Both
+                                                    {% endif %}
+                                                </span>
+                                                <span class="stat-label">Gender Preference</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Amenities Tab -->
+                                <div class="tab-panel" id="amenities-tab">
+                                    <h3 class="content-section-title">
+                                        <i class="bi bi-star-fill me-2"></i>Amenities & Features
+                                    </h3>
+                                    {% set amenities_list = property.amenities.split(',') if property.amenities else [] %}
+                                    {% set amenity_icons = {
+                                        'wifi': ('wifi', 'WiFi'),
+                                        'ac': ('snow', 'Air Conditioning'),
+                                        'parking': ('car-front', 'Parking'),
+                                        'kitchen': ('egg-fried', 'Kitchen'),
+                                        'laundry': ('droplet', 'Laundry'),
+                                        'gym': ('heart-pulse', 'Gym'),
+                                        'pool': ('water', 'Swimming Pool'),
+                                        'security': ('shield-check', '24/7 Security')
+                                    } %}
+                                    
+                                    {% if amenities_list|length > 0 %}
+                                    <div class="amenities-showcase-grid">
+                                        {% for amenity in amenities_list %}
+                                            {% set amenity_clean = amenity.strip().lower() %}
+                                            {% if amenity_clean in amenity_icons %}
+                                            <div class="amenity-item-card">
+                                                <div class="amenity-icon-circle">
+                                                    <i class="bi bi-{{ amenity_icons[amenity_clean][0] }}"></i>
+                                                </div>
+                                                <span class="amenity-item-name">{{ amenity_icons[amenity_clean][1] }}</span>
+                                            </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="empty-state-box">
+                                        <i class="bi bi-inbox"></i>
+                                        <p>No amenities listed for this property</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Details Tab -->
+                                <div class="tab-panel" id="details-tab">
+                                    <h3 class="content-section-title">
+                                        <i class="bi bi-list-ul me-2"></i>Property Details
+                                    </h3>
+                                    <div class="details-info-list">
+                                        <div class="detail-info-row">
+                                            <span class="detail-label-text">Property Type</span>
+                                            <span class="detail-value-text">{{ property.property_type|title }}</span>
+                                        </div>
+                                        
+                                        {% if property.bedrooms %}
+                                        <div class="detail-info-row">
+                                            <span class="detail-label-text">Bedrooms</span>
+                                            <span class="detail-value-text">{{ property.bedrooms }}</span>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if property.bathrooms %}
+                                        <div class="detail-info-row">
+                                            <span class="detail-label-text">Bathrooms</span>
+                                            <span class="detail-value-text">{{ property.bathrooms }}</span>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="detail-info-row">
+                                            <span class="detail-label-text">Total Capacity</span>
+                                            <span class="detail-value-text">{{ total_slots }} slots</span>
+                                        </div>
+                                        
+                                        <div class="detail-info-row">
+                                            <span class="detail-label-text">Available Slots</span>
+                                            <span class="detail-value-text">
+                                                <span class="{% if slots_left > 0 %}text-success-custom{% else %}text-danger-custom{% endif %}">
+                                                    {{ slots_left }} slot{{ 's' if slots_left != 1 else '' }}
+                                                </span>
+                                            </span>
+                                        </div>
+                                        
+                                        <div class="detail-info-row">
+                                            <span class="detail-label-text">Gender Preference</span>
+                                            <span class="detail-value-text">
+                                                {% if property.gender_preference|lower == 'female' %}
+                                                <span class="gender-badge-girls"><i class="bi bi-gender-female me-1"></i>Girls Only</span>
+                                                {% elif property.gender_preference|lower == 'male' %}
+                                                <span class="gender-badge-boys"><i class="bi bi-gender-male me-1"></i>Boys Only</span>
+                                                {% else %}
+                                                <span class="gender-badge-both"><i class="bi bi-gender-ambiguous me-1"></i>Both Genders</span>
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        
+                                        <div class="detail-info-row">
+                                            <span class="detail-label-text">Monthly Price</span>
+                                            <span class="detail-value-text price-highlight-text">₱{{ "{:,}".format(property.price) }}</span>
+                                        </div>
+                                        
+                                        <div class="detail-info-row">
+                                            <span class="detail-label-text">Location</span>
+                                            <span class="detail-value-text">{{ property.location if property.location else 'Not specified' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Location Map Card -->
+                        <div class="map-card mb-4">
+                            {% set map_query = (property.location ~ ', Surigao City, Philippines') if property.location else 'Surigao City, Philippines' %}
+                            <h3 class="content-section-title">
+                                <i class="bi bi-geo-alt-fill me-2"></i>Explore Surigao City
+                            </h3>
+                            <p class="map-description">
+                                Automatically pinned to this boarding house’s location within Surigao City, so you can quickly navigate and explore nearby landmarks.
+                            </p>
+                            <div class="map-frame-wrapper">
+                                <iframe
+                                    class="map-frame"
+                                    src="https://www.google.com/maps?q={{ map_query|urlencode }}&output=embed"
+                                    allowfullscreen=""
+                                    loading="lazy"
+                                    referrerpolicy="no-referrer-when-downgrade"
+                                ></iframe>
+                            </div>
+                        </div>
+
+                        <!-- Reviews Section -->
+                        <div class="reviews-section-card">
+                            <h3 class="content-section-title mb-4">
+                                <i class="bi bi-star-fill me-2"></i>Reviews & Ratings
+                            </h3>
+                            
+                            <!-- Rating Summary Box -->
+                            <div class="rating-summary-box mb-4">
+                                <div class="row align-items-center">
+                                    <div class="col-md-4 text-center">
+                                        <div class="rating-score-display">{{ avg_rating }}</div>
+                                        <div class="stars-display mb-2">
+                                            {% for i in range(5) %}
+                                                {% if i < avg_rating|int %}
+                                                    <i class="bi bi-star-fill"></i>
+                                                {% else %}
+                                                    <i class="bi bi-star"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <p class="review-count-text">{{ review_count }} review{{ 's' if review_count != 1 else '' }}</p>
+                                    </div>
+                                    <div class="col-md-8">
+                                        {% if can_review %}
+                                        <button class="btn-write-review" data-action="open-review-modal">
+                                            <i class="bi bi-pencil-square me-2"></i>Write a Review
+                                        </button>
+                                        {% endif %}
+                                        
+                                        {% if user_review %}
+                                        <div class="user-review-alert">
+                                            <strong>Your Review:</strong>
+                                            <div class="stars-display-small mt-1">
+                                                {% for i in range(user_review.rating) %}
+                                                    <i class="bi bi-star-fill"></i>
+                                                {% endfor %}
+                                            </div>
+                                            {% if user_review.comment %}
+                                            <p class="mt-2 mb-2">{{ user_review.comment }}</p>
+                                            {% endif %}
+                                            <div class="mt-2">
+                                                <a href="{{ url_for('edit_review', review_id=user_review.id) }}" 
+                                                class="btn-review-action-edit">Edit</a>
+                                                <form method="POST" action="{{ url_for('delete_review', review_id=user_review.id) }}" 
+                                                    class="d-inline" onsubmit="return confirm('Are you sure you want to delete this review?');">
+                                                    <button type="submit" class="btn-review-action-delete">Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Reviews List -->
+                            <div class="reviews-list-container">
+                                {% if reviews %}
+                                    {% for review in reviews %}
+                                    <div class="review-item-card">
+                                        <div class="review-header-row">
+                                            <div class="reviewer-info">
+                                                <div class="reviewer-avatar">{{ review.tenant.name[0] }}</div>
+                                                <div>
+                                                    <strong class="reviewer-name">{{ review.tenant.name }}</strong>
+                                                    <div class="stars-display-small">
+                                                        {% for i in range(5) %}
+                                                            {% if i < review.rating %}
+                                                                <i class="bi bi-star-fill"></i>
+                                                            {% else %}
+                                                                <i class="bi bi-star"></i>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <small class="review-date-text">{{ review.created_at.strftime('%b %d, %Y') }}</small>
+                                        </div>
+                                        {% if review.comment %}
+                                        <p class="review-comment-text">{{ review.comment }}</p>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="empty-reviews-box">
+                                        <i class="bi bi-chat-left-text"></i>
+                                        <p>No reviews yet. Be the first to review this property!</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Booking & Contact -->
+                    <div class="col-lg-4">
+                        <!-- Booking Card -->
+                        <div class="booking-info-card mb-4">
+                            <div class="booking-card-header">
+                                <h3 class="booking-card-title">
+                                    <i class="bi bi-calendar-check-fill me-2"></i>Book This Property
+                                </h3>
+                            </div>
+                            
+                            <div class="booking-card-body">
+                                {% if current_user.is_authenticated and current_user.role == 'tenant' %}
+                                    {% if user_booking %}
+                                        <!-- Booking Status Display -->
+                                        <div class="booking-status-display">
+                                            {% for b in user_booking %}
+                                            <div class="status-indicator status-{{ b.status }}">
+                                                {% if b.status == 'pending' %}
+                                                <i class="bi bi-hourglass-split me-2"></i>
+                                                <span>Pending Approval</span>
+                                                {% elif b.status == 'approved' %}
+                                                <i class="bi bi-check-circle-fill me-2"></i>
+                                                <span>Booking Confirmed</span>
+                                                {% elif b.status == 'rejected' %}
+                                                <i class="bi bi-x-circle-fill me-2"></i>
+                                                <span>Booking Rejected</span>
+                                                {% endif %}
+                                            </div>
+                                            <p class="status-message-text">
+                                                {% if b.status == 'pending' %}
+                                                Your booking request is waiting for landlord approval.
+                                                {% elif b.status == 'approved' %}
+                                                Congratulations! Your booking has been confirmed.
+                                                {% elif b.status == 'rejected' %}
+                                                Sorry, your booking request was rejected.
+                                                {% endif %}
+                                            </p>
+                                            {% endfor %}
+                                        </div>
+                                    {% elif slots_left > 0 %}
+                                        <!-- Booking Form -->
+                                        <form id="bookingForm" action="{{ url_for('book_property', property_id=property.id) }}" method="post" class="booking-input-form">
+                                            <div class="form-input-group">
+                                                <label for="start_date" class="input-label-text">
+                                                    <i class="bi bi-calendar-event me-1"></i>Check-in Date
+                                                </label>
+                                                <input type="date" name="start_date" id="start_date" class="form-input-field" required>
+                                                <small class="input-helper-text">When you plan to move in</small>
+                                            </div>
+
+                                            <div class="form-input-group">
+                                                <label for="end_date" class="input-label-text">
+                                                    <i class="bi bi-calendar-x me-1"></i>Check-out Date
+                                                </label>
+                                                <input type="date" name="end_date" id="end_date" class="form-input-field" required>
+                                                <small class="input-helper-text">When you plan to move out</small>
+                                            </div>
+
+                                            <div class="price-breakdown-box">
+                                                <div class="price-breakdown-row">
+                                                    <span>Monthly Rate:</span>
+                                                    <span class="price-amount-text">₱{{ "{:,}".format(property.price) }}</span>
+                                                </div>
+                                                <div class="price-breakdown-row total-row">
+                                                    <span>Estimated Total:</span>
+                                                    <span id="calculatedTotal" class="total-price-text">₱0</span>
+                                                </div>
+                                            </div>
+
+                                            <button class="btn-book-now w-100" type="button" data-action="confirm-booking">
+                                                <i class="bi bi-calendar-check me-2"></i>Book Now
+                                            </button>
+                                        </form>
+
+                                        <!-- Availability Display -->
+                                        <div class="availability-display-box">
+                                            <div class="availability-info-row">
+                                                <i class="bi bi-people-fill me-2"></i>
+                                                <span><strong>{{ total_slots }}</strong> total slots | <strong>{{ slots_left }}</strong> available</span>
+                                            </div>
+                                            <div class="availability-badge-row">
+                                                {% if slots_left == total_slots %}
+                                                    <span class="availability-badge badge-full"><i class="bi bi-check-circle me-1"></i>All Available</span>
+                                                {% elif slots_left == 0 %}
+                                                    <span class="availability-badge badge-none"><i class="bi bi-x-circle me-1"></i>Fully Booked</span>
+                                                {% elif slots_left <= 2 %}
+                                                    <span class="availability-badge badge-limited"><i class="bi bi-exclamation-triangle me-1"></i>Only {{ slots_left }} Left</span>
+                                                {% else %}
+                                                    <span class="availability-badge badge-good"><i class="bi bi-info-circle me-1"></i>Good Availability</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <!-- Fully Booked State -->
+                                        <div class="fully-booked-display">
+                                            <div class="booked-icon-wrapper">
+                                                <i class="bi bi-x-circle-fill"></i>
+                                            </div>
+                                            <h4 class="booked-title">Fully Booked</h4>
+                                            <p class="booked-message">All {{ total_slots }} slots are currently occupied. Please check back later or explore other properties!</p>
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <!-- Login Required State -->
+                                    <div class="login-required-display">
+                                        <div class="login-icon-wrapper">
+                                            <i class="bi bi-lock-fill"></i>
+                                        </div>
+                                        <h4 class="login-title">Sign In Required</h4>
+                                        <p class="login-message">Please sign in as a tenant to book this property</p>
+                                        <a href="{{ url_for('login') }}" class="btn-login-now w-100">
+                                            <i class="bi bi-box-arrow-in-right me-2"></i>Sign In to Book
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Owner Contact Card -->
+                        <div class="owner-contact-card">
+                            <div class="owner-card-header">
+                                <h3 class="owner-card-title">
+                                    <i class="bi bi-person-circle me-2"></i>Property Owner
+                                </h3>
+                            </div>
+                            <div class="owner-card-body">
+                                <div class="owner-profile-section">
+                                    <div class="owner-avatar-circle">{{ property.owner.name[0] }}</div>
+                                    <div>
+                                        <p class="owner-display-name">{{ property.owner.name }}</p>
+                                        <small class="owner-role-text">Landlord</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="owner-contact-info">
+                                    {% if property.owner.email %}
+                                    <a href="mailto:{{ property.owner.email }}" class="contact-info-link">
+                                        <i class="bi bi-envelope-fill me-2"></i>
+                                        <span>{{ property.owner.email }}</span>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if property.owner.phone %}
+                                    <a href="tel:{{ property.owner.phone }}" class="contact-info-link">
+                                        <i class="bi bi-telephone-fill me-2"></i>
+                                        <span>{{ property.owner.phone }}</span>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                
+                                <button class="btn-message-owner w-100 mt-3">
+                                    <i class="bi bi-chat-dots-fill me-2"></i>Send Message
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Gallery Modal -->
+    <div class="modal fade" id="fullscreenGalleryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content modal-gallery-content">
+                <div class="modal-header modal-gallery-header">
+                    <h5 class="modal-title modal-gallery-title">
+                        <i class="bi bi-image-fill me-2"></i>{{ property.title }}
+                    </h5>
+                    <button type="button" class="btn-close-gallery" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="modal-body modal-gallery-body">
+                    {% set property_images = property.images if property.images else [] %}
+                    {% set total_images = property_images|length if property_images else 1 %}
+                    
+                    <div class="fullscreen-gallery-container">
+                        {% if property_images %}
+                            {% for image in property_images %}
+                            <img 
+                                src="{{ url_for('static', filename='uploads/' + image.filename) }}" 
+                                class="fullscreen-gallery-image {% if loop.index0 == 0 %}active{% endif %}" 
+                                alt="{{ property.title }}"
+                                data-index="{{ loop.index0 }}"
+                            >
+                            {% endfor %}
+                        {% else %}
+                            <img 
+                                src="{{ url_for('static', filename='uploads/' + (property.image if property.image else 'default.jpg')) }}" 
+                                class="fullscreen-gallery-image active" 
+                                alt="{{ property.title }}"
+                                data-index="0"
+                            >
+                        {% endif %}
+                        
+                        {% if total_images > 1 %}
+                        <button class="fullscreen-arrow-btn fullscreen-prev" data-direction="-1" data-gallery="fullscreen">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button class="fullscreen-arrow-btn fullscreen-next" data-direction="1" data-gallery="fullscreen">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                        
+                        <div class="fullscreen-counter-badge">
+                            <span class="fullscreen-current-num">1</span> / <span class="fullscreen-total-num">{{ total_images }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div class="modal fade" id="reviewSubmitModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content review-modal-content">
+                <div class="modal-header review-modal-header">
+                    <h5 class="modal-title review-modal-title">
+                        <i class="bi bi-star-fill me-2"></i>Write a Review
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{{ url_for('add_review', property_id=property.id) }}">
+                    <div class="modal-body review-modal-body">
+                        <div class="review-form-group">
+                            <label class="review-form-label">Rating *</label>
+                            <div class="rating-input-stars">
+                                {% for i in range(5, 0, -1) %}
+                                <input type="radio" id="ratingStar{{ i }}" name="rating" value="{{ i }}" required>
+                                <label for="ratingStar{{ i }}"><i class="bi bi-star-fill"></i></label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="review-form-group">
+                            <label for="reviewComment" class="review-form-label">Comment (Optional)</label>
+                            <textarea class="review-form-textarea" id="reviewComment" name="comment" rows="4" 
+                                    placeholder="Share your experience with this property..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer review-modal-footer">
+                        <button type="button" class="btn-cancel-review" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn-submit-review">
+                            <i class="bi bi-send-fill me-2"></i>Submit Review
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Confirmation Modal -->
+    <div class="modal fade" id="bookingConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content confirm-modal-content">
+                <div class="modal-header confirm-modal-header">
+                    <h5 class="modal-title confirm-modal-title">
+                        <i class="bi bi-question-circle-fill me-2"></i>Confirm Your Booking
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body confirm-modal-body">
+                    <div class="confirm-icon-wrapper">
+                        <i class="bi bi-calendar-check-fill"></i>
+                    </div>
+                    <h4 class="confirm-question">Are you sure you want to book this property?</h4>
+                    <div class="confirm-details-box">
+                        <div class="confirm-detail-row">
+                            <span class="confirm-label">Property:</span>
+                            <span class="confirm-value">{{ property.title }}</span>
+                        </div>
+                        <div class="confirm-detail-row">
+                            <span class="confirm-label">Check-in:</span>
+                            <span class="confirm-value" id="confirmCheckin">-</span>
+                        </div>
+                        <div class="confirm-detail-row">
+                            <span class="confirm-label">Check-out:</span>
+                            <span class="confirm-value" id="confirmCheckout">-</span>
+                        </div>
+                        <div class="confirm-detail-row highlight-row">
+                            <span class="confirm-label">Estimated Total:</span>
+                            <span class="confirm-value" id="confirmTotal">₱0</span>
+                        </div>
+                    </div>
+                    <p class="confirm-note-text">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Your booking will be sent to the landlord for approval.
+                    </p>
+                </div>
+                <div class="modal-footer confirm-modal-footer">
+                    <button type="button" class="btn-cancel-booking" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>No, Cancel
+                    </button>
+                    <button type="button" class="btn-confirm-booking" data-action="submit-booking">
+                        <i class="bi bi-check-circle-fill me-2"></i>Yes, Book Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    /* ===== FACEBOOK BLUE THEME VARIABLES ===== */
+    :root {
+        --fb-primary: #1877f2;
+        --fb-primary-hover: #166fe5;
+        --fb-primary-active: #1567d3;
+        --fb-secondary: #42b72a;
+        --fb-secondary-hover: #36a420;
+        --fb-light-blue: #e7f3ff;
+        --fb-lighter-blue: #f0f8ff;
+        
+        --bg-primary: #ffffff;
+        --bg-secondary: #f0f2f5;
+        --bg-tertiary: #e4e6eb;
+        --bg-hover: #f2f3f5;
+        
+        --text-primary: #050505;
+        --text-secondary: #65676b;
+        --text-tertiary: #8a8d91;
+        --text-white: #ffffff;
+        
+        --border-color: #ced0d4;
+        --divider-color: #e4e6eb;
+        
+        --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.1);
+        --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.1);
+        --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.1);
+        --shadow-4: 0 8px 16px rgba(0, 0, 0, 0.15);
+        --shadow-hover: 0 8px 24px rgba(24, 119, 242, 0.2);
+        
+        --success: #31a24c;
+        --danger: #e74c3c;
+        --warning: #f39c12;
+        --info: #3498db;
+    }
+
+    body.dark-theme {
+        --bg-primary: #18191a;
+        --bg-secondary: #242526;
+        --bg-tertiary: #3a3b3c;
+        --bg-hover: #4e4f50;
+        --text-primary: #e4e6eb;
+        --text-secondary: #b0b3b8;
+        --text-tertiary: #8a8d91;
+        --border-color: #3e4042;
+        --divider-color: #3e4042;
+        --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.3);
+        --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.3);
+        --shadow-4: 0 8px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    body {
+        font-family: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* ===== SIDEBAR (Same as Dashboard) ===== */
+    .sidebar {
+        background: var(--bg-primary);
+        width: 280px;
+        min-width: 280px;
+        box-shadow: var(--shadow-2);
+        border-right: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    .sidebar h3 {
+        font-weight: 700;
+        font-size: 1.8rem;
+        color: var(--fb-primary);
+    }
+
+    .theme-toggle-btn {
+        background: var(--bg-tertiary);
+        border: 2px solid var(--border-color);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: var(--fb-primary);
+    }
+
+    .theme-toggle-btn:hover {
+        background: var(--fb-primary);
+        color: white;
+        transform: rotate(180deg);
+        border-color: var(--fb-primary);
+    }
+
+    .sidebar .nav-link {
+        color: var(--text-secondary) !important;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+        font-weight: 600;
+        text-decoration: none;
+        font-size: 0.95rem;
+    }
+
+    .sidebar .nav-link.active {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary) !important;
+    }
+
+    body.dark-theme .sidebar .nav-link.active {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    .sidebar .nav-link:hover {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary) !important;
+    }
+
+    body.dark-theme .sidebar .nav-link:hover {
+        background: var(--bg-hover);
+    }
+
+    .sidebar .nav-link.text-danger {
+        color: var(--danger) !important;
+    }
+
+    .sidebar .nav-link.text-danger:hover {
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    .main-content {
+        background: var(--bg-secondary);
+        min-height: 100vh;
+        transition: background-color 0.3s ease;
+        overflow-y: auto;
+    }
+
+    /* ===== BACK NAVIGATION ===== */
+    .back-navigation-bar {
+        background: var(--bg-primary);
+        border-bottom: 1px solid var(--border-color);
+        padding: 1rem 0;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: var(--shadow-1);
+    }
+
+    .back-link-btn {
+        display: inline-flex;
+        align-items: center;
+        color: var(--fb-primary);
+        text-decoration: none;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .back-link-btn:hover {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary);
+        transform: translateX(-4px);
+    }
+
+    body.dark-theme .back-link-btn:hover {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    /* ===== PROPERTY HEADER CARD ===== */
+    .property-header-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: var(--shadow-2);
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .property-title-section {
+        margin-bottom: 1rem;
+    }
+
+    .property-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.75rem;
+    }
+
+    .location-badge {
+        display: inline-flex;
+        align-items: center;
+        background: var(--fb-light-blue);
+        color: var(--fb-primary);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    body.dark-theme .location-badge {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    .price-tag-display {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+
+    .price-amount {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--fb-primary);
+    }
+
+    .price-label {
+        color: var(--text-secondary);
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .save-property-btn {
+        background: transparent;
+        border: 2px solid var(--fb-primary);
+        color: var(--fb-primary);
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 600;
+    }
+
+    .save-property-btn:hover {
+        background: var(--fb-primary);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    /* ===== GALLERY CARD ===== */
+    .gallery-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-2);
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .main-gallery-container {
+        position: relative;
+        width: 100%;
+        height: 500px;
+        background: #000;
+        overflow: hidden;
+    }
+
+    .gallery-main-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+        pointer-events: none;
+    }
+
+    .gallery-main-image.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .gallery-arrow-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        color: var(--fb-primary);
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 10;
+        box-shadow: var(--shadow-3);
+    }
+
+    body.dark-theme .gallery-arrow-btn {
+        background: rgba(24, 24, 26, 0.95);
+        color: var(--fb-primary);
+    }
+
+    .gallery-arrow-btn:hover {
+        background: var(--fb-primary);
+        color: white;
+        transform: translateY(-50%) scale(1.1);
+        box-shadow: var(--shadow-hover);
+    }
+
+    .prev-arrow {
+        left: 20px;
+    }
+
+    .next-arrow {
+        right: 20px;
+    }
+
+    .image-count-badge {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        z-index: 10;
+    }
+
+    .fullscreen-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        color: var(--fb-primary);
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 10;
+        box-shadow: var(--shadow-3);
+    }
+
+    body.dark-theme .fullscreen-btn {
+        background: rgba(24, 24, 26, 0.95);
+        color: var(--fb-primary);
+    }
+
+    .fullscreen-btn:hover {
+        background: var(--fb-primary);
+        color: white;
+        transform: scale(1.1);
+    }
+
+    /* ===== THUMBNAIL STRIP ===== */
+    .thumbnail-strip {
+        padding: 1rem;
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .thumbnail-wrapper {
+        display: flex;
+        gap: 0.75rem;
+        overflow-x: auto;
+        padding: 0.5rem 0;
+        scroll-behavior: smooth;
+    }
+
+    .thumbnail-box {
+        flex: 0 0 auto;
+        width: 100px;
+        height: 75px;
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: pointer;
+        border: 3px solid transparent;
+        transition: all 0.3s ease;
+    }
+
+    .thumbnail-box.active {
+        border-color: var(--fb-primary);
+        box-shadow: 0 0 0 2px var(--fb-light-blue);
+    }
+
+    .thumbnail-box:hover {
+        border-color: var(--fb-primary);
+        transform: translateY(-2px);
+    }
+
+    .thumbnail-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .thumbnail-wrapper::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .thumbnail-wrapper::-webkit-scrollbar-track {
+        background: var(--bg-tertiary);
+        border-radius: 3px;
+    }
+
+    .thumbnail-wrapper::-webkit-scrollbar-thumb {
+        background: var(--fb-primary);
+        border-radius: 3px;
+    }
+
+    /* ===== INFO TABS CARD ===== */
+    .info-tabs-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-2);
+        animation: fadeInUp 0.7s ease-out;
+    }
+
+    .custom-nav-tabs {
+        display: flex;
+        gap: 0.5rem;
+        border-bottom: 2px solid var(--border-color);
+        padding: 0;
+        margin: 0 0 2rem 0;
+        list-style: none;
+    }
+
+    .custom-nav-item {
+        margin: 0;
+    }
+
+    .custom-tab-btn {
+        background: transparent;
+        border: none;
+        padding: 1rem 1.5rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-bottom: 3px solid transparent;
+        display: flex;
+        align-items: center;
+    }
+
+    .custom-tab-btn:hover {
+        color: var(--fb-primary);
+        background: var(--bg-hover);
+        border-radius: 8px 8px 0 0;
+    }
+
+    .custom-tab-btn.active {
+        color: var(--fb-primary);
+        border-bottom-color: var(--fb-primary);
+    }
+
+    .tab-content-area {
+        min-height: 300px;
+    }
+
+    .tab-panel {
+        display: none;
+        animation: fadeIn 0.4s ease-out;
+    }
+
+    .tab-panel.active {
+        display: block;
+    }
+
+    .content-section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .content-section-title i {
+        color: var(--fb-primary);
+    }
+
+    .property-description {
+        color: var(--text-secondary);
+        line-height: 1.8;
+        font-size: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    /* ===== PROPERTY STATS GRID ===== */
+    .property-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .stat-box {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.50rem;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+
+    .stat-box:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-3);
+        border-color: var(--fb-primary);
+    }
+
+    .stat-icon-wrapper {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--fb-light-blue);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    body.dark-theme .stat-icon-wrapper {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    .stat-icon-wrapper i {
+        font-size: 1.5rem;
+        color: var(--fb-primary);
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    /* ===== AMENITIES SHOWCASE ===== */
+    .amenities-showcase-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .amenity-item-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+
+    .amenity-item-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-3);
+        border-color: var(--fb-primary);
+    }
+
+    .amenity-icon-circle {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--fb-light-blue);
+        border-radius: 12px;
+        flex-shrink: 0;
+    }
+
+    body.dark-theme .amenity-icon-circle {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    .amenity-icon-circle i {
+        font-size: 1.5rem;
+        color: var(--fb-primary);
+    }
+
+    .amenity-item-name {
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    /* ===== DETAILS INFO LIST ===== */
+    .details-info-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .detail-info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+
+    .detail-info-row:hover {
+        background: var(--bg-hover);
+        border-color: var(--fb-primary);
+    }
+
+    .detail-label-text {
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .detail-value-text {
+        color: var(--text-primary);
+        font-weight: 600;
+        text-align: right;
+        font-size: 1rem;
+    }
+
+    .price-highlight-text {
+        color: var(--fb-primary);
+        font-size: 1.3rem;
+        font-weight: 700;
+    }
+
+    .text-success-custom {
+        color: var(--success) !important;
+    }
+
+    .text-danger-custom {
+        color: var(--danger) !important;
+    }
+
+    .gender-badge-girls,
+    .gender-badge-boys,
+    .gender-badge-both {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .gender-badge-girls {
+        background: rgba(255, 105, 180, 0.1);
+        color: #ff69b4;
+        border: 1px solid #ff69b4;
+    }
+
+    .gender-badge-boys {
+        background: rgba(0, 191, 255, 0.1);
+        color: #00bfff;
+        border: 1px solid #00bfff;
+    }
+
+    .gender-badge-both {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary);
+        border: 1px solid var(--fb-primary);
+    }
+
+    body.dark-theme .gender-badge-both {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    /* ===== LOCATION MAP CARD ===== */
+    .map-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.75rem;
+        box-shadow: var(--shadow-2);
+        animation: fadeInUp 0.7s ease-out;
+    }
+
+    .map-description {
+        color: var(--text-secondary);
+        margin-bottom: 1.25rem;
+        line-height: 1.6;
+        font-size: 0.95rem;
+    }
+
+    .map-frame-wrapper {
+        position: relative;
+        width: 100%;
+        padding-top: 56.25%;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-2);
+    }
+
+    .map-frame {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
+
+    .map-card:hover .map-frame-wrapper {
+        border-color: var(--fb-primary);
+        box-shadow: var(--shadow-hover);
+    }
+
+    /* ===== REVIEWS SECTION ===== */
+    .reviews-section-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: var(--shadow-2);
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    .rating-summary-box {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 2rem;
+    }
+
+    .rating-score-display {
+        font-size: 4rem;
+        font-weight: 700;
+        color: var(--fb-primary);
+        line-height: 1;
+    }
+
+    .stars-display {
+        color: #ffc107;
+        font-size: 1.5rem;
+    }
+
+    .stars-display i {
+        margin: 0 2px;
+    }
+
+    .stars-display-small {
+        color: #ffc107;
+        font-size: 1rem;
+    }
+
+    .stars-display-small i {
+        margin: 0 1px;
+    }
+
+    .review-count-text {
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin: 0;
+    }
+
+    .btn-write-review {
+        background: var(--fb-primary);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-write-review:hover {
+        background: var(--fb-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    .user-review-alert {
+        background: var(--fb-light-blue);
+        border: 1px solid var(--fb-primary);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-top: 1rem;
+    }
+
+    body.dark-theme .user-review-alert {
+        background: rgba(24, 119, 242, 0.15);
+    }
+
+    .user-review-alert strong {
+        color: var(--text-primary);
+        font-weight: 700;
+    }
+
+    .user-review-alert p {
+        color: var(--text-primary);
+    }
+
+    .btn-review-action-edit,
+    .btn-review-action-delete {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-review-action-edit {
+        background: transparent;
+        color: var(--fb-primary);
+        border: 2px solid var(--fb-primary);
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-review-action-edit:hover {
+        background: var(--fb-primary);
+        color: white;
+    }
+
+    .btn-review-action-delete {
+        background: transparent;
+        color: var(--danger);
+        border: 2px solid var(--danger);
+        margin-left: 0.5rem;
+    }
+
+    .btn-review-action-delete:hover {
+        background: var(--danger);
+        color: white;
+    }
+
+    .reviews-list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .review-item-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .review-item-card:hover {
+        box-shadow: var(--shadow-3);
+        border-color: var(--fb-primary);
+    }
+
+    .review-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+
+    .reviewer-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .reviewer-avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background: var(--fb-primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+
+    .reviewer-name {
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 1rem;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .review-date-text {
+        color: var(--text-tertiary);
+        font-size: 0.85rem;
+    }
+
+    .review-comment-text {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    .empty-reviews-box {
+        text-align: center;
+        padding: 3rem;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+
+    .empty-reviews-box i {
+        font-size: 3rem;
+        color: var(--text-tertiary);
+        opacity: 0.5;
+        margin-bottom: 1rem;
+    }
+
+    .empty-reviews-box p {
+        color: var(--text-secondary);
+        margin: 0;
+    }
+
+    .empty-state-box {
+        text-align: center;
+        padding: 3rem;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+
+    .empty-state-box i {
+        font-size: 3rem;
+        color: var(--text-tertiary);
+        opacity: 0.5;
+        display: block;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state-box p {
+        color: var(--text-secondary);
+        margin: 0;
+    }
+
+/* Add this to your existing CSS */
+.tab-panel {
+    display: none;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+.error-message {
+    color: var(--danger) !important;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.form-input-field.error {
+    border-color: var(--danger) !important;
+}
+    /* ===== BOOKING INFO CARD ===== */
+    .booking-info-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: visible;
+        box-shadow: var(--shadow-3);
+        animation: fadeInUp 0.6s ease-out;
+        position: -webkit-sticky;
+        position: sticky;
+        top: 90px;
+        align-self: flex-start;
+        z-index: 50;
+        max-height: calc(100vh - 110px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .owner-contact-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-2);
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .booking-card-header,
+    .owner-card-header {
+        background: linear-gradient(135deg, var(--fb-primary) 0%, var(--fb-primary-hover) 100%);
+        padding: 1.5rem;
+        border-bottom: none;
+        flex-shrink: 0;
+    }
+
+    .booking-card-title,
+    .owner-card-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: white;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .booking-card-body,
+    .owner-card-body {
+        padding: 1.5rem;
+    }
+
+    .booking-card-body {
+        max-height: calc(100vh - 150px);
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .booking-card-body::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .booking-card-body::-webkit-scrollbar-track {
+        background: var(--bg-secondary);
+        border-radius: 3px;
+    }
+
+    .booking-card-body::-webkit-scrollbar-thumb {
+        background: var(--fb-primary);
+        border-radius: 3px;
+    }
+
+    .booking-card-body::-webkit-scrollbar-thumb:hover {
+        background: var(--fb-primary-hover);
+    }
+
+    .owner-card-body {
+        padding: 1.5rem;
+    }
+
+    /* ===== BOOKING FORM ===== */
+    .booking-input-form .form-input-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .input-label-text {
+        display: block;
+        color: var(--text-primary);
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .form-input-field {
+        width: 100%;
+        padding: 0.875rem;
+        background: var(--bg-secondary);
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        font-family: inherit;
+    }
+
+    .form-input-field:focus {
+        outline: none;
+        border-color: var(--fb-primary);
+        box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+    }
+
+    .input-helper-text {
+        display: block;
+        color: var(--text-tertiary);
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+    }
+
+    .price-breakdown-box {
+        background: var(--bg-secondary);
+        padding: 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .price-breakdown-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+    }
+
+    .price-breakdown-row.total-row {
+        border-top: 2px solid var(--border-color);
+        margin-top: 0.75rem;
+        padding-top: 1rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+    }
+
+    .price-amount-text {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .total-price-text {
+        color: var(--fb-primary);
+        font-weight: 700;
+        font-size: 1.3rem;
+    }
+
+    .btn-book-now {
+        background: var(--fb-primary);
+        color: white;
+        border: none;
+        padding: 1rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .btn-book-now:hover {
+        background: var(--fb-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    /* ===== BOOKING STATUS ===== */
+    .booking-status-display {
+        text-align: center;
+        padding: 2rem 1rem;
+    }
+
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.875rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        font-size: 1rem;
+    }
+
+    .status-indicator.status-pending {
+        background: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+        border: 2px solid #ffc107;
+    }
+
+    .status-indicator.status-approved {
+        background: rgba(49, 162, 76, 0.1);
+        color: var(--success);
+        border: 2px solid var(--success);
+    }
+
+    .status-indicator.status-rejected {
+        background: rgba(231, 76, 60, 0.1);
+        color: var(--danger);
+        border: 2px solid var(--danger);
+    }
+
+    .status-message-text {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin: 1rem 0 0 0;
+    }
+
+    /* ===== AVAILABILITY DISPLAY ===== */
+    .availability-display-box {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        padding: 1.25rem;
+        border-radius: 12px;
+    }
+
+    .availability-info-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-primary);
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .availability-info-row i {
+        color: var(--fb-primary);
+    }
+
+    .availability-badge-row {
+        text-align: center;
+    }
+
+    .availability-badge {
+        padding: 0.625rem 1.25rem;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .availability-badge.badge-full {
+        background: rgba(49, 162, 76, 0.1);
+        color: var(--success);
+        border: 2px solid var(--success);
+    }
+
+    .availability-badge.badge-none {
+        background: rgba(231, 76, 60, 0.1);
+        color: var(--danger);
+        border: 2px solid var(--danger);
+    }
+
+    .availability-badge.badge-limited {
+        background: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+        border: 2px solid #ffc107;
+    }
+
+    .availability-badge.badge-good {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary);
+        border: 2px solid var(--fb-primary);
+    }
+
+    body.dark-theme .availability-badge.badge-good {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    /* ===== FULLY BOOKED STATE ===== */
+    .fully-booked-display {
+        text-align: center;
+        padding: 2rem;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        border: 2px solid var(--danger);
+    }
+
+    .booked-icon-wrapper {
+        margin-bottom: 1rem;
+    }
+
+    .booked-icon-wrapper i {
+        font-size: 4rem;
+        color: var(--danger);
+    }
+
+    .booked-title {
+        color: var(--text-primary);
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+    }
+
+    .booked-message {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    /* ===== LOGIN REQUIRED STATE ===== */
+    .login-required-display {
+        text-align: center;
+        padding: 2rem;
+    }
+
+    .login-icon-wrapper {
+        margin-bottom: 1rem;
+    }
+
+    .login-icon-wrapper i {
+        font-size: 4rem;
+        color: var(--fb-primary);
+    }
+
+    .login-title {
+        color: var(--text-primary);
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+    }
+
+    .login-message {
+        color: var(--text-secondary);
+        margin: 1rem 0 1.5rem 0;
+    }
+
+    .btn-login-now {
+        background: var(--fb-primary);
+        color: white;
+        border: none;
+        padding: 1rem;
+        border-radius: 12px;
+        font-weight: 700;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .btn-login-now:hover {
+        background: var(--fb-primary-hover);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    /* ===== OWNER CONTACT CARD ===== */
+    .owner-profile-section {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 1.5rem;
+    }
+
+    .owner-avatar-circle {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--fb-primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .owner-display-name {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .owner-role-text {
+        color: var(--text-tertiary);
+        font-size: 0.85rem;
+    }
+
+    .owner-contact-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .contact-info-link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.875rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+
+    .contact-info-link:hover {
+        color: var(--fb-primary);
+        border-color: var(--fb-primary);
+        background: var(--fb-light-blue);
+        transform: translateX(5px);
+    }
+
+    body.dark-theme .contact-info-link:hover {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    .contact-info-link i {
+        color: var(--fb-primary);
+        font-size: 1.2rem;
+    }
+
+    .btn-message-owner {
+        background: transparent;
+        color: var(--fb-primary);
+        border: 2px solid var(--fb-primary);
+        padding: 0.875rem;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-message-owner:hover {
+        background: var(--fb-primary);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    /* ===== GALLERY CARD - FIXED VERSION ===== */
+    .gallery-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-2);
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .main-gallery-container {
+        position: relative;
+        width: 100%;
+        height: 500px;
+        background: #000;
+        overflow: hidden;
+        isolation: isolate; /* CRITICAL FIX: Creates new stacking context */
+    }
+
+    /* CRITICAL FIX: Force proper image stacking */
+    .gallery-main-image {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        opacity: 0 !important;
+        transition: opacity 0.4s ease-in-out !important;
+        pointer-events: none !important;
+        z-index: 1 !important;
+    }
+
+    /* CRITICAL FIX: Active image must have higher z-index */
+    .gallery-main-image.active {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        z-index: 10 !important;
+    }
+
+    .gallery-arrow-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        color: var(--fb-primary);
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 100; /* Higher than images */
+        box-shadow: var(--shadow-3);
+    }
+
+    body.dark-theme .gallery-arrow-btn {
+        background: rgba(24, 24, 26, 0.95);
+        color: var(--fb-primary);
+    }
+
+    .gallery-arrow-btn:hover {
+        background: var(--fb-primary);
+        color: white;
+        transform: translateY(-50%) scale(1.1);
+        box-shadow: var(--shadow-hover);
+    }
+
+    .prev-arrow {
+        left: 20px;
+    }
+
+    .next-arrow {
+        right: 20px;
+    }
+
+    .image-count-badge {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        z-index: 100; /* Higher than images */
+    }
+
+    .fullscreen-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        color: var(--fb-primary);
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 100; /* Higher than images */
+        box-shadow: var(--shadow-3);
+    }
+
+    body.dark-theme .fullscreen-btn {
+        background: rgba(24, 24, 26, 0.95);
+        color: var(--fb-primary);
+    }
+
+    .fullscreen-btn:hover {
+        background: var(--fb-primary);
+        color: white;
+        transform: scale(1.1);
+    }
+    /* ===== FULLSCREEN GALLERY FIXES ===== */
+    .modal-gallery-content {
+        background: #000 !important;
+        border: none !important;
+    }
+
+    .modal-gallery-header {
+        background: rgba(0, 0, 0, 0.95) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        padding: 1.5rem !important;
+    }
+
+    .modal-gallery-body {
+        padding: 0 !important;
+        background: #000 !important;
+    }
+
+    .fullscreen-gallery-container {
+        position: relative !important;
+        width: 100% !important;
+        height: calc(100vh - 80px) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: #000 !important;
+        isolation: isolate !important; /* CRITICAL FIX */
+    }
+
+    .fullscreen-gallery-image {
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        max-width: 95% !important;
+        max-height: 95% !important;
+        object-fit: contain !important;
+        opacity: 0 !important;
+        transition: opacity 0.4s ease-in-out !important;
+        z-index: 1 !important;
+    }
+
+    .fullscreen-gallery-image.active {
+        opacity: 1 !important;
+        z-index: 10 !important;
+    }
+
+    .fullscreen-arrow-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        color: var(--fb-primary);
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 1000;
+    }
+
+    .fullscreen-arrow-btn:hover {
+        background: var(--fb-primary);
+        color: white;
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    .fullscreen-prev {
+        left: 30px;
+    }
+
+    .fullscreen-next {
+        right: 30px;
+    }
+
+    .fullscreen-counter-badge {
+        position: absolute;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 0.875rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 700;
+        font-size: 1rem;
+        border: 2px solid var(--fb-primary);
+        z-index: 1000;
+    }
+
+    /* ===== REVIEW MODAL ===== */
+    .review-modal-content {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+    }
+
+    .review-modal-header {
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.5rem;
+    }
+
+    .review-modal-title {
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .review-modal-title i {
+        color: var(--fb-primary);
+    }
+
+    .review-modal-body {
+        padding: 1.5rem;
+    }
+
+    .review-form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .review-form-label {
+        display: block;
+        color: var(--text-primary);
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+    }
+
+    .rating-input-stars {
+        direction: rtl;
+        display: inline-flex;
+        gap: 0.25rem;
+    }
+
+    .rating-input-stars input[type="radio"] {
+        display: none;
+    }
+
+    .rating-input-stars label {
+        color: var(--border-color);
+        font-size: 2.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .rating-input-stars input[type="radio"]:checked ~ label,
+    .rating-input-stars label:hover,
+    .rating-input-stars label:hover ~ label {
+        color: #ffc107;
+    }
+
+    .review-form-textarea {
+        width: 100%;
+        padding: 0.875rem;
+        background: var(--bg-secondary);
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 1rem;
+        font-family: inherit;
+        resize: vertical;
+        transition: all 0.3s ease;
+    }
+
+    .review-form-textarea:focus {
+        outline: none;
+        border-color: var(--fb-primary);
+        box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+    }
+
+    .review-form-textarea::placeholder {
+        color: var(--text-tertiary);
+    }
+
+    .review-modal-footer {
+        border-top: 1px solid var(--border-color);
+        padding: 1.5rem;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+    }
+
+    .btn-cancel-review {
+        background: transparent;
+        color: var(--text-secondary);
+        border: 2px solid var(--border-color);
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-cancel-review:hover {
+        background: var(--bg-hover);
+        border-color: var(--text-secondary);
+        color: var(--text-primary);
+    }
+
+    .btn-submit-review {
+        background: var(--fb-primary);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-submit-review:hover {
+        background: var(--fb-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    /* ===== BOOKING CONFIRMATION MODAL ===== */
+    .confirm-modal-content {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        box-shadow: var(--shadow-4);
+    }
+
+    .confirm-modal-header {
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.5rem;
+        background: var(--bg-secondary);
+    }
+
+    .confirm-modal-title {
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 1.3rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .confirm-modal-title i {
+        color: var(--fb-primary);
+    }
+
+    .confirm-modal-body {
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .confirm-icon-wrapper {
+        margin-bottom: 1.5rem;
+    }
+
+    .confirm-icon-wrapper i {
+        font-size: 5rem;
+        color: var(--fb-primary);
+    }
+
+    .confirm-question {
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .confirm-details-box {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        text-align: left;
+    }
+
+    .confirm-detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--divider-color);
+    }
+
+    .confirm-detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .confirm-detail-row.highlight-row {
+        background: var(--fb-light-blue);
+        margin: 0 -1.5rem;
+        padding: 1rem 1.5rem;
+        border-radius: 0 0 12px 12px;
+        border-bottom: none;
+    }
+
+    body.dark-theme .confirm-detail-row.highlight-row {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    .confirm-label {
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .confirm-value {
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .highlight-row .confirm-label,
+    .highlight-row .confirm-value {
+        color: var(--fb-primary);
+        font-size: 1.1rem;
+    }
+
+    .confirm-note-text {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .confirm-note-text i {
+        color: var(--fb-primary);
+    }
+
+    .confirm-modal-footer {
+        border-top: 1px solid var(--border-color);
+        padding: 1.5rem;
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    .btn-cancel-booking {
+        background: transparent;
+        color: var(--danger);
+        border: 2px solid var(--danger);
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-cancel-booking:hover {
+        background: var(--danger);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .btn-confirm-booking {
+        background: var(--fb-primary);
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-confirm-booking:hover {
+        background: var(--fb-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* ===== RESPONSIVE DESIGN ===== */
+    @media (max-width: 992px) {
+        .sidebar {
+            width: 100%;
+            min-width: auto;
+            height: auto;
+            border-right: none;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+        
+        .property-header-card .col-lg-4 {
+            margin-top: 1.5rem;
+            text-align: left !important;
+        }
+        
+        .price-tag-display {
+            justify-content: flex-start;
+        }
+        
+        .booking-info-card {
+            position: relative;
+            top: 0;
+            margin-top: 2rem;
+        }
+        
+        .booking-card-body {
+            max-height: none;
+        }
+        
+        .owner-contact-card {
+            margin-top: 2rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .property-title {
+            font-size: 1.5rem;
+        }
+        
+        .price-amount {
+            font-size: 2rem;
+        }
+        
+        .main-gallery-container {
+            height: 350px;
+        }
+        
+        .gallery-arrow-btn {
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+        }
+        
+        .prev-arrow {
+            left: 10px;
+        }
+        
+        .next-arrow {
+            right: 10px;
+        }
+        
+        .thumbnail-box {
+            width: 80px;
+            height: 60px;
+        }
+        
+        .property-stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .amenities-showcase-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .custom-tab-btn {
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+        }
+        
+        .detail-info-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        
+        .detail-value-text {
+            text-align: left;
+        }
+        
+        .fullscreen-arrow-btn {
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+        }
+        
+        .fullscreen-prev {
+            left: 15px;
+        }
+        
+        .fullscreen-next {
+            right: 15px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .property-header-card {
+            padding: 1rem;
+        }
+        
+        .main-gallery-container {
+            height: 300px;
+        }
+        
+        .gallery-arrow-btn {
+            width: 35px;
+            height: 35px;
+            font-size: 1rem;
+        }
+        
+        .thumbnail-box {
+            width: 70px;
+            height: 50px;
+        }
+        
+        .info-tabs-card {
+            padding: 1rem;
+        }
+        
+        .custom-nav-tabs {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+        }
+        
+        .content-section-title {
+            font-size: 1.2rem;
+        }
+        
+        .booking-card-body,
+        .owner-card-body {
+            padding: 1rem;
+        }
+        
+        .confirm-modal-body {
+            padding: 1.5rem;
+        }
+        
+        .confirm-question {
+            font-size: 1.2rem;
+        }
+        
+        .confirm-icon-wrapper i {
+            font-size: 4rem;
+        }
+        
+        .confirm-modal-footer {
+            flex-direction: column;
+        }
+        
+        .btn-cancel-booking,
+        .btn-confirm-booking {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    /* ===== CUSTOM SCROLLBAR ===== */
+    .sidebar::-webkit-scrollbar,
+    .thumbnail-wrapper::-webkit-scrollbar,
+    .booking-info-card::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-track,
+    .thumbnail-wrapper::-webkit-scrollbar-track,
+    .booking-info-card::-webkit-scrollbar-track {
+        background: var(--bg-secondary);
+        border-radius: 3px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb,
+    .thumbnail-wrapper::-webkit-scrollbar-thumb,
+    .booking-info-card::-webkit-scrollbar-thumb {
+        background: var(--fb-primary);
+        border-radius: 3px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb:hover,
+    .thumbnail-wrapper::-webkit-scrollbar-thumb:hover,
+    .booking-info-card::-webkit-scrollbar-thumb:hover {
+        background: var(--fb-primary-hover);
+    }
+
+    /* ===== SMOOTH TRANSITIONS ===== */
+    * {
+        transition-property: background-color, border-color, color, fill, stroke;
+        transition-duration: 0.3s;
+        transition-timing-function: ease;
+    }
+
+    /* Exclude animations from transition */
+    .gallery-main-image,
+    .fullscreen-gallery-image,
+    .tab-panel,
+    .gallery-arrow-btn,
+    .fullscreen-arrow-btn,
+    .theme-toggle-btn,
+    button,
+    a {
+        transition: all 0.3s ease;
+    }
+    </style>
+
+    <script>
+    // ===== THEME TOGGLE FUNCTIONALITY =====
+    // ===== THEME TOGGLE FUNCTIONALITY =====
+function toggleTheme() {
+    const body = document.body;
+    const themeIcon = document.getElementById('themeIcon');
+    
+    body.classList.toggle('dark-theme');
+    
+    if (body.classList.contains('dark-theme')) {
+        themeIcon.className = 'bi bi-moon-fill';
+        localStorage.setItem('boardify_theme', 'dark');
+    } else {
+        themeIcon.className = 'bi bi-sun-fill';
+        localStorage.setItem('boardify_theme', 'light');
+    }
+}
+
+// ===== MAIN INITIALIZATION =====
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🏠 Boardify Property Detail Page Loading...');
+    
+    // Load saved theme
+    initializeTheme();
+    
+    // Initialize all event listeners
+    initializeTabs();
+    initializeGallery();
+    initializeBookingForm();
+    initializeModals();
+    initializeFavorites();
+    
+    console.log('✨ All features initialized successfully!');
+});
+
+// ===== THEME INITIALIZATION =====
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('boardify_theme');
+    const body = document.body;
+    const themeIcon = document.getElementById('themeIcon');
+    
+    if (savedTheme === 'dark') {
+        body.classList.add('dark-theme');
+        if (themeIcon) themeIcon.className = 'bi bi-moon-fill';
+    } else {
+        if (themeIcon) themeIcon.className = 'bi bi-sun-fill';
+    }
+}
+
+// ===== TAB FUNCTIONALITY =====
+function initializeTabs() {
+    const tabButtons = document.querySelectorAll('.custom-tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    
+    console.log(`📑 Found ${tabButtons.length} tab buttons and ${tabPanels.length} tab panels`);  // ✅ FIXED: Added backticks
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+            
+            // Remove active class from all buttons and panels
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabPanels.forEach(panel => panel.classList.remove('active'));
+            
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            // Show corresponding panel
+            const targetPanel = document.getElementById(targetTab + '-tab');
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+                console.log(`✅ Switched to ${targetTab} tab`);  // ✅ FIXED: Added backticks
+            }
+        });
+    });
+}
+
+// ===== SIMPLE GALLERY FUNCTIONALITY =====
+function initializeGallery() {
+    const mainImages = document.querySelectorAll('.gallery-main-image');
+    const thumbnails = document.querySelectorAll('.thumbnail-box');
+    const prevBtn = document.querySelector('.prev-arrow');
+    const nextBtn = document.querySelector('.next-arrow');
+    
+    let currentIndex = 0;
+    
+    function showImage(index) {
+        // Hide all images
+        mainImages.forEach(img => {
+            img.classList.remove('active');
+            img.style.opacity = '0';
+        });
+        
+        // Show selected image
+        mainImages[index].classList.add('active');
+        mainImages[index].style.opacity = '1';
+        
+        // Update thumbnails
+        thumbnails.forEach((thumb, i) => {
+            thumb.classList.toggle('active', i === index);
+        });
+        
+        // Update counter
+        const currentNum = document.querySelector('.current-image-num');
+        if (currentNum) {
+            currentNum.textContent = index + 1;
+        }
+        
+        currentIndex = index;
+    }
+    
+    // Thumbnail click events
+    thumbnails.forEach((thumb, index) => {
+        thumb.addEventListener('click', () => showImage(index));
+    });
+    
+    // Navigation arrows
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            let newIndex = currentIndex - 1;
+            if (newIndex < 0) newIndex = mainImages.length - 1;
+            showImage(newIndex);
+        });
+    }
+    
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            let newIndex = currentIndex + 1;
+            if (newIndex >= mainImages.length) newIndex = 0;
+            showImage(newIndex);
+        });
+    }
+    
+    // Fullscreen button
+    const fullscreenBtn = document.querySelector('.fullscreen-btn');
+    if (fullscreenBtn) {
+        fullscreenBtn.addEventListener('click', () => {
+            const modal = new bootstrap.Modal(document.getElementById('fullscreenGalleryModal'));
+            modal.show();
+        });
+    }
+}
+
+// ===== BOOKING FORM FUNCTIONALITY =====
+function initializeBookingForm() {
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    const totalPriceDisplay = document.getElementById('calculatedTotal');
+    const bookNowBtn = document.querySelector('[data-action="confirm-booking"]');
+    
+    if (!startDateInput || !endDateInput || !bookNowBtn) {
+        console.log('❌ Booking form elements not found');
+        return;
+    }
+    
+    // Get monthly price
+    const priceElement = document.querySelector('.price-amount');
+    let monthlyPrice = 0;
+    if (priceElement) {
+        const priceText = priceElement.textContent.replace(/[₱,]/g, '');
+        monthlyPrice = parseFloat(priceText) || 0;
+    }
+    
+    const dailyRate = monthlyPrice / 30;
+    
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    startDateInput.min = today;
+    endDateInput.min = today;
+    
+    // Update end date min when start date changes
+    startDateInput.addEventListener('change', function() {
+        if (this.value) {
+            const nextDay = new Date(this.value);
+            nextDay.setDate(nextDay.getDate() + 1);
+            endDateInput.min = nextDay.toISOString().split('T')[0];
+            
+            // If end date is before new min, clear it
+            if (endDateInput.value && new Date(endDateInput.value) < nextDay) {
+                endDateInput.value = '';
+            }
+        }
+        calculateTotal();
+    });
+    
+    endDateInput.addEventListener('change', calculateTotal);
+    
+    // Book Now button
+    bookNowBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Basic validation
+        if (!startDateInput.value || !endDateInput.value) {
+            showToast('Please select both check-in and check-out dates.', 'danger');
+            return;
+        }
+        
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (endDate <= startDate) {
+            showToast('Check-out date must be after check-in date.', 'danger');
+            return;
+        }
+        
+        confirmBooking();
+    });
+    
+    function calculateTotal() {
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        
+        if (!startDate || !endDate) {
+            totalPriceDisplay.textContent = '₱0';
+            return;
+        }
+        
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        if (end <= start) {
+            totalPriceDisplay.textContent = '₱0';
+            return;
+        }
+        
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const total = diffDays * dailyRate;
+        
+        totalPriceDisplay.textContent = '₱' + total.toLocaleString('en-PH', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+    
+    function confirmBooking() {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        const totalPrice = totalPriceDisplay.textContent;
+        
+        // Format dates for display
+        const startFormatted = startDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
+        const endFormatted = endDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
+        // Update confirmation modal
+        const confirmCheckin = document.getElementById('confirmCheckin');
+        const confirmCheckout = document.getElementById('confirmCheckout');
+        const confirmTotal = document.getElementById('confirmTotal');
+        
+        if (confirmCheckin) confirmCheckin.textContent = startFormatted;
+        if (confirmCheckout) confirmCheckout.textContent = endFormatted;
+        if (confirmTotal) confirmTotal.textContent = totalPrice;
+        
+        // Show confirmation modal
+        const modalElement = document.getElementById('bookingConfirmModal');
+        if (modalElement) {
+            const confirmModal = new bootstrap.Modal(modalElement);
+            confirmModal.show();
+        }
+    }
+    
+    // Initialize calculation
+    calculateTotal();
+}
+
+// ===== MODAL INITIALIZATION =====
+function initializeModals() {
+    // Review modal
+    const writeReviewBtn = document.querySelector('[data-action="open-review-modal"]');
+    if (writeReviewBtn) {
+        writeReviewBtn.addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('reviewSubmitModal'));
+            modal.show();
+        });
+    }
+    
+    // Booking confirmation submit
+    const confirmBookingBtn = document.querySelector('[data-action="submit-booking"]');
+    if (confirmBookingBtn) {
+        confirmBookingBtn.addEventListener('click', function() {
+            // Submit the actual form
+            const bookingForm = document.getElementById('bookingForm');
+            if (bookingForm) {
+                bookingForm.submit();
+            }
+        });
+    }
+}
+
+// ===== FAVORITES FUNCTIONALITY =====
+function initializeFavorites() {
+    const savePropertyBtn = document.querySelector('.save-property-btn');
+    if (savePropertyBtn) {
+        savePropertyBtn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            
+            if (icon.classList.contains('bi-heart')) {
+                icon.classList.remove('bi-heart');
+                icon.classList.add('bi-heart-fill');
+                this.style.background = 'var(--fb-primary)';
+                this.style.color = 'white';
+                showToast('Added to favorites!', 'success');
+            } else {
+                icon.classList.remove('bi-heart-fill');
+                icon.classList.add('bi-heart');
+                this.style.background = 'transparent';
+                this.style.color = 'var(--fb-primary)';
+                showToast('Removed from favorites', 'info');
+            }
+        });
+    }
+}
+
+// ===== TOAST NOTIFICATION =====
+function showToast(message, type = 'info') {
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.custom-toast');
+    existingToasts.forEach(toast => toast.remove());
+    
+    const toast = document.createElement('div');
+    toast.className = `custom-toast toast-${type}`;  // ✅ FIXED: Added backticks
+    
+    const icons = {
+        success: 'check-circle-fill',
+        danger: 'x-circle-fill',
+        warning: 'exclamation-circle-fill',
+        info: 'info-circle-fill'
+    };
+    
+    toast.innerHTML = `
+        <i class="bi bi-${icons[type] || 'info-circle-fill'} me-2"></i>
+        <span>${message}</span>
+    `;
+    
+    Object.assign(toast.style, {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        background: type === 'success' ? 'var(--success)' : 
+                   type === 'danger' ? 'var(--danger)' : 
+                   type === 'warning' ? 'var(--warning)' : 'var(--fb-primary)',
+        color: 'white',
+        padding: '1rem 1.5rem',
+        borderRadius: '12px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        zIndex: '9999',
+        display: 'flex',
+        alignItems: 'center',
+        fontWeight: '600',
+        fontSize: '0.95rem',
+        animation: 'slideInRight 0.3s ease-out'
+    });
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Add toast animations
+if (!document.querySelector('#toast-animations')) {
+    const style = document.createElement('style');
+    style.id = 'toast-animations';
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+    // ===== LAZY LOADING FOR IMAGES =====
+    window.addEventListener('load', function() {
+        const images = document.querySelectorAll('img');
+        
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.style.opacity = '0';
+                    img.style.transition = 'opacity 0.5s ease';
+                    
+                    img.onload = function() {
+                        img.style.opacity = '1';
+                    };
+                    
+                    observer.unobserve(img);
+                }
+            });
+        });
+        
+        images.forEach(img => {
+            if (img.complete) {
+                img.style.opacity = '1';
+            } else {
+                imageObserver.observe(img);
+            }
+        });
+    });
+
+    // ===== SMOOTH SCROLL TO TOP ON PAGE LOAD =====
+    window.addEventListener('load', function() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // ===== FORM VALIDATION =====
+    document.addEventListener('DOMContentLoaded', function() {
+        const bookingForm = document.getElementById('bookingForm');
+        
+        if (bookingForm) {
+            const inputs = bookingForm.querySelectorAll('input[required]');
+            
+            inputs.forEach(input => {
+                input.addEventListener('invalid', function(e) {
+                    e.preventDefault();
+                    this.classList.add('error');
+                    
+                    if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('error-message')) {
+                        const errorMsg = document.createElement('small');
+                        errorMsg.className = 'error-message';
+                        errorMsg.style.color = 'var(--danger)';
+                        errorMsg.style.display = 'block';
+                        errorMsg.style.marginTop = '0.5rem';
+                        errorMsg.style.fontWeight = '600';
+                        errorMsg.textContent = 'This field is required';
+                        this.parentNode.appendChild(errorMsg);
+                    }
+                });
+                
+                input.addEventListener('input', function() {
+                    this.classList.remove('error');
+                    const errorMsg = this.parentNode.querySelector('.error-message');
+                    if (errorMsg) {
+                        errorMsg.remove();
+                    }
+                });
+            });
+        }
+    });
+
+    // ===== CONSOLE LOG FOR DEBUGGING =====
+    console.log('🏠 Boardify Property Detail Page Loaded - Facebook Blue Theme');
+    console.log('✨ All features initialized successfully!');
+    </script>
+    {% endblock %}

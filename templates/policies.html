@@ -1,0 +1,1245 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex" style="min-height: 100vh;">
+    <!-- Sidebar (Same as other pages) -->
+    <nav class="sidebar text-white p-4 d-flex flex-column">
+        <div class="mb-4">
+            <h3 class="mb-0">
+                <i class="bi bi-house-heart-fill me-2"></i>Boardify
+            </h3>
+        </div>
+
+        <div class="nav-links flex-grow-1">
+            <a href="{{ url_for('dashboard') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-speedometer2 me-3"></i> Dashboard
+            </a>
+            <a href="{{ url_for('viewproperties') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-building me-3"></i> Properties
+            </a>
+            {% if current_user.is_authenticated and current_user.role == 'landlord' %}
+            <a href="{{ url_for('add_property') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-plus-circle me-3"></i> Add Property
+            </a>
+            <a href="{{ url_for('approved_bookings') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-check2-square me-3"></i> Approvals
+            </a>
+            {% elif current_user.is_authenticated %}
+            <a href="{{ url_for('my_bookings_tenant_page') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-calendar-check me-3"></i> My Bookings
+            </a>
+            {% endif %}
+            <a href="{{ url_for('billing') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-receipt me-3"></i> Bills
+            </a>
+            <a href="{{ url_for('policies') }}" class="nav-link d-flex align-items-center active">
+                <i class="bi bi-file-text me-3"></i> Policies
+            </a>
+        </div>
+
+        <div class="mt-auto">
+            <a href="{{ url_for('help_support') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-question-circle me-3"></i> Help & Support
+            </a>
+            <a href="{{ url_for('logout') }}" class="nav-link d-flex align-items-center text-danger">
+                <i class="bi bi-box-arrow-right me-3"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="flex-grow-1 main-content">
+        <div class="container-fluid p-4">
+            <!-- Header -->
+            <div class="page-header-card mb-4">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <h1 class="page-title">
+                            <i class="bi bi-file-text-fill me-3"></i>Boardify Policies
+                        </h1>
+                        <p class="page-subtitle">Rules and guidelines for a safe and comfortable boarding experience</p>
+                    </div>
+                    {% if current_user.is_authenticated and current_user.role == 'landlord' %}
+                    <div class="col-lg-4 text-end">
+                        <button class="btn-add-policy" data-action="add-policy">
+                            <i class="bi bi-plus-circle me-2"></i>Add New Policy
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid mb-4">
+                <div class="stat-card stat-card-primary">
+                    <div class="stat-icon-wrapper">
+                        <i class="bi bi-file-text-fill"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">15</h3>
+                        <p class="stat-label">Total Policies</p>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-card-success">
+                    <div class="stat-icon-wrapper">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">8</h3>
+                        <p class="stat-label">Tenant Policies</p>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-card-warning">
+                    <div class="stat-icon-wrapper">
+                        <i class="bi bi-building-fill"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">4</h3>
+                        <p class="stat-label">Landlord Policies</p>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-card-info">
+                    <div class="stat-icon-wrapper">
+                        <i class="bi bi-shield-check-fill"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">3</h3>
+                        <p class="stat-label">Shared Policies</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Policies Section -->
+                <div class="col-lg-8">
+                    <!-- Payment Policy -->
+                    <div class="policy-card" data-policy-id="payment">
+                        <div class="policy-header" data-action="toggle-policy">
+                            <div class="policy-icon-wrapper icon-success">
+                                <i class="bi bi-credit-card-fill"></i>
+                            </div>
+                            <div class="policy-info">
+                                <h3 class="policy-title">Payment & Billing Policy</h3>
+                                <div class="policy-meta">
+                                    <span class="policy-badge badge-success">Tenant</span>
+                                    <span class="policy-date">Updated: Jan 15, 2024</span>
+                                </div>
+                            </div>
+                            <div class="policy-toggle-icon">
+                                <i class="bi bi-chevron-down"></i>
+                            </div>
+                        </div>
+                        <div class="policy-content">
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-calendar-event me-2"></i>Rent Payment Schedule</h4>
+                                <p>Rent is due on the 1st of each month. A 3-day grace period is provided.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-shield-fill-check me-2"></i>Security Deposit</h4>
+                                <p>Equivalent to one month's rent, refundable within 30 days after move-out.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-exclamation-triangle-fill me-2"></i>Late Payment Fee</h4>
+                                <p>5% of monthly rent if payment is received after the 5th of the month.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-wallet2 me-2"></i>Payment Methods</h4>
+                                <p>GCash, Bank Transfer, or Cash with official receipt.</p>
+                            </div>
+                            <div class="policy-footer">
+                                <span class="policy-applicable">Applicable to: <strong>Tenants Only</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cancellation Policy -->
+                    <div class="policy-card" data-policy-id="cancellation">
+                        <div class="policy-header" data-action="toggle-policy">
+                            <div class="policy-icon-wrapper icon-danger">
+                                <i class="bi bi-calendar-x-fill"></i>
+                            </div>
+                            <div class="policy-info">
+                                <h3 class="policy-title">Cancellation & Refund Policy</h3>
+                                <div class="policy-meta">
+                                    <span class="policy-badge badge-info">Both</span>
+                                    <span class="policy-date">Updated: Feb 1, 2024</span>
+                                </div>
+                            </div>
+                            <div class="policy-toggle-icon">
+                                <i class="bi bi-chevron-down"></i>
+                            </div>
+                        </div>
+                        <div class="policy-content">
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-x-circle me-2"></i>Booking Cancellation</h4>
+                                <p>Cancellations made 30+ days before move-in receive full refund minus processing fee.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-door-open me-2"></i>Early Termination</h4>
+                                <p>60-day notice required for early lease termination. One month's rent penalty applies.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-person-x me-2"></i>No-Show Policy</h4>
+                                <p>Failure to move in on scheduled date forfeits security deposit.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-building-x me-2"></i>Landlord Cancellation</h4>
+                                <p>If landlord cancels booking, full refund plus compensation of one night's stay.</p>
+                            </div>
+                            <div class="policy-footer">
+                                <span class="policy-applicable">Applicable to: <strong>Both Tenants & Landlords</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- House Rules -->
+                    <div class="policy-card" data-policy-id="house-rules">
+                        <div class="policy-header" data-action="toggle-policy">
+                            <div class="policy-icon-wrapper icon-warning">
+                                <i class="bi bi-house-fill"></i>
+                            </div>
+                            <div class="policy-info">
+                                <h3 class="policy-title">House Rules & Conduct</h3>
+                                <div class="policy-meta">
+                                    <span class="policy-badge badge-success">Tenant</span>
+                                    <span class="policy-date">Updated: Dec 20, 2023</span>
+                                </div>
+                            </div>
+                            <div class="policy-toggle-icon">
+                                <i class="bi bi-chevron-down"></i>
+                            </div>
+                        </div>
+                        <div class="policy-content">
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-moon-stars me-2"></i>Quiet Hours</h4>
+                                <p>10:00 PM to 7:00 AM daily. Please be considerate of fellow boarders.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-people me-2"></i>Guest Policy</h4>
+                                <p>Overnight guests allowed maximum 2 nights per month with prior notice.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-door-closed me-2"></i>Common Areas</h4>
+                                <p>Clean up after use. Kitchen closes at 11:00 PM.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-ban me-2"></i>Smoking</h4>
+                                <p>Strictly prohibited inside the building. Designated smoking area available.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-heart me-2"></i>Pets</h4>
+                                <p>Not allowed without prior written approval.</p>
+                            </div>
+                            <div class="policy-footer">
+                                <span class="policy-applicable">Applicable to: <strong>Tenants Only</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Safety Policy -->
+                    <div class="policy-card" data-policy-id="safety">
+                        <div class="policy-header" data-action="toggle-policy">
+                            <div class="policy-icon-wrapper icon-info">
+                                <i class="bi bi-shield-check-fill"></i>
+                            </div>
+                            <div class="policy-info">
+                                <h3 class="policy-title">Safety & Security Policy</h3>
+                                <div class="policy-meta">
+                                    <span class="policy-badge badge-info">Both</span>
+                                    <span class="policy-date">Updated: Jan 30, 2024</span>
+                                </div>
+                            </div>
+                            <div class="policy-toggle-icon">
+                                <i class="bi bi-chevron-down"></i>
+                            </div>
+                        </div>
+                        <div class="policy-content">
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-key-fill me-2"></i>Key Policy</h4>
+                                <p>Do not duplicate keys. Lost keys incur ₱500 replacement fee.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-fire me-2"></i>Emergency Procedures</h4>
+                                <p>Familiarize yourself with fire exits and emergency contacts.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-door-open-fill me-2"></i>Property Access</h4>
+                                <p>Landlord provides 24-hour notice before entering private rooms.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-camera-video-fill me-2"></i>Security Cameras</h4>
+                                <p>Common areas are monitored for safety. No cameras in private spaces.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-telephone-fill me-2"></i>Emergency Contacts</h4>
+                                <p>Posted in common areas and provided in welcome package.</p>
+                            </div>
+                            <div class="policy-footer">
+                                <span class="policy-applicable">Applicable to: <strong>Both Tenants & Landlords</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Maintenance Policy -->
+                    <div class="policy-card" data-policy-id="maintenance">
+                        <div class="policy-header" data-action="toggle-policy">
+                            <div class="policy-icon-wrapper icon-primary">
+                                <i class="bi bi-tools"></i>
+                            </div>
+                            <div class="policy-info">
+                                <h3 class="policy-title">Maintenance & Repairs</h3>
+                                <div class="policy-meta">
+                                    <span class="policy-badge badge-warning">Landlord</span>
+                                    <span class="policy-date">Updated: Nov 15, 2023</span>
+                                </div>
+                            </div>
+                            <div class="policy-toggle-icon">
+                                <i class="bi bi-chevron-down"></i>
+                            </div>
+                        </div>
+                        <div class="policy-content">
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-wrench me-2"></i>Routine Maintenance</h4>
+                                <p>Landlord responsible for all major repairs and building maintenance.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-exclamation-circle-fill me-2"></i>Emergency Repairs</h4>
+                                <p>Available 24/7 for urgent issues affecting safety or basic amenities.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-chat-square-text me-2"></i>Reporting Issues</h4>
+                                <p>Use Boardify app to report maintenance issues with photos.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-clock me-2"></i>Response Time</h4>
+                                <p>Non-emergency requests addressed within 48 hours.</p>
+                            </div>
+                            <div class="policy-section">
+                                <h4 class="policy-subtitle"><i class="bi bi-person-check me-2"></i>Tenant Responsibilities</h4>
+                                <p>Report issues promptly and allow access for repairs.</p>
+                            </div>
+                            <div class="policy-footer">
+                                <span class="policy-applicable">Applicable to: <strong>Landlords Only</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <div class="sidebar-sticky">
+                        <!-- Quick Links -->
+                        <div class="quick-links-card mb-4">
+                            <div class="quick-links-header">
+                                <h3 class="quick-links-title">
+                                    <i class="bi bi-lightning-fill me-2"></i>Quick Policy Links
+                                </h3>
+                            </div>
+                            <div class="quick-links-body">
+                                <a href="#" class="quick-link-item" data-policy="payment">
+                                    <i class="bi bi-credit-card-fill text-success me-3"></i>
+                                    <span>Payment Policies</span>
+                                    <i class="bi bi-chevron-right ms-auto"></i>
+                                </a>
+                                <a href="#" class="quick-link-item" data-policy="cancellation">
+                                    <i class="bi bi-calendar-x-fill text-danger me-3"></i>
+                                    <span>Cancellation Policies</span>
+                                    <i class="bi bi-chevron-right ms-auto"></i>
+                                </a>
+                                <a href="#" class="quick-link-item" data-policy="house-rules">
+                                    <i class="bi bi-house-fill text-warning me-3"></i>
+                                    <span>House Rules</span>
+                                    <i class="bi bi-chevron-right ms-auto"></i>
+                                </a>
+                                <a href="#" class="quick-link-item" data-policy="safety">
+                                    <i class="bi bi-shield-check-fill text-info me-3"></i>
+                                    <span>Safety & Security</span>
+                                    <i class="bi bi-chevron-right ms-auto"></i>
+                                </a>
+                                <a href="#" class="quick-link-item" data-policy="maintenance">
+                                    <i class="bi bi-tools text-primary me-3"></i>
+                                    <span>Maintenance</span>
+                                    <i class="bi bi-chevron-right ms-auto"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Policy Help -->
+                        <div class="help-card">
+                            <div class="help-header">
+                                <h3 class="help-title">
+                                    <i class="bi bi-question-circle-fill me-2"></i>Need Help?
+                                </h3>
+                            </div>
+                            <div class="help-body">
+                                <p class="help-text">If you have questions about any policy or need clarification, please contact:</p>
+                                <ul class="help-list">
+                                    <li><i class="bi bi-person-fill me-2"></i>Your landlord directly</li>
+                                    <li><i class="bi bi-envelope-fill me-2"></i>Boardify Support: support@boardify.com</li>
+                                    <li><i class="bi bi-telephone-fill me-2"></i>Emergency: +63 912 345 6789</li>
+                                </ul>
+                                <button class="btn-contact-support">
+                                    <i class="bi bi-chat-dots-fill me-2"></i>Contact Support
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ===== FACEBOOK BLUE THEME VARIABLES ===== */
+:root {
+    --fb-primary: #1877f2;
+    --fb-primary-hover: #166fe5;
+    --fb-primary-active: #1567d3;
+    --fb-secondary: #42b72a;
+    --fb-secondary-hover: #36a420;
+    --fb-light-blue: #e7f3ff;
+    --fb-lighter-blue: #f0f8ff;
+    
+    --bg-primary: #ffffff;
+    --bg-secondary: #f0f2f5;
+    --bg-tertiary: #e4e6eb;
+    --bg-hover: #f2f3f5;
+    
+    --text-primary: #050505;
+    --text-secondary: #65676b;
+    --text-tertiary: #8a8d91;
+    --text-white: #ffffff;
+    
+    --border-color: #ced0d4;
+    --divider-color: #e4e6eb;
+    
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.1);
+    --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-4: 0 8px 16px rgba(0, 0, 0, 0.15);
+    --shadow-hover: 0 8px 24px rgba(24, 119, 242, 0.2);
+    
+    --success: #31a24c;
+    --danger: #e74c3c;
+    --warning: #f39c12;
+    --info: #3498db;
+}
+
+body {
+    font-family: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+    background: var(--bg-primary);
+    width: 280px;
+    min-width: 280px;
+    box-shadow: var(--shadow-2);
+    border-right: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.sidebar h3 {
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: var(--fb-primary);
+}
+
+.sidebar .nav-link {
+    color: var(--text-secondary) !important;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.sidebar .nav-link.active {
+    background: var(--fb-light-blue);
+    color: var(--fb-primary) !important;
+}
+
+.sidebar .nav-link:hover {
+    background: var(--fb-light-blue);
+    color: var(--fb-primary) !important;
+}
+
+.sidebar .nav-link.text-danger {
+    color: var(--danger) !important;
+}
+
+.sidebar .nav-link.text-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+    background: var(--bg-secondary);
+    min-height: 100vh;
+    overflow-y: auto;
+}
+
+/* ===== PAGE HEADER ===== */
+.page-header-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: var(--shadow-2);
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.page-title i {
+    color: var(--fb-primary);
+}
+
+.page-subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin: 0;
+}
+
+.btn-add-policy {
+    background: var(--fb-primary);
+    color: white;
+    border: none;
+    padding: 0.875rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-add-policy:hover {
+    background: var(--fb-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+/* ===== STATS GRID ===== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.stat-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-2);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-4);
+}
+
+.stat-icon-wrapper {
+    width: 70px;
+    height: 70px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.stat-card-primary .stat-icon-wrapper {
+    background: var(--fb-light-blue);
+    color: var(--fb-primary);
+}
+
+.stat-card-success .stat-icon-wrapper {
+    background: rgba(49, 162, 76, 0.1);
+    color: var(--success);
+}
+
+.stat-card-warning .stat-icon-wrapper {
+    background: rgba(243, 156, 18, 0.1);
+    color: var(--warning);
+}
+
+.stat-card-info .stat-icon-wrapper {
+    background: rgba(52, 152, 219, 0.1);
+    color: var(--info);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin: 0.5rem 0 0 0;
+}
+
+/* ===== POLICY CARDS ===== */
+.policy-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: var(--shadow-2);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.7s ease-out;
+}
+
+.policy-card:hover {
+    box-shadow: var(--shadow-3);
+    border-color: var(--fb-primary);
+}
+
+.policy-header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.policy-header:hover {
+    background: var(--bg-hover);
+}
+
+.policy-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.icon-primary {
+    background: var(--fb-light-blue);
+    color: var(--fb-primary);
+}
+
+.icon-success {
+    background: rgba(49, 162, 76, 0.1);
+    color: var(--success);
+}
+
+.icon-danger {
+    background: rgba(231, 76, 60, 0.1);
+    color: var(--danger);
+}
+
+.icon-warning {
+    background: rgba(243, 156, 18, 0.1);
+    color: var(--warning);
+}
+
+.icon-info {
+    background: rgba(52, 152, 219, 0.1);
+    color: var(--info);
+}
+
+.policy-info {
+    flex: 1;
+}
+
+.policy-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+}
+
+.policy-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.policy-badge {
+    padding: 0.375rem 0.875rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+}
+
+.badge-success {
+    background: rgba(49, 162, 76, 0.15);
+    color: var(--success);
+    border: 1px solid var(--success);
+}
+
+.badge-warning {
+    background: rgba(243, 156, 18, 0.15);
+    color: var(--warning);
+    border: 1px solid var(--warning);
+}
+
+.badge-info {
+    background: rgba(52, 152, 219, 0.15);
+    color: var(--info);
+    border: 1px solid var(--info);
+}
+
+.policy-date {
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+}
+
+.policy-toggle-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.policy-toggle-icon i {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    transition: transform 0.3s ease;
+}
+
+.policy-card.active .policy-toggle-icon {
+    background: var(--fb-primary);
+}
+
+.policy-card.active .policy-toggle-icon i {
+    color: white;
+    transform: rotate(180deg);
+}
+
+.policy-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+    background: var(--bg-secondary);
+}
+
+.policy-card.active .policy-content {
+    max-height: 2000px;
+    border-top: 1px solid var(--border-color);
+}
+
+.policy-section {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--divider-color);
+}
+
+.policy-section:last-of-type {
+    border-bottom: none;
+}
+
+.policy-subtitle {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.75rem 0;
+    display: flex;
+    align-items: center;
+}
+
+.policy-subtitle i {
+    color: var(--fb-primary);
+    font-size: 0.95rem;
+}
+
+.policy-section p {
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.policy-footer {
+    padding: 1.25rem 1.5rem;
+    background: var(--fb-light-blue);
+    border-top: 1px solid var(--border-color);
+}
+
+.policy-applicable {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.policy-applicable strong {
+    color: var(--fb-primary);
+    font-weight: 700;
+}
+
+/* ===== SIDEBAR STICKY ===== */
+.sidebar-sticky {
+    position: sticky;
+    top: 20px;
+}
+
+/* ===== QUICK LINKS CARD ===== */
+.quick-links-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-2);
+    animation: fadeInUp 0.8s ease-out;
+}
+
+.quick-links-header {
+    background: linear-gradient(135deg, var(--fb-primary) 0%, var(--fb-primary-hover) 100%);
+    padding: 1.25rem 1.5rem;
+}
+
+.quick-links-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.quick-links-body {
+    padding: 0;
+}
+
+.quick-link-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--divider-color);
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.quick-link-item:last-child {
+    border-bottom: none;
+}
+
+.quick-link-item:hover {
+    background: var(--fb-light-blue);
+    color: var(--fb-primary);
+    padding-left: 2rem;
+}
+
+.quick-link-item i.bi-chevron-right {
+    font-size: 1rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.quick-link-item:hover i.bi-chevron-right {
+    opacity: 1;
+}
+
+/* ===== HELP CARD ===== */
+.help-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-2);
+    animation: fadeInUp 0.9s ease-out;
+}
+
+.help-header {
+    background: var(--bg-tertiary);
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.help-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.help-title i {
+    color: var(--fb-primary);
+}
+
+.help-body {
+    padding: 1.5rem;
+}
+
+.help-text {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.help-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+}
+
+.help-list li {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: 0.5rem 0;
+    display: flex;
+    align-items: center;
+}
+
+.help-list li i {
+    color: var(--fb-primary);
+    font-size: 0.85rem;
+}
+
+.btn-contact-support {
+    width: 100%;
+    background: transparent;
+    color: var(--fb-primary);
+    border: 2px solid var(--fb-primary);
+    padding: 0.875rem;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-contact-support:hover {
+    background: var(--fb-primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-3);
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 992px) {
+    .sidebar {
+        width: 100%;
+        min-width: auto;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        position: relative;
+    }
+    
+    .sidebar-sticky {
+        position: relative;
+        top: 0;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header-card {
+        padding: 1.5rem;
+    }
+    
+    .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+        padding: 1.25rem;
+    }
+    
+    .policy-header {
+        padding: 1.25rem;
+    }
+    
+    .policy-icon-wrapper {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
+    
+    .policy-title {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .policy-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+<script>
+// ===== INITIALIZATION =====
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🏠 Boardify Policies Page Loading...');
+    
+    // Initialize policy toggles
+    initializePolicyCards();
+    
+    // Initialize quick links
+    initializeQuickLinks();
+    
+    // Initialize animations
+    initializeAnimations();
+    
+    console.log('✨ All features initialized successfully!');
+});
+
+// ===== POLICY CARDS =====
+function initializePolicyCards() {
+    const policyHeaders = document.querySelectorAll('[data-action="toggle-policy"]');
+    
+    policyHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const policyCard = this.closest('.policy-card');
+            togglePolicyCard(policyCard);
+        });
+    });
+}
+
+function togglePolicyCard(card) {
+    const isActive = card.classList.contains('active');
+    
+    // Close all other cards
+    document.querySelectorAll('.policy-card').forEach(c => {
+        c.classList.remove('active');
+    });
+    
+    // Toggle current card
+    if (!isActive) {
+        card.classList.add('active');
+        
+        // Smooth scroll to card
+        setTimeout(() => {
+            card.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
+        }, 100);
+    }
+}
+
+// ===== QUICK LINKS =====
+function initializeQuickLinks() {
+    const quickLinks = document.querySelectorAll('.quick-link-item');
+    
+    quickLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const policyId = this.getAttribute('data-policy');
+            const targetCard = document.querySelector(`[data-policy-id="${policyId}"]`);
+            
+            if (targetCard) {
+                // Close all cards first
+                document.querySelectorAll('.policy-card').forEach(c => {
+                    c.classList.remove('active');
+                });
+                
+                // Open target card
+                targetCard.classList.add('active');
+                
+                // Scroll to card
+                targetCard.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+                
+                // Highlight effect
+                targetCard.style.animation = 'none';
+                setTimeout(() => {
+                    targetCard.style.animation = 'pulse 0.5s ease';
+                }, 10);
+            }
+        });
+    });
+}
+
+// ===== ANIMATIONS =====
+function initializeAnimations() {
+    // Add pulse animation to CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.02);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Stagger animation for policy cards
+    const policyCards = document.querySelectorAll('.policy-card');
+    policyCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
+}
+
+// ===== CONTACT SUPPORT BUTTON =====
+const supportBtn = document.querySelector('.btn-contact-support');
+if (supportBtn) {
+    supportBtn.addEventListener('click', function() {
+        showToast('Opening support chat...', 'info');
+        // Add your support chat logic here
+    });
+}
+
+// ===== ADD POLICY BUTTON =====
+const addPolicyBtn = document.querySelector('[data-action="add-policy"]');
+if (addPolicyBtn) {
+    addPolicyBtn.addEventListener('click', function() {
+        showToast('Add Policy feature coming soon!', 'info');
+        // Add your add policy logic here
+    });
+}
+
+// ===== TOAST NOTIFICATION =====
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'custom-toast toast-' + type;
+    
+    let iconClass = 'info-circle-fill';
+    let bgColor = 'var(--fb-primary)';
+    
+    if (type === 'success') {
+        iconClass = 'check-circle-fill';
+        bgColor = 'var(--success)';
+    } else if (type === 'danger') {
+        iconClass = 'x-circle-fill';
+        bgColor = 'var(--danger)';
+    } else if (type === 'warning') {
+        iconClass = 'exclamation-circle-fill';
+        bgColor = 'var(--warning)';
+    }
+    
+    toast.innerHTML = `
+        <i class="bi bi-${iconClass} me-2"></i>
+        <span>${message}</span>
+    `;
+    
+    Object.assign(toast.style, {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        background: bgColor,
+        color: 'white',
+        padding: '1rem 1.5rem',
+        borderRadius: '12px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        zIndex: '9999',
+        display: 'flex',
+        alignItems: 'center',
+        fontWeight: '600',
+        fontSize: '0.95rem',
+        animation: 'slideInRight 0.3s ease-out'
+    });
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Toast animations
+const toastStyle = document.createElement('style');
+toastStyle.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(toastStyle);
+
+// ===== SMOOTH SCROLL =====
+window.addEventListener('load', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+{% endblock %}

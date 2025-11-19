@@ -1,0 +1,1623 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-4 text-center text-md-start">
+                    <div class="profile-avatar-container">
+                        <img src="{{ url_for('static', filename='uploads/' ~ (user.profile_pic or 'default.jpg')) }}" 
+                             class="profile-avatar" alt="{{ user.name }}">
+                        {% if user.role == 'landlord' and user.is_verified %}
+                        <div class="verified-checkmark">
+                            <i class="bi bi-patch-check-fill"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="profile-info">
+                        <div class="profile-header-top">
+                            <div class="username-section">
+                                <h1 class="profile-username">
+                                    {{ user.name }}
+                                    {% if user.role == 'landlord' and user.is_verified %}
+                                    <i class="bi bi-patch-check-fill verified-icon" title="Verified Account"></i>
+                                    {% endif %}
+                                </h1>
+                            </div>
+                            <div class="profile-actions">
+                                <button class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                                    <i class="bi bi-pencil"></i> Edit Profile
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-stats">
+                            <div class="stat">
+                                <span class="stat-number">{{ properties|length if user.role=='landlord' else bookings|length }}</span>
+                                <span class="stat-label">{{ 'Properties' if user.role=='landlord' else 'Bookings' }}</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">{{ bills|length }}</span>
+                                <span class="stat-label">Bills</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">
+                                    {% if user.role == 'landlord' %}
+                                        {{ properties|selectattr('status', 'equalto', 'booked')|list|length }}
+                                    {% else %}
+                                        {{ bookings|selectattr('status', 'equalto', 'approved')|list|length }}
+                                    {% endif %}
+                                </span>
+                                <span class="stat-label">Active</span>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-bio">
+                            <p class="profile-role">
+                                <span class="badge {{ 'landlord-badge' if user.role=='landlord' else 'tenant-badge' }}">
+                                    <i class="bi {{ 'bi-building' if user.role=='landlord' else 'bi-person' }}"></i>
+                                    {{ user.role|capitalize }}
+                                </span>
+                                {% if user.role == 'landlord' and user.is_verified %}
+                                <span class="badge verified-profile-badge">
+                                    <i class="bi bi-shield-fill-check"></i>
+                                    Verified Profile
+                                </span>
+                                {% endif %}
+                            </p>
+                            
+                            <div class="profile-details">
+                                {% if user.gender %}
+                                <div class="profile-detail-item">
+                                    <i class="bi bi-gender-ambiguous"></i>
+                                    <span>{{ user.get_gender_display() }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if user.birthdate %}
+                                <div class="profile-detail-item">
+                                    <i class="bi bi-calendar-heart"></i>
+                                    <span>{{ user.get_birthdate_display() }}</span>
+                                    {% if user.get_age() %}
+                                    <span class="age-badge">({{ user.get_age() }} years old)</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                
+                                <div class="profile-detail-item">
+                                    <i class="bi bi-envelope"></i>
+                                    <span>{{ user.email }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Navigation -->
+    <div class="profile-nav">
+        <div class="container">
+            <nav class="profile-tabs">
+                <a href="#posts" class="tab-item active" data-tab="posts">
+                    <i class="bi {{ 'bi-grid-3x3' if user.role=='landlord' else 'bi-house-heart' }}"></i> 
+                    {{ 'PROPERTIES' if user.role=='landlord' else 'MY RENTALS' }}
+                </a>
+                <a href="#bookings" class="tab-item" data-tab="bookings">
+                    <i class="bi bi-calendar-check"></i> BOOKINGS
+                </a>
+                <a href="#billing" class="tab-item" data-tab="billing">
+                    <i class="bi bi-receipt"></i> BILLING
+                </a>
+                {% if user.role == 'tenant' %}
+                <a href="#favorites" class="tab-item" data-tab="favorites">
+                    <i class="bi bi-heart"></i> FAVORITES
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+    </div>
+
+    <!-- Profile Content -->
+    <div class="profile-content">
+        <div class="container">
+            <!-- Posts/Properties Section -->
+            <div id="posts" class="tab-content active">
+                {% if user.role == 'landlord' %}
+                    {% if properties %}
+                    <div class="content-grid">
+                        {% for property in properties %}
+                        <a href="{{ url_for('property_detail', property_id=property.id) }}" class="content-item">
+                            <div class="content-image">
+                                <img src="{{ url_for('static', filename='uploads/' ~ (property.image or 'property-placeholder.jpg')) }}" 
+                                     alt="{{ property.title }}">
+                                <div class="content-overlay">
+                                    <div class="content-stats">
+                                        <span><i class="bi bi-people"></i> {{ property.bookings|selectattr('status', 'equalto', 'approved')|list|length }}/{{ property.slots or 10 }}</span>
+                                        <span class="status-badge {{ property.status }}">{{ property.status|capitalize }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="content-info">
+                                <h4>{{ property.title }}</h4>
+                                <p class="property-price">₱{{ "{:,}".format(property.price) }}/month</p>
+                                <p class="property-location"><i class="bi bi-geo-alt-fill"></i> {{ property.location }}</p>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-building"></i>
+                        <h3>No Properties Listed</h3>
+                        <p>Start earning by listing your first property.</p>
+                        <a href="{{ url_for('add_property') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Add Property
+                        </a>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    {% set active_rentals = bookings|selectattr('status', 'equalto', 'approved')|list %}
+                    {% if active_rentals %}
+                    <div class="rentals-section">
+                        <h3 class="section-title">
+                            <i class="bi bi-house-check"></i> Current Rentals
+                        </h3>
+                        <div class="content-grid">
+                            {% for booking in active_rentals %}
+                            <a href="{{ url_for('property_detail', property_id=booking.property.id) }}" class="content-item rental-card">
+                                <div class="rental-badge active">
+                                    <i class="bi bi-check-circle-fill"></i> Active
+                                </div>
+                                <div class="content-image">
+                                    <img src="{{ url_for('static', filename='uploads/' ~ (booking.property.image or 'property-placeholder.jpg')) }}" 
+                                         alt="{{ booking.property.title }}">
+                                </div>
+                                <div class="content-info">
+                                    <h4>{{ booking.property.title }}</h4>
+                                    <p class="property-price">₱{{ "{:,}".format(booking.property.price) }}/month</p>
+                                    <p class="property-location"><i class="bi bi-geo-alt-fill"></i> {{ booking.property.location }}</p>
+                                    <div class="rental-dates">
+                                        <i class="bi bi-calendar-range"></i>
+                                        <span>{{ booking.start_date.strftime('%b %d, %Y') }} - {{ booking.end_date.strftime('%b %d, %Y') }}</span>
+                                    </div>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-house-heart"></i>
+                        <h3>No Active Rentals</h3>
+                        <p>You don't have any active rentals yet. Find your perfect home!</p>
+                        <a href="{{ url_for('viewproperties') }}" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Browse Properties
+                        </a>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- Bookings Section -->
+            <div id="bookings" class="tab-content">
+                {% if bookings %}
+                <div class="booking-list">
+                    {% for booking in bookings %}
+                    <div class="booking-card">
+                        <div class="booking-header">
+                            <div class="booking-image">
+                                <img src="{{ url_for('static', filename='uploads/' ~ (booking.property.image or 'property-placeholder.jpg')) }}" 
+                                     alt="{{ booking.property.title }}">
+                            </div>
+                            <div class="booking-info">
+                                <h4>{{ booking.property.title }}</h4>
+                                <p class="booking-location">
+                                    <i class="bi bi-geo-alt"></i> {{ booking.property.location }}
+                                </p>
+                                <p class="booking-dates">
+                                    <i class="bi bi-calendar-range"></i> 
+                                    {{ booking.start_date.strftime('%b %d, %Y') }} - {{ booking.end_date.strftime('%b %d, %Y') }}
+                                </p>
+                                <p class="booking-price">₱{{ "{:,}".format(booking.total_bill or booking.property.price) }}</p>
+                            </div>
+                            <div class="booking-status">
+                                <span class="status-badge {{ booking.status }}">{{ booking.status|capitalize }}</span>
+                            </div>
+                        </div>
+                        <div class="booking-footer">
+                            <div class="booking-date">
+                                <i class="bi bi-clock"></i>
+                                Booked {{ booking.created_at.strftime('%b %d, %Y') if booking.created_at else 'Recently' }}
+                            </div>
+                            {% if booking.status == 'pending' and user.role == 'landlord' %}
+                            <div class="booking-actions">
+                                <form method="POST" action="{{ url_for('booking_action', booking_id=booking.id, action='approve') }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="bi bi-check-lg"></i> Approve
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('booking_action', booking_id=booking.id, action='reject') }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="bi bi-x-lg"></i> Reject
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-calendar-x"></i>
+                    <h3>No Bookings Yet</h3>
+                    <p>Your booking history will appear here.</p>
+                    {% if user.role == 'tenant' %}
+                    <a href="{{ url_for('viewproperties') }}" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Browse Properties
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Billing Section -->
+            <div id="billing" class="tab-content">
+                {% if bills %}
+                <div class="billing-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon paid">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>₱{{ "{:,}".format(bills|selectattr('status', 'equalto', 'paid')|map(attribute='amount')|sum|default(0)) }}</h3>
+                            <p>Total Paid</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon pending">
+                            <i class="bi bi-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>₱{{ "{:,}".format(bills|rejectattr('status', 'equalto', 'paid')|map(attribute='amount')|sum|default(0)) }}</h3>
+                            <p>Pending</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bills-list">
+                    {% for bill in bills %}
+                    <div class="bill-card">
+                        <div class="bill-header">
+                            <div class="bill-info">
+                                <h4>{{ bill.property.title }}</h4>
+                                <p class="bill-amount">₱{{ "{:,}".format(bill.amount) }}</p>
+                            </div>
+                            <div class="bill-status">
+                                <span class="status-badge {{ bill.status }}">{{ bill.status|capitalize }}</span>
+                            </div>
+                        </div>
+                        <div class="bill-details">
+                            <div class="detail">
+                                <i class="bi bi-calendar"></i>
+                                <span>Due: {{ bill.due_date.strftime('%b %d, %Y') if bill.due_date else 'Not set' }}</span>
+                            </div>
+                            {% if user.role == 'landlord' %}
+                            <div class="detail">
+                                <i class="bi bi-person"></i>
+                                <span>Tenant: {{ bill.tenant.name }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if user.role != 'landlord' and bill.status != 'paid' %}
+                        <div class="bill-actions">
+                            <a href="{{ url_for('billing') }}" class="btn btn-primary">
+                                <i class="bi bi-credit-card"></i> Pay Now
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-receipt"></i>
+                    <h3>No Bills Yet</h3>
+                    <p>Your billing history will appear here.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Favorites Section -->
+            {% if user.role == 'tenant' %}
+            <div id="favorites" class="tab-content">
+                <div class="favorites-header">
+                    <h3 class="section-title">
+                        <i class="bi bi-heart-fill"></i> Saved Properties
+                    </h3>
+                    <p class="section-subtitle">Properties you've marked as favorites</p>
+                </div>
+                
+                <div class="empty-state">
+                    <i class="bi bi-heart"></i>
+                    <h3>No Favorites Yet</h3>
+                    <p>Start saving properties you love to easily find them later!</p>
+                    <a href="{{ url_for('viewproperties') }}" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Explore Properties
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="edit-avatar-section">
+                        <div class="avatar-preview">
+                            <img src="{{ url_for('static', filename='uploads/' ~ (user.profile_pic or 'default.jpg')) }}" 
+                                 id="avatarPreview" alt="Profile Preview">
+                        </div>
+                        <div class="avatar-upload">
+                            <input type="file" name="profile_pic" id="avatarUpload" accept="image/*" hidden>
+                            <label for="avatarUpload" class="btn btn-outline-primary">
+                                <i class="bi bi-camera"></i> Change Photo
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="name">Full Name</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ user.name }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="gender">Gender</label>
+                        <select class="form-control" id="gender" name="gender">
+                            <option value="">-- Select Gender --</option>
+                            <option value="male" {% if user.gender == 'male' %}selected{% endif %}>Male</option>
+                            <option value="female" {% if user.gender == 'female' %}selected{% endif %}>Female</option>
+                            <option value="other" {% if user.gender == 'other' %}selected{% endif %}>Other</option>
+                            <option value="prefer_not_to_say" {% if user.gender == 'prefer_not_to_say' %}selected{% endif %}>Prefer not to say</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="birthdate">Birthdate</label>
+                        <input type="date" class="form-control" id="birthdate" name="birthdate" 
+                               value="{{ user.birthdate.strftime('%Y-%m-%d') if user.birthdate else '' }}"
+                               max="{{ today.strftime('%Y-%m-%d') if today else '' }}">
+                        <small class="form-text text-muted">You must be at least 18 years old</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" value="{{ user.phone or '' }}" 
+                               placeholder="+63 XXX XXX XXXX">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bio">Bio</label>
+                        <textarea class="form-control" id="bio" name="bio" rows="3" 
+                                  placeholder="Tell us about yourself...">{{ user.bio or '' }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Main Container */
+body {
+    background-color: #f0f2f5;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #1c1e21;
+}
+
+.profile-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Profile Header */
+.profile-header {
+    background: #fff;
+    border-radius: 8px;
+    padding: 40px 30px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.profile-avatar-container {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 20px;
+}
+
+.profile-avatar {
+    width: 168px;
+    height: 168px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #fff;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.verified-checkmark {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 42px;
+    height: 42px;
+    background: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.verified-checkmark i {
+    font-size: 38px;
+    color: #1877f2;
+}
+
+.profile-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.profile-username {
+    font-size: 32px;
+    font-weight: 700;
+    color: #050505;
+    margin: 0;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.verified-icon {
+    color: #1877f2;
+    font-size: 28px;
+    vertical-align: middle;
+    animation: verifiedPulse 2s ease-in-out infinite;
+}
+
+@keyframes verifiedPulse {
+    0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 2px rgba(24, 119, 242, 0.5));
+    }
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 8px rgba(24, 119, 242, 0.8));
+    }
+}
+
+.username-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.btn-edit {
+    background-color: #e4e6eb;
+    border: none;
+    color: #050505;
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-edit:hover {
+    background-color: #d8dadf;
+}
+
+.profile-stats {
+    display: flex;
+    gap: 40px;
+    padding: 16px 0;
+    border-top: 1px solid #e4e6eb;
+    border-bottom: 1px solid #e4e6eb;
+    margin-bottom: 16px;
+}
+
+.stat {
+    text-align: center;
+    cursor: pointer;
+}
+
+.stat-number {
+    display: block;
+    font-size: 20px;
+    font-weight: 600;
+    color: #050505;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #65676b;
+    margin-top: 4px;
+    display: block;
+}
+
+.profile-bio {
+    margin-top: 16px;
+}
+
+.profile-role {
+    margin: 0 0 12px 0;
+    display: flex;
+    gap: 8px;
+}
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.landlord-badge {
+    background-color: #e7f3ff;
+    color: #1877f2;
+}
+
+.tenant-badge {
+    background-color: #f0f2f5;
+    color: #65676b;
+}
+
+.verified-profile-badge {
+    background: linear-gradient(135deg, #1877f2 0%, #0e64d1 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(24, 119, 242, 0.3);
+    animation: badgeShine 3s ease-in-out infinite;
+}
+
+@keyframes badgeShine {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(24, 119, 242, 0.3);
+    }
+    50% {
+        box-shadow: 0 4px 16px rgba(24, 119, 242, 0.6);
+    }
+}
+
+.profile-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.profile-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    color: #65676b;
+}
+
+.profile-detail-item i {
+    width: 20px;
+    text-align: center;
+    color: #65676b;
+}
+
+.age-badge {
+    background-color: #e7f3ff;
+    color: #1877f2;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 6px;
+}
+
+/* Navigation */
+.profile-nav {
+    background: #fff;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.profile-tabs {
+    display: flex;
+    justify-content: space-around;
+}
+
+.tab-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 12px;
+    color: #65676b;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    cursor: pointer;
+    position: relative;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-item:hover {
+    background-color: #f0f2f5;
+}
+
+.tab-item.active {
+    color: #1877f2;
+    border-bottom-color: #1877f2;
+}
+
+.tab-item i {
+    font-size: 18px;
+}
+
+/* Content */
+.profile-content {
+    min-height: 400px;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Grid */
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.content-item {
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.content-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.content-image {
+    width: 100%;
+    height: 220px;
+    position: relative;
+    overflow: hidden;
+}
+
+.content-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.content-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.content-item:hover .content-overlay {
+    opacity: 1;
+}
+
+.content-stats {
+    display: flex;
+    gap: 16px;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.content-stats span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+}
+
+.content-info {
+    padding: 16px;
+}
+
+.content-info h4 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #050505;
+}
+
+.property-price {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1877f2;
+    margin: 0 0 6px 0;
+}
+
+.property-location {
+    font-size: 14px;
+    color: #65676b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.property-location i {
+    color: #1877f2;
+}
+
+/* Rentals */
+.rentals-section {
+    margin-bottom: 32px;
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #050505;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.section-title i {
+    color: #1877f2;
+    font-size: 24px;
+}
+
+.section-subtitle {
+    color: #65676b;
+    font-size: 15px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.rental-card {
+    position: relative;
+}
+
+.rental-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.rental-badge.active {
+    background: #42b72a;
+    color: white;
+}
+
+.rental-badge.past {
+    background: #65676b;
+    color: white;
+}
+
+.rental-dates {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #65676b;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e4e6eb;
+}
+
+.rental-dates i {
+    color: #1877f2;
+}
+
+/* Bookings & Bills */
+.booking-list,
+.bills-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.booking-card,
+.bill-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s;
+}
+
+.booking-card:hover,
+.bill-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.booking-header {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.booking-image {
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.booking-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.booking-info {
+    flex: 1;
+}
+
+.booking-info h4 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #050505;
+}
+
+.booking-location,
+.booking-dates {
+    font-size: 14px;
+    color: #65676b;
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.booking-location i,
+.booking-dates i {
+    color: #1877f2;
+}
+
+.booking-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1877f2;
+    margin: 8px 0 0 0;
+}
+
+.booking-status {
+    flex-shrink: 0;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-badge.pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.approved {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-badge.paid {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-badge.booked {
+    background-color: #cce5ff;
+    color: #004085;
+}
+
+.status-badge.available {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.booking-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid #e4e6eb;
+}
+
+.booking-date {
+    font-size: 13px;
+    color: #65676b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.booking-date i {
+    color: #65676b;
+}
+
+.booking-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-success {
+    background-color: #42b72a;
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn-success:hover {
+    background-color: #36a420;
+}
+
+.btn-danger {
+    background-color: #f02849;
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn-danger:hover {
+    background-color: #d01f3d;
+}
+
+/* Billing Stats */
+.billing-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.stat-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+}
+
+.stat-icon.paid {
+    background-color: #42b72a;
+}
+
+.stat-icon.pending {
+    background-color: #ffc107;
+}
+
+.stat-info h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #050505;
+    margin: 0 0 4px 0;
+}
+
+.stat-info p {
+    font-size: 14px;
+    color: #65676b;
+    margin: 0;
+    font-weight: 600;
+}
+
+.bill-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.bill-info h4 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 6px 0;
+    color: #050505;
+}
+
+.bill-amount {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1877f2;
+    margin: 0;
+}
+
+.bill-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.detail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #65676b;
+}
+
+.detail i {
+    color: #1877f2;
+    width: 18px;
+}
+
+.bill-actions {
+    text-align: right;
+}
+
+.btn-primary {
+    background-color: #1877f2;
+    border: none;
+    color: white;
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+}
+
+.btn-primary:hover {
+    background-color: #166fe5;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 40px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state i {
+    font-size: 64px;
+    color: #bcc0c4;
+    margin-bottom: 16px;
+}
+
+.empty-state h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #050505;
+    margin: 0 0 8px 0;
+}
+
+.empty-state p {
+    font-size: 15px;
+    color: #65676b;
+    margin: 0 0 20px 0;
+}
+
+/* Favorites */
+.favorites-header {
+    text-align: center;
+    margin-bottom: 24px;
+    padding: 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.favorites-header .section-title {
+    justify-content: center;
+    box-shadow: none;
+    padding: 0;
+    margin-bottom: 8px;
+}
+
+/* Modal */
+.modal-content {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    border-bottom: 1px solid #e4e6eb;
+    padding: 16px 20px;
+}
+
+.modal-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #050505;
+}
+
+.btn-close {
+    opacity: 0.6;
+}
+
+.btn-close:hover {
+    opacity: 1;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    border-top: 1px solid #e4e6eb;
+    padding: 16px 20px;
+}
+
+.edit-avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.avatar-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #1877f2;
+}
+
+.avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #050505;
+    font-size: 15px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccd0d5;
+    border-radius: 6px;
+    background: #fff;
+    color: #050505;
+    font-size: 15px;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #1877f2;
+    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+}
+
+.form-text {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    color: #65676b;
+}
+
+.btn-secondary {
+    background-color: #e4e6eb;
+    border: none;
+    color: #050505;
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #d8dadf;
+}
+
+.btn-outline-primary {
+    background-color: transparent;
+    border: 1px solid #1877f2;
+    color: #1877f2;
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-outline-primary:hover {
+    background-color: #e7f3ff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .profile-container {
+        padding: 12px;
+    }
+
+    .profile-header {
+        padding: 24px 16px 16px;
+    }
+
+    .profile-avatar {
+        width: 140px;
+        height: 140px;
+    }
+
+    .verified-checkmark {
+        width: 36px;
+        height: 36px;
+        bottom: 8px;
+        right: 8px;
+    }
+
+    .verified-checkmark i {
+        font-size: 32px;
+    }
+
+    .profile-username {
+        font-size: 24px;
+    }
+
+    .profile-header-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .profile-stats {
+        gap: 20px;
+        width: 100%;
+        justify-content: space-around;
+    }
+
+    .profile-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-item {
+        font-size: 12px;
+        padding: 14px 10px;
+        white-space: nowrap;
+        min-width: 100px;
+    }
+
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .booking-header {
+        flex-direction: column;
+    }
+
+    .booking-image {
+        width: 100%;
+        height: 200px;
+    }
+
+    .billing-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .booking-footer {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .booking-actions {
+        width: 100%;
+    }
+
+    .booking-actions form {
+        flex: 1;
+    }
+
+    .booking-actions button {
+        width: 100%;
+    }
+
+    .section-title {
+        font-size: 18px;
+        padding: 12px 16px;
+    }
+
+    .empty-state {
+        padding: 40px 24px;
+    }
+
+    .empty-state i {
+        font-size: 48px;
+    }
+
+    .empty-state h3 {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+    }
+
+    .profile-username {
+        font-size: 20px;
+    }
+
+    .profile-stats {
+        gap: 12px;
+    }
+
+    .stat-number {
+        font-size: 18px;
+    }
+
+    .stat-label {
+        font-size: 12px;
+    }
+
+    .tab-item {
+        font-size: 11px;
+        padding: 12px 8px;
+        min-width: 80px;
+    }
+
+    .tab-item i {
+        font-size: 16px;
+    }
+
+    .content-info h4 {
+        font-size: 16px;
+    }
+
+    .property-price {
+        font-size: 18px;
+    }
+}
+
+/* Scrollbar */
+.profile-tabs::-webkit-scrollbar {
+    height: 4px;
+}
+
+.profile-tabs::-webkit-scrollbar-track {
+    background: #f0f2f5;
+}
+
+.profile-tabs::-webkit-scrollbar-thumb {
+    background: #bcc0c4;
+    border-radius: 4px;
+}
+
+.profile-tabs::-webkit-scrollbar-thumb:hover {
+    background: #8a8d91;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tab switching
+    const tabItems = document.querySelectorAll('.tab-item');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabItems.forEach(function(tab) {
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            tabItems.forEach(function(t) {
+                t.classList.remove('active');
+            });
+            tabContents.forEach(function(c) {
+                c.classList.remove('active');
+            });
+            
+            this.classList.add('active');
+            
+            const targetId = this.getAttribute('href').substring(1);
+            const targetContent = document.getElementById(targetId);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+        });
+    });
+
+    // Avatar upload preview
+    const avatarUpload = document.getElementById('avatarUpload');
+    const avatarPreview = document.getElementById('avatarPreview');
+
+    if (avatarUpload && avatarPreview) {
+        avatarUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (!file.type.match('image.*')) {
+                    alert('Please select an image file');
+                    return;
+                }
+                
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Image size should be less than 5MB');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    avatarPreview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Birthdate validation
+    const birthdateInput = document.getElementById('birthdate');
+    if (birthdateInput) {
+        const today = new Date();
+        const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+        birthdateInput.max = maxDate.toISOString().split('T')[0];
+        
+        birthdateInput.addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            const age = Math.floor((today - selectedDate) / (365.25 * 24 * 60 * 60 * 1000));
+            
+            if (age < 18) {
+                alert('You must be at least 18 years old');
+                this.value = '';
+            }
+        });
+    }
+    
+    // Form submission loading state
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn && !submitBtn.disabled) {
+                submitBtn.disabled = true;
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+                
+                // Re-enable after 3 seconds as fallback
+                setTimeout(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }, 3000);
+            }
+        });
+    });
+    
+    // Phone number formatting
+    const phoneInput = document.getElementById('phone');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.startsWith('63')) {
+                value = value.substring(2);
+            }
+            if (value.length > 10) {
+                value = value.substring(0, 10);
+            }
+            if (value) {
+                e.target.value = '+63 ' + value;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

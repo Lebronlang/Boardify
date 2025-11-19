@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="fw-bold text-primary mb-2">
+                <i class="bi bi-calendar-check me-2"></i>Pending Bookings
+            </h2>
+            <p class="text-muted">Manage your property booking requests</p>
+        </div>
+    </div>
+
+    {% if bookings %}
+        <div class="row g-4">
+        {% for booking in bookings %}
+            <div class="col-12">
+                <div class="card shadow-sm border-0 hover-lift">
+                    <div class="card-body p-4">
+                        <div class="row align-items-center">
+                            <div class="col-lg-8">
+                                <h5 class="card-title mb-2 fw-semibold">
+                                    {{ booking.property.title }}
+                                </h5>
+                                <div class="d-flex flex-wrap gap-3 text-muted small">
+                                    <span>
+                                        <i class="bi bi-calendar3 me-1"></i>
+                                        {{ booking.check_in }} - {{ booking.check_out }}
+                                    </span>
+                                    <span>
+                                        <i class="bi bi-person me-1"></i>
+                                        {{ booking.guest_name }}
+                                    </span>
+                                    <span>
+                                        <i class="bi bi-people me-1"></i>
+                                        {{ booking.guests }} guests
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                                <span class="badge bg-warning text-dark px-3 py-2 mb-2 d-inline-block">
+                                    <i class="bi bi-clock-history me-1"></i>
+                                    {{ booking.status }}
+                                </span>
+                                <div class="d-flex gap-2 justify-content-lg-end mt-2">
+                                    <button class="btn btn-success btn-sm">
+                                        <i class="bi bi-check-circle me-1"></i>Approve
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-x-circle me-1"></i>Decline
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <div class="empty-state">
+                <i class="bi bi-inbox display-1 text-muted mb-3 d-block"></i>
+                <h4 class="text-muted mb-2">No Pending Bookings</h4>
+                <p class="text-muted">You don't have any pending booking requests at the moment.</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.empty-state i {
+    opacity: 0.5;
+}
+
+.card {
+    border-radius: 12px;
+}
+
+.badge {
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.btn-sm {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

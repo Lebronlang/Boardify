@@ -1,0 +1,585 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Support Tickets | Boardify Admin{% endblock %}
+
+{% block header_icon %}bi-ticket-perforated{% endblock %}
+{% block header_title %}Support Tickets{% endblock %}
+{% block header_subtitle %}Manage user support requests and inquiries{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Ticket Cards */
+    .card {
+        background: var(--card-bg) !important;
+        border: 2px solid var(--neon-green);
+        border-radius: 12px;
+        box-shadow: 0 0 30px rgba(0, 255, 65, 0.2);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+        animation: cardScan 3s linear infinite;
+    }
+
+    @keyframes cardScan {
+        0%, 100% { left: -100%; }
+        50% { left: 100%; }
+    }
+
+    .card-header {
+        background: rgba(0, 255, 65, 0.1) !important;
+        border-bottom: 2px solid var(--neon-green) !important;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .card-header h5 {
+        color: var(--neon-green) !important;
+        font-family: 'Orbitron', monospace !important;
+        margin: 0;
+        text-shadow: 0 0 10px var(--neon-green);
+        letter-spacing: 2px;
+    }
+
+    .card-body {
+        padding: 0;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: var(--card-bg);
+        border: 2px solid var(--neon-cyan);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(0, 212, 255, 0.05), transparent);
+        animation: statGlow 3s linear infinite;
+    }
+
+    @keyframes statGlow {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 40px rgba(0, 212, 255, 0.4);
+        border-color: var(--neon-green);
+    }
+
+    .stat-card.pending { border-color: var(--neon-yellow); }
+    .stat-card.resolved { border-color: var(--neon-green); }
+    .stat-card.total { border-color: var(--neon-cyan); }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-bottom: 15px;
+        background: rgba(0, 255, 65, 0.1);
+        color: var(--neon-green);
+        position: relative;
+        z-index: 1;
+    }
+
+    .stat-card.pending .stat-icon { 
+        background: rgba(255, 204, 0, 0.1);
+        color: var(--neon-yellow);
+    }
+
+    .stat-card.resolved .stat-icon { 
+        background: rgba(0, 255, 65, 0.1);
+        color: var(--neon-green);
+    }
+
+    .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        margin: 10px 0;
+        color: var(--neon-green) !important;
+        font-family: 'Orbitron', monospace !important;
+        text-shadow: 0 0 15px currentColor;
+        position: relative;
+        z-index: 1;
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: var(--neon-cyan) !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Filter Controls */
+    .filter-controls {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-controls .form-control,
+    .filter-controls .form-select {
+        background: rgba(0, 255, 65, 0.05) !important;
+        border: 1px solid var(--neon-green) !important;
+        color: var(--neon-green) !important;
+        font-family: 'Share Tech Mono', monospace;
+    }
+
+    .filter-controls .form-control::placeholder {
+        color: rgba(0, 255, 65, 0.5) !important;
+    }
+
+    .filter-controls .form-control:focus,
+    .filter-controls .form-select:focus {
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.3) !important;
+        border-color: var(--neon-cyan) !important;
+    }
+
+    .filter-controls .form-select option {
+        background: var(--dark-bg);
+        color: var(--neon-green);
+    }
+
+    /* Table Styling */
+    .table-responsive {
+        border-radius: 0 0 12px 12px;
+        overflow: hidden;
+    }
+
+    .table {
+        margin: 0;
+        color: var(--neon-cyan) !important;
+        font-family: 'Share Tech Mono', monospace;
+    }
+
+    .table thead {
+        background: rgba(0, 255, 65, 0.1) !important;
+        border-bottom: 2px solid var(--neon-green);
+    }
+
+    .table thead th {
+        color: var(--neon-green) !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        padding: 1rem;
+        border: none !important;
+        text-shadow: 0 0 5px var(--neon-green);
+    }
+
+    .table tbody tr {
+        border-bottom: 1px solid rgba(0, 255, 65, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .table tbody tr:hover {
+        background: rgba(0, 212, 255, 0.05) !important;
+        transform: translateX(5px);
+    }
+
+    .table tbody td {
+        color: var(--neon-cyan) !important;
+        padding: 1rem;
+        vertical-align: middle;
+        border: none !important;
+    }
+
+    .table tbody td strong {
+        color: var(--neon-green) !important;
+        text-shadow: 0 0 5px var(--neon-green);
+    }
+
+    /* User Avatar */
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(0, 212, 255, 0.2);
+        border: 2px solid var(--neon-cyan);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--neon-cyan);
+        font-size: 1.2rem;
+        box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    }
+
+    /* Badges */
+    .badge {
+        padding: 0.5rem 1rem;
+        font-family: 'Orbitron', monospace;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        border: 1px solid currentColor;
+        text-shadow: 0 0 5px currentColor;
+        box-shadow: 0 0 10px currentColor;
+    }
+
+    .badge.bg-warning {
+        background: rgba(255, 204, 0, 0.2) !important;
+        color: var(--neon-yellow) !important;
+        border-color: var(--neon-yellow);
+    }
+
+    .badge.bg-success {
+        background: rgba(0, 255, 65, 0.2) !important;
+        color: var(--neon-green) !important;
+        border-color: var(--neon-green);
+    }
+
+    .badge.bg-danger {
+        background: rgba(255, 0, 255, 0.2) !important;
+        color: var(--neon-pink) !important;
+        border-color: var(--neon-pink);
+    }
+
+    /* Buttons */
+    .btn {
+        font-family: 'Orbitron', monospace;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.8rem;
+        padding: 0.5rem 1rem;
+        border: 2px solid;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: currentColor;
+        transition: left 0.3s ease;
+        z-index: -1;
+        opacity: 0.2;
+    }
+
+    .btn:hover::before {
+        left: 0;
+    }
+
+    .btn-success {
+        background: rgba(0, 255, 65, 0.1) !important;
+        border-color: var(--neon-green) !important;
+        color: var(--neon-green) !important;
+    }
+
+    .btn-success:hover {
+        background: rgba(0, 255, 65, 0.2) !important;
+        box-shadow: 0 0 20px var(--neon-green);
+        transform: scale(1.05);
+    }
+
+    .btn-warning {
+        background: rgba(255, 204, 0, 0.1) !important;
+        border-color: var(--neon-yellow) !important;
+        color: var(--neon-yellow) !important;
+    }
+
+    .btn-warning:hover {
+        background: rgba(255, 204, 0, 0.2) !important;
+        box-shadow: 0 0 20px var(--neon-yellow);
+        transform: scale(1.05);
+    }
+
+    .btn-danger {
+        background: rgba(255, 0, 255, 0.1) !important;
+        border-color: var(--neon-pink) !important;
+        color: var(--neon-pink) !important;
+    }
+
+    .btn-danger:hover {
+        background: rgba(255, 0, 255, 0.2) !important;
+        box-shadow: 0 0 20px var(--neon-pink);
+        transform: scale(1.05);
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--neon-cyan);
+        opacity: 0.5;
+        text-shadow: 0 0 20px var(--neon-cyan);
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    .empty-state h4 {
+        color: var(--neon-green) !important;
+        margin-top: 1.5rem;
+        text-shadow: 0 0 10px var(--neon-green);
+    }
+
+    .empty-state p {
+        color: var(--neon-cyan) !important;
+        opacity: 0.7;
+    }
+
+    /* Message Preview */
+    .message-preview {
+        display: inline-block;
+        max-width: 300px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: help;
+        transition: all 0.3s ease;
+    }
+
+    .message-preview:hover {
+        color: var(--neon-green) !important;
+        text-shadow: 0 0 5px var(--neon-green);
+    }
+
+    /* Ticket ID */
+    .ticket-id {
+        font-family: 'Orbitron', monospace;
+        color: var(--neon-cyan) !important;
+        font-weight: 700;
+        text-shadow: 0 0 5px var(--neon-cyan);
+    }
+
+    /* Priority Indicator */
+    .priority-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    .priority-high { background: var(--neon-pink); box-shadow: 0 0 10px var(--neon-pink); }
+    .priority-medium { background: var(--neon-yellow); box-shadow: 0 0 10px var(--neon-yellow); }
+    .priority-low { background: var(--neon-cyan); box-shadow: 0 0 10px var(--neon-cyan); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .filter-controls {
+            flex-direction: column;
+        }
+        
+        .filter-controls .form-control,
+        .filter-controls .form-select {
+            width: 100% !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Overview -->
+<div class="stats-grid">
+    <div class="stat-card total">
+        <div class="stat-icon">
+            <i class="bi bi-ticket-perforated"></i>
+        </div>
+        <div class="stat-value">{{ tickets|length if tickets else 0 }}</div>
+        <div class="stat-label">Total Tickets</div>
+    </div>
+    
+    <div class="stat-card pending">
+        <div class="stat-icon">
+            <i class="bi bi-clock-history"></i>
+        </div>
+        <div class="stat-value">{{ tickets|selectattr('status', 'equalto', 'pending')|list|length if tickets else 0 }}</div>
+        <div class="stat-label">Pending Tickets</div>
+    </div>
+    
+    <div class="stat-card resolved">
+        <div class="stat-icon">
+            <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="stat-value">{{ tickets|selectattr('status', 'equalto', 'resolved')|list|length if tickets else 0 }}</div>
+        <div class="stat-label">Resolved Tickets</div>
+    </div>
+</div>
+
+<!-- Tickets Table -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="bi bi-list-check me-2"></i>SUPPORT REQUESTS</h5>
+        <div class="filter-controls">
+            <input type="text" class="form-control form-control-sm" placeholder="SEARCH TICKETS..." style="width: 200px;" id="searchTickets">
+            <select class="form-select form-select-sm" style="width: 150px;" id="filterStatus">
+                <option value="">ALL STATUS</option>
+                <option value="pending">PENDING</option>
+                <option value="resolved">RESOLVED</option>
+            </select>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if tickets %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="ticketsTable">
+                <thead>
+                    <tr>
+                        <th>TICKET ID</th>
+                        <th>USER</th>
+                        <th>SUBJECT</th>
+                        <th>MESSAGE</th>
+                        <th>STATUS</th>
+                        <th>SUBMITTED</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in tickets %}
+                    <tr data-status="{{ ticket.status }}">
+                        <td class="ticket-id">#{{ ticket.id }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="user-avatar">
+                                    <i class="bi bi-person"></i>
+                                </div>
+                                <div>
+                                    <div style="color: var(--neon-green) !important; font-weight: 600;">{{ ticket.user.name }}</div>
+                                    <small style="color: var(--neon-cyan) !important; opacity: 0.7;">{{ ticket.user.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><strong>{{ ticket.subject }}</strong></td>
+                        <td>
+                            <span class="message-preview" title="{{ ticket.message }}">
+                                {{ ticket.message }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {% if ticket.status == 'pending' %}bg-warning{% else %}bg-success{% endif %}">
+                                <i class="bi {% if ticket.status == 'pending' %}bi-clock{% else %}bi-check-circle{% endif %} me-1"></i>
+                                {{ ticket.status|upper }}
+                            </span>
+                        </td>
+                        <td style="font-family: 'Orbitron', monospace; font-size: 0.85rem;">
+                            {{ ticket.timestamp.strftime('%Y-%m-%d') }}<br>
+                            <small style="opacity: 0.7;">{{ ticket.timestamp.strftime('%H:%M') }}</small>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('admin_help_tickets') }}" method="post" class="d-inline">
+                                <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
+                                {% if ticket.status == 'pending' %}
+                                    <button type="submit" name="status" value="resolved" class="btn btn-success btn-sm">
+                                        <i class="bi bi-check-lg me-1"></i>RESOLVE
+                                    </button>
+                                {% else %}
+                                    <button type="submit" name="status" value="pending" class="btn btn-warning btn-sm">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>REOPEN
+                                    </button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h4>NO SUPPORT TICKETS</h4>
+            <p>There are no support tickets at the moment. Check back later.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Search and Filter Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchTickets');
+    const filterSelect = document.getElementById('filterStatus');
+    const tableRows = document.querySelectorAll('#ticketsTable tbody tr');
+    
+    function filterTickets() {
+        const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+        const statusFilter = filterSelect ? filterSelect.value.toLowerCase() : '';
+        
+        tableRows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const status = row.getAttribute('data-status');
+            
+            const matchesSearch = text.includes(searchTerm);
+            const matchesStatus = !statusFilter || status === statusFilter;
+            
+            row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+        });
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', filterTickets);
+    }
+    
+    if (filterSelect) {
+        filterSelect.addEventListener('change', filterTickets);
+    }
+    
+    // Animate stat cards on load
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+    
+    // Console message
+    console.log('%c[BOARDIFY ADMIN]', 'color: #00ff41; font-family: monospace; font-size: 14px;', 'Support Tickets System Initialized');
+});
+</script>
+{% endblock %}

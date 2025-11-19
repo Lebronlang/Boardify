@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4">Add New Policy</h2>
+
+    <form method="POST">
+        <div class="mb-3">
+            <label for="title" class="form-label">Policy Title</label>
+            <input type="text" class="form-control" id="title" name="title" placeholder="Enter policy title" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="content" class="form-label">Policy Content</label>
+            <textarea class="form-control" id="content" name="content" rows="5" placeholder="Enter policy details" required></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="applicable_role" class="form-label">Applicable Role</label>
+            <select class="form-select" id="applicable_role" name="applicable_role" required>
+                <option value="">Select Role</option>
+                <option value="tenant">Tenant</option>
+                <option value="landlord">Landlord</option>
+                <option value="all">All</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-dark">Add Policy</button>
+        <a href="{{ url_for('policies') }}" class="btn btn-secondary ms-2">Cancel</a>
+    </form>
+</div>
+{% endblock %}

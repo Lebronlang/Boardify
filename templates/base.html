@@ -1,0 +1,2910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title or "Boardify - Modern Property System" }}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <!-- Facebook Blue Theme Styles -->
+    <style>
+        :root {
+            /* Facebook Blue Color Palette */
+            --fb-primary: #1877f2;
+            --fb-primary-hover: #166fe5;
+            --fb-primary-active: #1567d3;
+            --fb-secondary: #42b72a;
+            --fb-secondary-hover: #36a420;
+            --fb-light-blue: #e7f3ff;
+            --fb-lighter-blue: #f0f8ff;
+            
+            /* Background Colors */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f0f2f5;
+            --bg-tertiary: #e4e6eb;
+            --bg-hover: #f2f3f5;
+            
+            /* Dark Mode Colors */
+            --dark-primary: #18191a;
+            --dark-secondary: #242526;
+            --dark-tertiary: #3a3b3c;
+            --dark-hover: #4e4f50;
+            
+            /* Text Colors */
+            --text-primary: #050505;
+            --text-secondary: #65676b;
+            --text-tertiary: #8a8d91;
+            --text-white: #ffffff;
+            
+            /* Border & Divider */
+            --border-color: #ced0d4;
+            --divider-color: #e4e6eb;
+            
+            /* Shadows */
+            --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.1);
+            --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.1);
+            --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.1);
+            --shadow-4: 0 8px 16px rgba(0, 0, 0, 0.15);
+            --shadow-hover: 0 8px 24px rgba(24, 119, 242, 0.2);
+            
+            /* Status Colors */
+            --success: #31a24c;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #3498db;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ============================================
+           ENHANCED NAVBAR - FACEBOOK STYLE
+           ============================================ */
+        .modern-navbar {
+            background: var(--bg-primary) !important;
+            box-shadow: var(--shadow-2);
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--divider-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .modern-navbar .container-fluid {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .modern-navbar .navbar-brand {
+            font-weight: 800;
+            font-size: 2rem;
+            color: var(--fb-primary) !important;
+            text-shadow: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .modern-navbar .navbar-brand:hover {
+            color: var(--fb-primary-hover) !important;
+            transform: scale(1.02);
+        }
+
+        .modern-navbar .navbar-brand i {
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--fb-primary) 0%, #4a90e2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .modern-navbar .nav-link {
+            color: var(--text-secondary) !important;
+            font-weight: 600;
+            padding: 0.6rem 1rem !important;
+            border-radius: 8px;
+            margin: 0 0.25rem;
+            transition: all 0.2s ease;
+            position: relative;
+            font-size: 0.95rem;
+        }
+
+        .modern-navbar .nav-link::before {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 3px;
+            background: var(--fb-primary);
+            transition: width 0.3s ease;
+            border-radius: 2px 2px 0 0;
+        }
+
+        .modern-navbar .nav-link:hover {
+            color: var(--fb-primary) !important;
+            background: var(--fb-light-blue);
+        }
+
+        .modern-navbar .nav-link:hover::before {
+            width: 80%;
+        }
+
+        .modern-navbar .nav-link.active {
+            color: var(--fb-primary) !important;
+            background: var(--fb-lighter-blue);
+        }
+
+        .modern-navbar .nav-link.active::before {
+            width: 100%;
+        }
+
+        .modern-navbar .dropdown-menu {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow-4);
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            min-width: 280px;
+        }
+
+        .modern-navbar .dropdown-item {
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modern-navbar .dropdown-item i {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        .modern-navbar .dropdown-item:hover {
+            background: var(--fb-light-blue);
+            color: var(--fb-primary);
+        }
+
+        .modern-navbar .dropdown-item:hover i {
+            color: var(--fb-primary);
+        }
+
+        .modern-navbar .navbar-toggler {
+            border: none;
+            padding: 0.5rem;
+        }
+
+        .modern-navbar .navbar-toggler:focus {
+            box-shadow: none;
+        }
+
+        .modern-navbar .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%231877f2' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        }
+
+        /* Notification Badge */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger);
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border: 2px solid var(--bg-primary);
+        }
+
+        /* ============================================
+           MAIN CONTAINER & CONTENT
+           ============================================ */
+        .main-container {
+            min-height: calc(100vh - 120px);
+            padding: 2rem 0;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Alert Styles - Facebook Inspired */
+        .alert {
+            border: none;
+            border-radius: 12px;
+            box-shadow: var(--shadow-2);
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.25rem;
+            font-weight: 500;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left-color: var(--success);
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border-left-color: var(--danger);
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left-color: var(--warning);
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left-color: var(--info);
+        }
+
+        .alert .btn-close {
+            opacity: 0.5;
+        }
+
+        .alert .btn-close:hover {
+            opacity: 1;
+        }
+
+        /* Content Wrapper */
+        .content-wrapper {
+            background: var(--bg-primary);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-2);
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .content-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--fb-primary), #4a90e2, var(--fb-primary));
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        /* Page Header */
+        .page-header {
+            background: linear-gradient(135deg, var(--fb-primary) 0%, #4a90e2 100%);
+            border: none;
+            border-radius: 16px;
+            padding: 2.5rem;
+            color: var(--text-white);
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-3);
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .page-header::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -5%;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+            animation: float 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(-30px, -30px) rotate(120deg); }
+            66% { transform: translate(30px, -20px) rotate(240deg); }
+        }
+
+        .page-header h1, .page-header h2, .page-header h3 {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .page-header p {
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
+        }
+
+        /* ============================================
+           BUTTON STYLES - FACEBOOK INSPIRED
+           ============================================ */
+        .btn-primary {
+            background: var(--fb-primary);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 600;
+            color: var(--text-white);
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-1);
+            font-size: 0.95rem;
+        }
+
+        .btn-primary:hover {
+            background: var(--fb-primary-hover);
+            color: var(--text-white);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .btn-primary:active {
+            background: var(--fb-primary-active);
+            transform: translateY(0);
+        }
+
+        .btn-outline-primary {
+            color: var(--fb-primary);
+            border: 2px solid var(--fb-primary);
+            border-radius: 8px;
+            padding: 11px 24px;
+            font-weight: 600;
+            background: transparent;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--fb-primary);
+            border-color: var(--fb-primary);
+            color: var(--text-white);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-success {
+            background: var(--fb-secondary);
+            border: none;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: var(--fb-secondary-hover);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.875rem;
+        }
+
+        .btn-lg {
+            padding: 14px 32px;
+            font-size: 1.05rem;
+        }
+
+        /* ============================================
+           CARD STYLES
+           ============================================ */
+        .card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow-2);
+            transition: all 0.3s ease;
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-4);
+            border-color: var(--fb-primary);
+        }
+
+        .card-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-weight: 600;
+            padding: 1rem 1.25rem;
+        }
+
+        .card-body {
+            background: var(--bg-primary);
+            padding: 1.5rem 1.25rem;
+        }
+
+        .card-footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 1rem 1.25rem;
+        }
+
+        .card-img-top {
+            border-radius: 12px 12px 0 0;
+        }
+
+        /* ============================================
+           FORM CONTROLS
+           ============================================ */
+        .form-control, .form-select {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: var(--bg-primary);
+            border-color: var(--fb-primary);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+            outline: none;
+        }
+
+        .form-control::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .form-label {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .form-text {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .input-group-text {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        /* ============================================
+           TABLE STYLES
+           ============================================ */
+        .table {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow-2);
+            color: var(--text-primary);
+            background: var(--bg-primary);
+        }
+
+        .table thead {
+            background: var(--fb-primary);
+            color: white;
+        }
+
+        .table th {
+            border: none;
+            font-weight: 600;
+            padding: 1rem;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        .table td {
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+            padding: 1rem;
+            vertical-align: middle;
+            color: var(--text-primary);
+        }
+
+        .table tbody tr {
+            transition: background 0.2s ease;
+        }
+
+        .table tbody tr:hover {
+            background: var(--fb-lighter-blue) !important;
+        }
+
+        .table-striped tbody tr:nth-of-type(odd) {
+            background: var(--bg-primary);
+        }
+
+        .table-striped tbody tr:nth-of-type(even) {
+            background: var(--bg-secondary);
+        }
+
+        /* ============================================
+           BADGE STYLES
+           ============================================ */
+        .badge {
+            padding: 0.5em 0.8em;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .badge.bg-primary {
+            background: var(--fb-primary) !important;
+        }
+
+        .badge.bg-success {
+            background: var(--success) !important;
+        }
+
+        .badge.bg-danger {
+            background: var(--danger) !important;
+        }
+
+        .badge.bg-warning {
+            background: var(--warning) !important;
+            color: white;
+        }
+
+        .badge.bg-info {
+            background: var(--info) !important;
+        }
+
+        .badge.bg-secondary {
+            background: var(--text-secondary) !important;
+        }
+
+        /* ============================================
+           FOOTER
+           ============================================ */
+        .modern-footer {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            padding: 2.5rem 0;
+            margin-top: 3rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .modern-footer h5 {
+            color: var(--fb-primary);
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .modern-footer .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .modern-footer .social-links a {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .modern-footer .social-links a:hover {
+            background: var(--fb-primary);
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .modern-footer .text-light {
+            color: var(--text-tertiary) !important;
+        }
+
+        /* ============================================
+           UTILITY CLASSES
+           ============================================ */
+        a {
+            color: var(--fb-primary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--fb-primary-hover);
+            text-decoration: underline;
+        }
+
+        hr {
+            border-color: var(--border-color);
+            opacity: 1;
+            margin: 1.5rem 0;
+        }
+
+        .text-muted {
+            color: var(--text-secondary) !important;
+        }
+
+        .text-primary {
+            color: var(--fb-primary) !important;
+        }
+
+        .bg-light {
+            background: var(--bg-secondary) !important;
+        }
+
+        .border {
+            border-color: var(--border-color) !important;
+        }
+
+        /* ============================================
+           SCROLLBAR STYLING
+           ============================================ */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 6px;
+            border: 2px solid var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--fb-primary);
+        }
+
+        /* Selection Color */
+        ::selection {
+            background: var(--fb-primary);
+            color: white;
+        }
+
+        ::-moz-selection {
+            background: var(--fb-primary);
+            color: white;
+        }
+
+        /* ============================================
+           ADVANCED AI CHATBOT STYLES - FACEBOOK STYLE
+           ============================================ */
+        
+        .chatbot-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1050;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .chatbot-toggle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--fb-primary) 0%, #4a90e2 100%);
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(24, 119, 242, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulseBlue 2s infinite;
+        }
+
+        @keyframes pulseBlue {
+            0%, 100% {
+                box-shadow: 0 4px 20px rgba(24, 119, 242, 0.4);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 4px 30px rgba(24, 119, 242, 0.6);
+                transform: scale(1.05);
+            }
+        }
+
+        .chatbot-toggle:hover {
+            background: linear-gradient(135deg, var(--fb-primary-hover) 0%, #3d7ad4 100%);
+            transform: scale(1.1);
+            animation: none;
+            box-shadow: 0 6px 30px rgba(24, 119, 242, 0.6);
+        }
+
+        .chatbot-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .chatbot-notification {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            border: 3px solid white;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        .chatbot-window {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 400px;
+            max-width: calc(100vw - 40px);
+            height: 650px;
+            max-height: calc(100vh - 120px);
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chatbot-window.active {
+            display: flex;
+            animation: slideUpFade 0.3s ease-out;
+        }
+
+        @keyframes slideUpFade {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chatbot-header {
+            background: linear-gradient(135deg, var(--fb-primary) 0%, #4a90e2 100%);
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white;
+        }
+
+        .chatbot-avatar {
+            width: 45px;
+            height: 45px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--fb-primary);
+            font-size: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .chatbot-info {
+            flex: 1;
+        }
+
+        .chatbot-info h6 {
+            color: white;
+            margin: 0;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .status-online {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .status-online i {
+            font-size: 0.5rem;
+            color: var(--fb-secondary);
+        }
+
+        .chatbot-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chatbot-actions .btn {
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        .chatbot-actions .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .chatbot-messages {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            background: var(--bg-secondary);
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 0.85rem 1.1rem;
+            border-radius: 18px;
+            line-height: 1.5;
+            animation: messageSlide 0.3s ease-out;
+            word-wrap: break-word;
+            font-size: 0.95rem;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-bot {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            box-shadow: var(--shadow-1);
+        }
+
+        .message-user {
+            background: var(--fb-primary);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            box-shadow: var(--shadow-2);
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-top: 0.4rem;
+            display: block;
+        }
+
+        .message-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .msg-btn {
+            background: var(--fb-primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            box-shadow: var(--shadow-1);
+        }
+
+        .msg-btn:hover {
+            background: var(--fb-primary-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-3);
+        }
+
+        .msg-btn:active {
+            transform: translateY(0);
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 0.3rem;
+            align-self: flex-start;
+            padding: 0.85rem 1.1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            box-shadow: var(--shadow-1);
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--fb-primary);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .chatbot-quick-actions {
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            background: var(--bg-primary);
+        }
+
+        .quick-action-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.6rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-weight: 500;
+        }
+
+        .quick-action-btn:hover {
+            background: var(--fb-primary);
+            color: white;
+            border-color: var(--fb-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-2);
+        }
+
+        .chatbot-input-container {
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-primary);
+        }
+
+        .chatbot-input {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        #chatbotInput {
+            flex: 1;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            outline: none;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        #chatbotInput:focus {
+            border-color: var(--fb-primary);
+            box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+            background: var(--bg-primary);
+        }
+
+        #chatbotInput::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        #sendMessage {
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            background: var(--fb-primary);
+            border: none;
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        #sendMessage:hover {
+            background: var(--fb-primary-hover);
+            transform: scale(1.05);
+        }
+
+        #sendMessage:active {
+            transform: scale(0.95);
+        }
+
+        .chatbot-suggestions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .chatbot-suggestions small {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .suggestion {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 0.35rem 0.65rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border-color);
+            font-weight: 500;
+        }
+
+        .suggestion:hover {
+            background: var(--fb-light-blue);
+            color: var(--fb-primary);
+            border-color: var(--fb-primary);
+        }
+
+        .property-card-chat {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .property-card-chat:hover {
+            border-color: var(--fb-primary);
+            transform: translateX(5px);
+            box-shadow: var(--shadow-3);
+            background: var(--bg-primary);
+        }
+
+        .property-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .property-details {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .property-price {
+            color: var(--fb-primary);
+            font-weight: 700;
+            margin-top: 0.5rem;
+            font-size: 1rem;
+        }
+
+        /* ============================================
+           ENHANCED FEATURES
+           ============================================ */
+
+        /* Loading Spinner */
+        .spinner-border {
+            border-color: var(--fb-primary);
+            border-right-color: transparent;
+        }
+
+        /* Progress Bar */
+        .progress {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: var(--fb-primary);
+        }
+
+        /* Tooltip */
+        .tooltip-inner {
+            background: var(--dark-primary);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .tooltip.bs-tooltip-top .tooltip-arrow::before {
+            border-top-color: var(--dark-primary);
+        }
+
+        /* Modal */
+        .modal-content {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--shadow-4);
+        }
+
+        .modal-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem;
+        }
+
+        .modal-title {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .modal-footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 1rem 1.25rem;
+        }
+
+        .btn-close {
+            opacity: 0.5;
+        }
+
+        .btn-close:hover {
+            opacity: 1;
+        }
+
+        /* Pagination */
+        .pagination {
+            gap: 0.5rem;
+        }
+
+        .page-link {
+            color: var(--fb-primary);
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .page-link:hover {
+            background: var(--fb-light-blue);
+            border-color: var(--fb-primary);
+            color: var(--fb-primary);
+        }
+
+        .page-item.active .page-link {
+            background: var(--fb-primary);
+            border-color: var(--fb-primary);
+            color: white;
+        }
+
+        .page-item.disabled .page-link {
+            background: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-tertiary);
+        }
+
+        /* Breadcrumb */
+        .breadcrumb {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+        }
+
+        .breadcrumb-item {
+            color: var(--text-secondary);
+        }
+
+        .breadcrumb-item.active {
+            color: var(--fb-primary);
+            font-weight: 600;
+        }
+
+        .breadcrumb-item + .breadcrumb-item::before {
+            color: var(--text-tertiary);
+        }
+
+        /* List Group */
+        .list-group-item {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .list-group-item:hover {
+            background: var(--fb-lighter-blue);
+            border-color: var(--fb-primary);
+        }
+
+        .list-group-item.active {
+            background: var(--fb-primary);
+            border-color: var(--fb-primary);
+            color: white;
+        }
+
+        /* Accordion */
+        .accordion-item {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px !important;
+            margin-bottom: 0.5rem;
+        }
+
+        .accordion-button {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-weight: 600;
+            border-radius: 8px !important;
+        }
+
+        .accordion-button:not(.collapsed) {
+            background: var(--fb-light-blue);
+            color: var(--fb-primary);
+            box-shadow: none;
+        }
+
+        .accordion-button:focus {
+            box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+            border-color: var(--fb-primary);
+        }
+
+        .accordion-body {
+            color: var(--text-primary);
+        }
+
+        /* Nav Tabs */
+        .nav-tabs {
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .nav-tabs .nav-link {
+            color: var(--text-secondary);
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 0.75rem 1.25rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tabs .nav-link:hover {
+            border-color: var(--fb-primary);
+            color: var(--fb-primary);
+            background: var(--fb-lighter-blue);
+        }
+
+        .nav-tabs .nav-link.active {
+            color: var(--fb-primary);
+            border-color: var(--fb-primary);
+            background: var(--bg-primary);
+        }
+
+        /* Nav Pills */
+        .nav-pills .nav-link {
+            color: var(--text-secondary);
+            border-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .nav-pills .nav-link:hover {
+            background: var(--fb-light-blue);
+            color: var(--fb-primary);
+        }
+
+        .nav-pills .nav-link.active {
+            background: var(--fb-primary);
+            color: white;
+        }
+
+        /* Dropdown Menu Enhancements */
+        .dropdown-menu {
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-4);
+            border-radius: 12px;
+            padding: 0.5rem;
+        }
+
+        .dropdown-divider {
+            border-top-color: var(--border-color);
+            margin: 0.5rem 0;
+        }
+
+        .dropdown-header {
+            color: var(--text-secondary);
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.5rem 1rem;
+        }
+
+        /* Switch/Toggle */
+        .form-check-input {
+            border-color: var(--border-color);
+            cursor: pointer;
+        }
+
+        .form-check-input:checked {
+            background-color: var(--fb-primary);
+            border-color: var(--fb-primary);
+        }
+
+        .form-check-input:focus {
+            border-color: var(--fb-primary);
+            box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+        }
+
+        .form-switch .form-check-input {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba%28255,255,255,1.0%29'/%3e%3c/svg%3e");
+        }
+
+        /* Range Slider */
+        .form-range {
+            height: 0.5rem;
+        }
+
+        .form-range::-webkit-slider-thumb {
+            background: var(--fb-primary);
+        }
+
+        .form-range::-moz-range-thumb {
+            background: var(--fb-primary);
+        }
+
+        .form-range::-webkit-slider-thumb:hover {
+            background: var(--fb-primary-hover);
+        }
+
+        .form-range::-moz-range-thumb:hover {
+            background: var(--fb-primary-hover);
+        }
+
+        /* Offcanvas */
+        .offcanvas {
+            background: var(--bg-primary);
+            border-left: 1px solid var(--border-color);
+        }
+
+        .offcanvas-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .offcanvas-title {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .offcanvas-body {
+            color: var(--text-primary);
+        }
+
+        /* Toast Notifications */
+        .toast {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-4);
+            border-radius: 12px;
+        }
+
+        .toast-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .toast-body {
+            color: var(--text-primary);
+        }
+
+        /* ============================================
+           RESPONSIVE DESIGN
+           ============================================ */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem 0;
+            }
+            
+            .content-wrapper {
+                padding: 1.5rem;
+                margin: 0 0.5rem 1rem;
+                border-radius: 12px;
+            }
+            
+            .page-header {
+                padding: 1.5rem;
+                border-radius: 12px;
+            }
+
+            .modern-navbar .navbar-brand {
+                font-size: 1.5rem;
+            }
+
+            .modern-navbar .navbar-brand i {
+                font-size: 1.5rem;
+            }
+
+            .chatbot-container {
+                bottom: 10px;
+                right: 10px;
+            }
+
+            .chatbot-window {
+                width: calc(100vw - 20px);
+                height: calc(100vh - 100px);
+                right: -10px;
+                bottom: 70px;
+                border-radius: 12px;
+            }
+
+            .chatbot-toggle {
+                width: 56px;
+                height: 56px;
+                font-size: 1.5rem;
+            }
+
+            .chatbot-notification {
+                width: 20px;
+                height: 20px;
+                font-size: 0.7rem;
+            }
+
+            .card {
+                margin-bottom: 1rem;
+            }
+
+            .btn {
+                font-size: 0.9rem;
+            }
+
+            .table {
+                font-size: 0.875rem;
+            }
+
+            .table th, .table td {
+                padding: 0.75rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .content-wrapper {
+                padding: 1rem;
+            }
+
+            .page-header {
+                padding: 1.25rem;
+            }
+
+            .modern-navbar .container-fluid {
+                padding: 0 1rem;
+            }
+
+            .btn-lg {
+                padding: 12px 24px;
+                font-size: 1rem;
+            }
+
+            .chatbot-header {
+                padding: 0.75rem;
+            }
+
+            .chatbot-avatar {
+                width: 40px;
+                height: 40px;
+                font-size: 1.25rem;
+            }
+
+            .chatbot-info h6 {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* ============================================
+           DARK MODE SUPPORT (Optional)
+           ============================================ */
+        @media (prefers-color-scheme: dark) {
+            .dark-mode-toggle:checked ~ * {
+                --bg-primary: var(--dark-secondary);
+                --bg-secondary: var(--dark-primary);
+                --bg-tertiary: var(--dark-tertiary);
+                --text-primary: var(--text-white);
+                --text-secondary: #b0b3b8;
+                --border-color: var(--dark-hover);
+                --divider-color: var(--dark-tertiary);
+            }
+        }
+
+        /* ============================================
+           ANIMATIONS & TRANSITIONS
+           ============================================ */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .animate-slideInRight {
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .animate-slideInLeft {
+            animation: slideInLeft 0.5s ease-out;
+        }
+
+        .animate-scaleIn {
+            animation: scaleIn 0.3s ease-out;
+        }
+
+        /* Smooth transitions for all interactive elements */
+        button, a, input, select, textarea, .card, .badge {
+            transition: all 0.2s ease;
+        }
+
+        /* Focus visible for accessibility */
+        *:focus-visible {
+            outline: 3px solid var(--fb-primary);
+            outline-offset: 2px;
+        }
+
+        /* Reduced motion for accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ============================================
+           PRINT STYLES
+           ============================================ */
+        @media print {
+            .modern-navbar,
+            .modern-footer,
+            .chatbot-container,
+            .btn,
+            .alert {
+                display: none !important;
+            }
+
+            body {
+                background: white;
+                color: black;
+            }
+
+            .content-wrapper {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Enhanced Navbar -->
+    <nav class="navbar navbar-expand-lg modern-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-building"></i>Boardify
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+               <ul class="navbar-nav ms-auto">
+    {% if 'user_id' in session %}
+        
+        
+    
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('users') }}">
+                <i class="bi bi-people me-1"></i>Users
+            </a>
+        </li>
+        <li class="nav-item position-relative">
+            <a class="nav-link" href="{{ url_for('inbox') }}">
+                <i class="bi bi-envelope me-1"></i>Messages
+                <span class="notification-badge" style="display: none;">3</span>
+            </a>
+        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle me-1"></i>{{ session['user_name'] }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('profile') }}">
+                                        <i class="bi bi-person"></i>My Profile
+                                    </a>
+                                </li>
+                                
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('logout') }}">
+                                        <i class="bi bi-box-arrow-right"></i>Logout
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>Login
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('register') }}">
+                                <i class="bi bi-person-plus me-1"></i>Register
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Enhanced Flash Messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show animate-fadeIn" role="alert">
+                        {% if category == 'success' %}
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                        {% elif category == 'danger' %}
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        {% elif category == 'warning' %}
+                            <i class="bi bi-exclamation-circle-fill me-2"></i>
+                        {% elif category == 'info' %}
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                        {% endif %}
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content Container -->
+    <div class="main-container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Enhanced Footer -->
+    <footer class="modern-footer">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-4 text-md-start text-center mb-3 mb-md-0">
+                    <h5 class="mb-2">
+                        <i class="bi bi-house-heart-fill me-2"></i>Boardify
+                    </h5>
+                    <p class="text-light mb-0">Modern Property Management</p>
+                </div>
+                <div class="col-md-4 text-center mb-3 mb-md-0">
+                    <div class="social-links">
+                        <a href="#" title="Facebook"><i class="bi bi-facebook"></i></a>
+                        <a href="#" title="Twitter"><i class="bi bi-twitter"></i></a>
+                        <a href="#" title="Instagram"><i class="bi bi-instagram"></i></a>
+                        <a href="#" title="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end text-center">
+                    <p class="mb-1">&copy; {{ current_year or 2025 }} Boardify</p>
+                    <small class="text-light">Built with <i class="bi bi-heart-fill text-danger"></i> for property management</small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- ============================================
+         ADVANCED AI CHATBOT
+         ============================================ -->
+    <div class="chatbot-container" id="chatbotContainer">
+        <button class="chatbot-toggle" id="chatbotToggle" title="Open AI Assistant (Ctrl+K)">
+            <i class="bi bi-robot"></i>
+            <span class="chatbot-notification" id="chatbotNotification" style="display: none;"></span>
+        </button>
+
+        <div class="chatbot-window" id="chatbotWindow">
+            <div class="chatbot-header">
+                <div class="chatbot-avatar">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <div class="chatbot-info">
+                    <h6 class="mb-0">Boardify AI Assistant</h6>
+                    <small class="status-online">
+                        <i class="bi bi-circle-fill"></i> Online 24/7
+                    </small>
+                </div>
+                <div class="chatbot-actions">
+                    <button class="btn btn-sm" id="clearChat" title="Clear chat">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    <button class="btn btn-sm" id="minimizeChat" title="Minimize">
+                        <i class="bi bi-dash"></i>
+                    </button>
+                    <button class="btn btn-sm" id="closeChat" title="Close">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="chatbot-messages" id="chatbotMessages">
+                <!-- Messages will appear here dynamically -->
+            </div>
+
+            <div class="chatbot-quick-actions" id="quickActions">
+                <button class="quick-action-btn" data-action="find_properties">
+                    <i class="bi bi-search"></i> Find Properties
+                </button>
+                <button class="quick-action-btn" data-action="booking_help">
+                    <i class="bi bi-calendar-check"></i> Booking Help
+                </button>
+                <button class="quick-action-btn" data-action="billing_info">
+                    <i class="bi bi-receipt"></i> Billing Info
+                </button>
+            </div>
+
+            <div class="chatbot-input-container">
+                <div class="chatbot-input">
+                    <input type="text" 
+                           id="chatbotInput" 
+                           placeholder="Ask me anything about Boardify..."
+                           autocomplete="off">
+                    <button id="sendMessage" class="btn btn-primary" title="Send message">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </div>
+                <div class="chatbot-suggestions" id="chatbotSuggestions">
+                    <small>Try asking:</small>
+                    <span class="suggestion">"Find apartments in Makati"</span>
+                    <span class="suggestion">"How to book?"</span>
+                    <span class="suggestion">"Payment methods"</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         ADVANCED AI CHATBOT JAVASCRIPT
+         ============================================ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const chatbotToggle = document.getElementById('chatbotToggle');
+            const chatbotWindow = document.getElementById('chatbotWindow');
+            const chatbotMessages = document.getElementById('chatbotMessages');
+            const chatbotInput = document.getElementById('chatbotInput');
+            const sendMessage = document.getElementById('sendMessage');
+            const quickActions = document.getElementById('quickActions');
+            const minimizeChat = document.getElementById('minimizeChat');
+            const closeChat = document.getElementById('closeChat');
+            const clearChat = document.getElementById('clearChat');
+            const chatbotNotification = document.getElementById('chatbotNotification');
+
+            // State
+            let isChatOpen = false;
+            let conversationHistory = [];
+            let userContext = {
+                name: 'Guest',
+                isLoggedIn: false,
+                currentPage: window.location.pathname
+            };
+
+            // Try to get user info from page if available
+            try {
+                const userNameElement = document.querySelector('.navbar-brand + .navbar-collapse .dropdown-toggle');
+                if (userNameElement && userNameElement.textContent.trim()) {
+                    const userName = userNameElement.textContent.trim();
+                    if (userName && userName !== 'Login' && userName !== 'Register') {
+                        userContext.name = userName;
+                        userContext.isLoggedIn = true;
+                    }
+                }
+            } catch(e) {
+                // User not logged in or element not found
+            }
+
+            // Advanced AI Knowledge Base
+            const boardifyKnowledge = {
+                propertyManagement: {
+                    types: ['Apartment', 'Bedspacer', 'Condo', 'Studio', 'House', 'Room'],
+                    features: ['WiFi', 'Parking', 'Security', 'Laundry', 'Kitchen', 'Furnished'],
+                    locations: ['Makati', 'BGC', 'Quezon City', 'Manila', 'Pasig', 'Mandaluyong']
+                },
+                bookingProcess: {
+                    steps: [
+                        'Browse available properties',
+                        'Select your preferred property',
+                        'Click Book Now button',
+                        'Fill out booking form with details',
+                        'Submit booking request',
+                        'Wait for landlord approval (24-48 hours)',
+                        'Receive approval notification',
+                        'Review and sign digital contract',
+                        'Pay security deposit and first month',
+                        'Receive confirmation and access details'
+                    ],
+                    requirements: ['Valid ID', 'Proof of income', 'Emergency contact', 'Security deposit'],
+                    timeline: 'Approval typically takes 24-48 hours'
+                },
+                billing: {
+                    paymentMethods: ['GCash', 'Bank Transfer', 'PayMaya', 'Credit/Debit Card', 'Cash Payment'],
+                    schedule: 'Monthly rent due on 1st of each month',
+                    lateFee: '5% penalty after 5 days',
+                    features: ['Auto-pay setup', 'Payment history', 'Download receipts', 'Split payment option']
+                },
+                features: {
+                    tenant: ['Property search', 'Online booking', 'Digital contracts', 'Payment tracking', 'Maintenance requests', 'Messaging system'],
+                    landlord: ['Property listing', 'Tenant management', 'Payment monitoring', 'Contract generation', 'Analytics dashboard', 'Review system']
+                },
+                support: {
+                    hours: '24/7 AI Support, Human support 9AM-6PM',
+                    channels: ['In-app chat', 'Email support', 'Phone hotline', 'Help center'],
+                    response: 'AI responds instantly, human support within 1 hour'
+                }
+            };
+
+            // ============================================
+            // CORE FUNCTIONS
+            // ============================================
+
+            function initChat() {
+                const greeting = userContext.isLoggedIn 
+                    ? `Hello ${userContext.name}! 👋 I'm your AI-powered Boardify assistant.`
+                    : `Hello! 👋 Welcome to Boardify. I'm your AI assistant.`;
+                
+                addBotMessage(greeting);
+                
+                setTimeout(() => {
+                    addBotMessage("I have comprehensive knowledge about:<br><br>🏠 <strong>Property Management</strong> - Search, filtering, availability<br>📅 <strong>Booking System</strong> - Complete booking workflow<br>💰 <strong>Payments & Billing</strong> - All payment methods & tracking<br>📋 <strong>Contracts</strong> - Digital agreements & signing<br>🔧 <strong>Platform Features</strong> - Every feature explained<br>📊 <strong>Analytics</strong> - Insights and reports<br><br>Ask me anything - I'm trained on the entire Boardify system!");
+                    showQuickActions();
+                }, 800);
+            }
+
+            function addBotMessage(text, delay = 0, options = {}) {
+                setTimeout(() => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'message message-bot';
+                    
+                    let content = formatMessage(text);
+                    
+                    if (options.buttons) {
+                        content += '<div class="message-buttons">';
+                        options.buttons.forEach(btn => {
+                            content += `<button class="msg-btn" data-action="${btn.action}">${btn.label}</button>`;
+                        });
+                        content += '</div>';
+                    }
+                    
+                    messageDiv.innerHTML = `
+                        <div>${content}</div>
+                        <div class="message-time">${getCurrentTime()}</div>
+                    `;
+                    chatbotMessages.appendChild(messageDiv);
+                    
+                    if (options.buttons) {
+                        messageDiv.querySelectorAll('.msg-btn').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                const action = this.getAttribute('data-action');
+                                handleButtonAction(action);
+                            });
+                        });
+                    }
+                    
+                    scrollToBottom();
+                    conversationHistory.push({ type: 'bot', text, time: new Date(), options });
+                }, delay);
+            }
+
+            function addUserMessage(text) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message message-user';
+                messageDiv.innerHTML = `
+                    <div>${escapeHtml(text)}</div>
+                    <div class="message-time">${getCurrentTime()}</div>
+                `;
+                chatbotMessages.appendChild(messageDiv);
+                scrollToBottom();
+                conversationHistory.push({ type: 'user', text, time: new Date() });
+            }
+
+            function showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'typing-indicator';
+                typingDiv.id = 'typingIndicator';
+                typingDiv.innerHTML = `
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                `;
+                chatbotMessages.appendChild(typingDiv);
+                scrollToBottom();
+            }
+
+            function hideTypingIndicator() {
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            }
+
+            function formatMessage(text) {
+                return text.replace(/\n/g, '<br>')
+                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                          .replace(/`(.*?)`/g, '<code>$1</code>');
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            function getCurrentTime() {
+                return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+
+            function scrollToBottom() {
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+            }
+
+            function showQuickActions() {
+                quickActions.style.display = 'flex';
+            }
+
+            function hideQuickActions() {
+                quickActions.style.display = 'none';
+            }
+
+            // ============================================
+            // AI PROCESSING ENGINE
+            // ============================================
+
+            async function processUserMessage(message) {
+                const lowerMessage = message.toLowerCase();
+                showTypingIndicator();
+                hideQuickActions();
+                
+                // Simulate AI thinking time
+                const thinkingTime = 800 + Math.random() * 700;
+                
+                setTimeout(() => {
+                    hideTypingIndicator();
+                    
+                    // Advanced intent detection
+                    const intent = detectIntent(lowerMessage);
+                    const response = generateResponse(intent, lowerMessage, message);
+                    
+                    if (Array.isArray(response)) {
+                        response.forEach((msg, index) => {
+                            addBotMessage(msg.text, index * 600, msg.options || {});
+                        });
+                    } else {
+                        addBotMessage(response);
+                    }
+                    
+                }, thinkingTime);
+            }
+
+            function detectIntent(message) {
+                const intents = {
+                    greeting: ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings'],
+                    propertySearch: ['find', 'search', 'looking for', 'property', 'apartment', 'room', 'studio', 'condo', 'house', 'bedspace'],
+                    booking: ['book', 'reserve', 'reservation', 'how to book', 'booking process', 'rent'],
+                    payment: ['pay', 'payment', 'bill', 'billing', 'rent payment', 'gcash', 'bank transfer', 'pay my rent'],
+                    contract: ['contract', 'agreement', 'lease', 'terms', 'sign', 'document'],
+                    features: ['features', 'what can', 'capabilities', 'functions', 'how does it work'],
+                    support: ['help', 'support', 'problem', 'issue', 'trouble', 'error', 'bug'],
+                    account: ['account', 'profile', 'register', 'sign up', 'login', 'password', 'email'],
+                    landlord: ['landlord', 'owner', 'property owner', 'list property', 'add property'],
+                    tenant: ['tenant', 'renter', 'my booking', 'my property', 'my rent'],
+                    location: ['location', 'where', 'near', 'makati', 'bgc', 'quezon city', 'manila', 'area'],
+                    price: ['price', 'cost', 'how much', 'budget', 'cheap', 'expensive', 'affordable'],
+                    amenities: ['amenities', 'facilities', 'wifi', 'parking', 'security', 'furnished', 'kitchen'],
+                    maintenance: ['maintenance', 'repair', 'fix', 'broken', 'not working'],
+                    reviews: ['review', 'rating', 'feedback', 'comment', 'testimonial']
+                };
+                
+                for (const [intent, keywords] of Object.entries(intents)) {
+                    if (keywords.some(keyword => message.includes(keyword))) {
+                        return intent;
+                    }
+                }
+                
+                return 'general';
+            }
+
+            function generateResponse(intent, lowerMessage, originalMessage) {
+                const responses = {
+                    greeting: () => {
+                        const greetings = [
+                            `Hello${userContext.isLoggedIn ? ' ' + userContext.name : ''}! 😊 How can I assist you with Boardify today?`,
+                            `Hi there! 👋 I'm here to help you navigate Boardify. What would you like to know?`,
+                            `Welcome! I'm ready to help you with any questions about properties, bookings, or payments.`
+                        ];
+                        return greetings[Math.floor(Math.random() * greetings.length)];
+                    },
+                    
+                    propertySearch: () => {
+                        const responses = [{
+                            text: `<strong>🏠 Property Search Guide</strong><br><br>I can help you find the perfect property! Here's how:<br><br><strong>Search Options:</strong><br>📍 <strong>By Location:</strong> "Find properties in Makati"<br>💰 <strong>By Price:</strong> "Show apartments under ₱15,000"<br>🏢 <strong>By Type:</strong> Available types: ${boardifyKnowledge.propertyManagement.types.join(', ')}<br>✨ <strong>By Features:</strong> ${boardifyKnowledge.propertyManagement.features.join(', ')}<br><br><strong>Popular Locations:</strong><br>${boardifyKnowledge.propertyManagement.locations.map(loc => '• ' + loc).join('<br>')}`,
+                            options: {
+                                buttons: [
+                                    { label: '🔍 Search Now', action: 'search_properties' },
+                                    { label: '📋 View All Properties', action: 'view_all' },
+                                    { label: '💡 Get Recommendations', action: 'recommendations' }
+                                ]
+                            }
+                        }];
+                        
+                        if (lowerMessage.includes('makati') || lowerMessage.includes('bgc') || lowerMessage.includes('quezon')) {
+                            const location = lowerMessage.includes('makati') ? 'Makati' : 
+                                           lowerMessage.includes('bgc') ? 'BGC' : 'Quezon City';
+                            responses.push({
+                                text: `Great choice! ${location} is a popular area. Let me show you available properties there.`,
+                                options: {}
+                            });
+                        }
+                        
+                        return responses;
+                    },
+                    
+                    booking: () => [{
+                        text: `<strong>📅 Complete Booking Process</strong><br><br><strong>Step-by-Step Guide:</strong><br><br>${boardifyKnowledge.bookingProcess.steps.map((step, i) => `${i + 1}. ${step}`).join('<br>')}<br><br><strong>📋 Requirements:</strong><br>${boardifyKnowledge.bookingProcess.requirements.map(req => '✓ ' + req).join('<br>')}<br><br><strong>⏱️ Timeline:</strong> ${boardifyKnowledge.bookingProcess.timeline}<br><br><strong>💡 Tips:</strong><br>• Have all documents ready beforehand<br>• Respond promptly to landlord inquiries<br>• Read the contract carefully before signing<br>• Keep copies of all communications`,
+                        options: {
+                            buttons: [
+                                { label: '📝 Start Booking', action: 'start_booking' },
+                                { label: '📄 View Requirements', action: 'booking_requirements' },
+                                { label: '❓ Booking FAQs', action: 'booking_faq' }
+                            ]
+                        }
+                    }],
+                    
+                    payment: () => [{
+                        text: `<strong>💰 Payment & Billing Information</strong><br><br><strong>Accepted Payment Methods:</strong><br>${boardifyKnowledge.billing.paymentMethods.map(method => '💳 ' + method).join('<br>')}<br><br><strong>Payment Schedule:</strong><br>📅 ${boardifyKnowledge.billing.schedule}<br>⚠️ ${boardifyKnowledge.billing.lateFee}<br><br><strong>Features:</strong><br>${boardifyKnowledge.billing.features.map(f => '✓ ' + f).join('<br>')}<br><br><strong>How to Pay:</strong><br>1. Go to Billing section in your profile<br>2. Select payment method<br>3. Enter payment details<br>4. Confirm transaction<br>5. Download receipt automatically`,
+                        options: {
+                            buttons: [
+                                { label: '💳 Make Payment', action: 'make_payment' },
+                                { label: '📊 Payment History', action: 'payment_history' },
+                                { label: '🔄 Setup Auto-Pay', action: 'setup_autopay' }
+                            ]
+                        }
+                    }],
+                    
+                    contract: () => [{
+                        text: `<strong>📄 Digital Contract System</strong><br><br><strong>Our Contract Process:</strong><br><br>✓ <strong>Automatic Generation:</strong> Contracts are auto-generated after approval<br>✓ <strong>Digital Signing:</strong> Sign electronically - legally binding<br>✓ <strong>Cloud Storage:</strong> Access anytime from your profile<br>✓ <strong>Both Parties:</strong> Landlord and tenant both sign<br><br><strong>Contract Includes:</strong><br>• Property details and address<br>• Rental amount and payment terms<br>• Security deposit information<br>• Lease duration and renewal terms<br>• House rules and responsibilities<br>• Termination clauses<br><br><strong>After Signing:</strong><br>• Receive email confirmation<br>• Download PDF copy<br>• Access from Documents section<br>• Both parties get identical copies`,
+                        options: {
+                            buttons: [
+                                { label: '📋 View Sample', action: 'view_contract_sample' },
+                                { label: '✍️ My Contracts', action: 'my_contracts' }
+                            ]
+                        }
+                    }],
+                    
+                    features: () => [{
+                        text: `<strong>🚀 Boardify Platform Features</strong><br><br><strong>For Tenants:</strong><br>${boardifyKnowledge.features.tenant.map(f => '✓ ' + f).join('<br>')}<br><br><strong>For Landlords:</strong><br>${boardifyKnowledge.features.landlord.map(f => '✓ ' + f).join('<br>')}<br><br><strong>Key Highlights:</strong><br>🤖 <strong>AI Assistant:</strong> 24/7 intelligent support (that's me!)<br>📱 <strong>Mobile Responsive:</strong> Works on all devices<br>🔒 <strong>Secure:</strong> Bank-level encryption<br>⚡ <strong>Real-time:</strong> Instant notifications<br>📊 <strong>Analytics:</strong> Detailed insights and reports`,
+                        options: {
+                            buttons: [
+                                { label: '👤 Tenant Features', action: 'tenant_features' },
+                                { label: '🏢 Landlord Features', action: 'landlord_features' }
+                            ]
+                        }
+                    }],
+                    
+                    support: () => [{
+                        text: `<strong>🆘 Support & Help</strong><br><br><strong>Available Support Channels:</strong><br>${boardifyKnowledge.support.channels.map(c => '📞 ' + c).join('<br>')}<br><br><strong>Support Hours:</strong><br>${boardifyKnowledge.support.hours}<br><br><strong>Response Time:</strong><br>${boardifyKnowledge.support.response}<br><br><strong>Common Issues I Can Help With:</strong><br>• Payment problems<br>• Booking questions<br>• Account access<br>• Contract issues<br>• Property inquiries<br>• Technical difficulties<br><br><strong>For Urgent Issues:</strong><br>Contact our human support team for immediate assistance with critical problems.`,
+                        options: {
+                            buttons: [
+                                { label: '📧 Email Support', action: 'email_support' },
+                                { label: '📚 Help Center', action: 'help_center' },
+                                { label: '🔧 Report Issue', action: 'report_issue' }
+                            ]
+                        }
+                    }],
+                    
+                    account: () => {
+                        if (userContext.isLoggedIn) {
+                            return [{
+                                text: `<strong>👤 Your Account</strong><br><br>Hello ${userContext.name}! Your account is active.<br><br><strong>Quick Actions:</strong><br>• View your profile<br>• Update information<br>• Change password<br>• Manage notifications<br>• Privacy settings<br><br><strong>Account Security:</strong><br>✓ Email verified<br>✓ Secure password<br>✓ 2FA available`,
+                                options: {
+                                    buttons: [
+                                        { label: '👤 View Profile', action: 'view_profile' },
+                                        { label: '🔒 Security Settings', action: 'security' }
+                                    ]
+                                }
+                            }];
+                        } else {
+                            return [{
+                                text: `<strong>👤 Account & Registration</strong><br><br>You're not logged in yet. Here's how to get started:<br><br><strong>Create Account:</strong><br>1. Click 'Register' in the menu<br>2. Fill in your details<br>3. Verify your email<br>4. Complete your profile<br><br><strong>Benefits of Registration:</strong><br>✓ Save favorite properties<br>✓ Quick booking process<br>✓ Track your applications<br>✓ Manage payments<br>✓ Digital contracts<br>✓ Personalized recommendations`,
+                                options: {
+                                    buttons: [
+                                        { label: '📝 Register Now', action: 'register' },
+                                        { label: '🔑 Login', action: 'login' }
+                                    ]
+                                }
+                            }];
+                        }
+                    },
+                    
+                    landlord: () => [{
+                        text: `<strong>🏢 Landlord Features</strong><br><br><strong>Property Management:</strong><br>✓ <strong>List Properties:</strong> Add unlimited properties<br>✓ <strong>Photo Gallery:</strong> Upload multiple images<br>✓ <strong>Pricing Control:</strong> Set your own rates<br>✓ <strong>Availability:</strong> Real-time calendar<br><br><strong>Tenant Management:</strong><br>✓ Review applications<br>✓ Approve/reject bookings<br>✓ Screen tenants<br>✓ Communicate directly<br><br><strong>Financial Tools:</strong><br>✓ Payment tracking<br>✓ Auto-billing system<br>✓ Payment reminders<br>✓ Financial reports<br>✓ Tax documents<br><br><strong>Analytics Dashboard:</strong><br>📊 Occupancy rates<br>💰 Revenue tracking<br>📈 Performance metrics`,
+                        options: {
+                            buttons: [
+                                { label: '➕ Add Property', action: 'add_property' },
+                                { label: '📊 View Dashboard', action: 'landlord_dashboard' }
+                            ]
+                        }
+                    }],
+                    
+                    tenant: () => [{
+                        text: `<strong>👤 Tenant Features</strong><br><br><strong>Property Search:</strong><br>✓ <strong>Advanced Filters:</strong> Location, price, type<br>✓ <strong>Save Favorites:</strong> Bookmark properties<br>✓ <strong>Compare:</strong> Side-by-side comparison<br>✓ <strong>Virtual Tours:</strong> 360° views<br><br><strong>Booking Management:</strong><br>✓ Quick booking process<br>✓ Application tracking<br>✓ Digital contracts<br>✓ Instant notifications<br><br><strong>Payment & Billing:</strong><br>✓ Online payments<br>✓ Payment history<br>✓ Auto-pay option<br>✓ Receipt downloads<br><br><strong>Communication:</strong><br>💬 Direct messaging<br>📞 Contact landlord<br>🔧 Maintenance requests<br>⭐ Leave reviews`,
+                        options: {
+                            buttons: [
+                                { label: '🔍 Search Properties', action: 'search_properties' },
+                                { label: '📋 My Bookings', action: 'my_bookings' }
+                            ]
+                        }
+                    }],
+                    
+                    location: () => {
+                        const locationMentioned = boardifyKnowledge.propertyManagement.locations.find(loc => 
+                            lowerMessage.includes(loc.toLowerCase())
+                        );
+                        
+                        if (locationMentioned) {
+                            return [{
+                                text: `<strong>📍 Properties in ${locationMentioned}</strong><br><br>${locationMentioned} is a great choice! Here's what you should know:<br><br><strong>Area Highlights:</strong><br>• Central business district<br>• Near major transportation<br>• Shopping and dining<br>• Educational institutions<br><br><strong>Average Prices:</strong><br>Studio: ₱8,000 - ₱15,000/month<br>1BR: ₱12,000 - ₱25,000/month<br>2BR: ₱20,000 - ₱40,000/month<br><br>Let me find available properties for you!`,
+                                options: {
+                                    buttons: [
+                                        { label: `🔍 Search ${locationMentioned}`, action: `search_${locationMentioned}` },
+                                        { label: '🗺️ View Map', action: 'view_map' }
+                                    ]
+                                }
+                            }];
+                        } else {
+                            return `<strong>📍 Location Search</strong><br><br>We have properties in these prime locations:<br><br>${boardifyKnowledge.propertyManagement.locations.map(loc => '📌 ' + loc).join('<br>')}<br><br>Which area interests you?`;
+                        }
+                    },
+                    
+                    price: () => {
+                        const priceRanges = [
+                            { range: 'Under ₱5,000', desc: 'Bedspacers, shared rooms' },
+                            { range: '₱5,000 - ₱10,000', desc: 'Studios, small apartments' },
+                            { range: '₱10,000 - ₱20,000', desc: '1-2BR apartments' },
+                            { range: '₱20,000 - ₱30,000', desc: '2-3BR condos' },
+                            { range: 'Above ₱30,000', desc: 'Premium properties' }
+                        ];
+                        
+                        return [{
+                            text: `<strong>💰 Price Ranges</strong><br><br>Here's a breakdown of what you can expect:<br><br>${priceRanges.map(p => `<strong>${p.range}</strong><br>${p.desc}`).join('<br><br>')}<br><br><strong>💡 Tips:</strong><br>• Prices vary by location<br>• Furnished = higher price<br>• Utilities may be separate<br>• Security deposit usually 1-2 months<br><br>What's your budget range?`,
+                            options: {
+                                buttons: [
+                                    { label: 'Under ₱10K', action: 'budget_low' },
+                                    { label: '₱10K-₱20K', action: 'budget_mid' },
+                                    { label: 'Above ₱20K', action: 'budget_high' }
+                                ]
+                            }
+                        }];
+                    },
+                    
+                    amenities: () => [{
+                        text: `<strong>✨ Amenities & Features</strong><br><br><strong>Common Amenities:</strong><br>${boardifyKnowledge.propertyManagement.features.map(f => '✓ ' + f).join('<br>')}<br><br><strong>Filter by Amenities:</strong><br>You can search for properties with specific features:<br><br>🌐 <strong>WiFi:</strong> High-speed internet included<br>🚗 <strong>Parking:</strong> Dedicated parking space<br>🛡️ <strong>Security:</strong> 24/7 guard, CCTV<br>🧺 <strong>Laundry:</strong> Washing machine available<br>🍳 <strong>Kitchen:</strong> Full or shared kitchen<br>🛋️ <strong>Furnished:</strong> Move-in ready<br><br><strong>Premium Features:</strong><br>• Swimming pool<br>• Gym/Fitness center<br>• Rooftop deck<br>• Co-working space`,
+                        options: {
+                            buttons: [
+                                { label: '✨ Premium Properties', action: 'premium' },
+                                { label: '🏢 Basic Properties', action: 'basic' }
+                            ]
+                        }
+                    }],
+                    
+                    maintenance: () => [{
+                        text: `<strong>🔧 Maintenance Requests</strong><br><br><strong>How to Request:</strong><br>1. Go to your tenant dashboard<br>2. Click "Maintenance Request"<br>3. Describe the issue<br>4. Upload photos if needed<br>5. Submit request<br>6. Track status in real-time<br><br><strong>Response Times:</strong><br>🚨 <strong>Emergency:</strong> Within 2 hours<br>⚠️ <strong>Urgent:</strong> Within 24 hours<br>📝 <strong>Regular:</strong> Within 3 days<br><br><strong>Emergency Issues:</strong><br>• No water/electricity<br>• Gas leak<br>• Broken locks<br>• Flooding<br>• Safety hazards<br><br>All requests are logged and tracked for accountability.`,
+                        options: {
+                            buttons: [
+                                { label: '🚨 Report Emergency', action: 'emergency' },
+                                { label: '📝 Regular Request', action: 'maintenance_request' }
+                            ]
+                        }
+                    }],
+                    
+                    reviews: () => [{
+                        text: `<strong>⭐ Reviews & Ratings</strong><br><br><strong>Why Reviews Matter:</strong><br>• Help other tenants decide<br>• Hold landlords accountable<br>• Improve property quality<br>• Build community trust<br><br><strong>Review System:</strong><br>✓ <strong>Verified Reviews:</strong> Only actual tenants<br>✓ <strong>5-Star Rating:</strong> Clear scoring system<br>✓ <strong>Categories:</strong> Cleanliness, communication, value<br>✓ <strong>Response:</strong> Landlords can reply<br><br><strong>Leave a Review:</strong><br>After your stay, you'll receive a review request. Your honest feedback helps everyone!<br><br><strong>Reading Reviews:</strong><br>• Check recent reviews (last 6 months)<br>• Look for patterns<br>• Read landlord responses<br>• Consider overall rating`,
+                        options: {
+                            buttons: [
+                                { label: '⭐ Leave Review', action: 'leave_review' },
+                                { label: '📖 Read Reviews', action: 'read_reviews' }
+                            ]
+                        }
+                    }],
+                    
+                    general: () => {
+                        const suggestions = [
+                            "Try asking 'Find apartments in Makati'",
+                            "Ask 'How do I book a property?'",
+                            "Say 'Explain the payment process'",
+                            "Type 'What features does Boardify have?'",
+                            "Ask 'Show me cheap properties'"
+                        ];
+                        
+                        return `I'm here to help! I have comprehensive knowledge about the entire Boardify system.<br><br><strong>💡 You can ask me about:</strong><br>• Property searching and filtering<br>• Complete booking workflow<br>• Payment methods and billing<br>• Digital contracts<br>• Account management<br>• Landlord and tenant features<br>• Maintenance requests<br>• Reviews and ratings<br><br><strong>Try these:</strong><br>${suggestions.map(s => '💬 ' + s).join('<br>')}<br><br>What would you like to know?`;
+                    }
+                };
+                
+                return responses[intent] ? responses[intent]() : responses.general();
+            }
+
+            // ============================================
+            // BUTTON ACTION HANDLERS
+            // ============================================
+
+            function handleButtonAction(action) {
+                const actionMap = {
+                    search_properties: () => {
+                        addUserMessage("Search for properties");
+                        if (userContext.isLoggedIn) {
+                            addBotMessage("Opening property search page...", 300);
+                            setTimeout(() => window.location.href = '/properties', 1000);
+                        } else {
+                            addBotMessage("You'll need to login first to search properties. Would you like me to take you to the login page?", 300, {
+                                buttons: [
+                                    { label: '🔑 Login Now', action: 'login' },
+                                    { label: '📝 Register', action: 'register' }
+                                ]
+                            });
+                        }
+                    },
+                    view_all: () => {
+                        addUserMessage("View all properties");
+                        addBotMessage("Taking you to the properties page...", 300);
+                        setTimeout(() => window.location.href = '/properties', 1000);
+                    },
+                    recommendations: () => {
+                        addUserMessage("Get property recommendations");
+                        showPersonalizedRecommendations();
+                    },
+                    start_booking: () => {
+                        addUserMessage("I want to start booking");
+                        if (userContext.isLoggedIn) {
+                            addBotMessage("Great! First, let's find you the perfect property. What are you looking for?", 300);
+                            setTimeout(() => processUserMessage("find properties"), 800);
+                        } else {
+                            addBotMessage("You need an account to book properties. Let me help you get started!", 300, {
+                                buttons: [
+                                    { label: '📝 Create Account', action: 'register' },
+                                    { label: '🔑 I have an account', action: 'login' }
+                                ]
+                            });
+                        }
+                    },
+                    booking_requirements: () => {
+                        addUserMessage("Show booking requirements");
+                        addBotMessage(`<strong>📋 Booking Requirements Checklist</strong><br><br>${boardifyKnowledge.bookingProcess.requirements.map(req => '☐ ' + req).join('<br>')}<br><br><strong>Document Formats:</strong><br>• ID: JPG, PNG, PDF (max 5MB)<br>• Proof of Income: Payslip or ITR<br>• Emergency Contact: Name & number<br><br><strong>💡 Pro Tip:</strong> Prepare these documents in advance for faster approval!`, 300);
+                    },
+                    booking_faq: () => {
+                        addUserMessage("Booking FAQs");
+                        addBotMessage(`<strong>❓ Frequently Asked Questions</strong><br><br><strong>Q: How long does approval take?</strong><br>A: Usually 24-48 hours<br><br><strong>Q: Can I cancel my booking?</strong><br>A: Yes, check cancellation policy per property<br><br><strong>Q: When do I pay?</strong><br>A: After approval, before move-in<br><br><strong>Q: What if I'm rejected?</strong><br>A: You can book other properties immediately<br><br><strong>Q: Is my deposit refundable?</strong><br>A: Yes, based on contract terms<br><br>Have more questions? Just ask!`, 300);
+                    },
+                    make_payment: () => {
+                        addUserMessage("Make a payment");
+                        if (userContext.isLoggedIn) {
+                            addBotMessage("Taking you to the billing section...", 300);
+                            setTimeout(() => window.location.href = '/billing', 1000);
+                        } else {
+                            addBotMessage("Please login to access billing features.", 300);
+                        }
+                    },
+                    payment_history: () => {
+                        addUserMessage("View payment history");
+                        if (userContext.isLoggedIn) {
+                            addBotMessage("Opening your payment history...", 300);
+                            setTimeout(() => window.location.href = '/billing#history', 1000);
+                        } else {
+                            addBotMessage("Please login to view payment history.", 300);
+                        }
+                    },
+                    setup_autopay: () => {
+                        addUserMessage("Setup auto-pay");
+                        addBotMessage("<strong>🔄 Auto-Pay Setup</strong><br><br>Auto-pay ensures you never miss a payment!<br><br><strong>How it works:</strong><br>1. Link your GCash or bank account<br>2. Set monthly deduction date<br>3. Automatic payment on due date<br>4. Receive confirmation email<br><br><strong>Benefits:</strong><br>✓ Never miss due dates<br>✓ No late fees<br>✓ Peace of mind<br>✓ Can cancel anytime<br><br>Would you like to set it up now?", 300, {
+                            buttons: [
+                                { label: '✓ Setup Now', action: 'make_payment' },
+                                { label: '📚 Learn More', action: 'autopay_info' }
+                            ]
+                        });
+                    },
+                    view_contract_sample: () => {
+                        addUserMessage("Show contract sample");
+                        addBotMessage("<strong>📄 Digital Contract Sample</strong><br><br>Our contracts include:<br><br>• <strong>Parties:</strong> Landlord & Tenant info<br>• <strong>Property:</strong> Full address & description<br>• <strong>Terms:</strong> Duration (6/12 months typical)<br>• <strong>Rent:</strong> Monthly amount & due date<br>• <strong>Deposit:</strong> Security deposit terms<br>• <strong>Utilities:</strong> What's included<br>• <strong>Rules:</strong> Property guidelines<br>• <strong>Termination:</strong> How to end lease<br>• <strong>Signatures:</strong> Digital signing<br><br>All contracts are legally binding and stored securely in the cloud.", 300);
+                    },
+                    my_contracts: () => {
+                        addUserMessage("View my contracts");
+                        if (userContext.isLoggedIn) {
+                            addBotMessage("Opening your contracts...", 300);
+                            setTimeout(() => window.location.href = '/profile#contracts', 1000);
+                        } else {
+                            addBotMessage("Please login to view your contracts.", 300);
+                        }
+                    },
+                    tenant_features: () => {
+                        addUserMessage("Tell me about tenant features");
+                        processUserMessage("tenant features");
+                    },
+                    landlord_features: () => {
+                        addUserMessage("Tell me about landlord features");
+                        processUserMessage("landlord features");
+                    },
+                    email_support: () => {
+                        addUserMessage("Contact email support");
+                        addBotMessage("<strong>📧 Email Support</strong><br><br>You can reach our support team at:<br><br><strong>support@boardify.com</strong><br><br>Expected response time: <strong>2-4 hours</strong><br><br>Include in your email:<br>• Your name and account email<br>• Detailed description<br>• Screenshots if applicable<br>• Order/booking reference if relevant<br><br>We'll get back to you as soon as possible!", 300);
+                    },
+                    help_center: () => {
+                        addUserMessage("Open help center");
+                        addBotMessage("Opening the Help Center with detailed guides and tutorials...", 300);
+                        setTimeout(() => window.location.href = '/help', 1000);
+                    },
+                    report_issue: () => {
+                        addUserMessage("Report an issue");
+                        addBotMessage("<strong>🔧 Report an Issue</strong><br><br>I'm here to help! Please describe the issue you're experiencing:<br><br>• <strong>Technical problem?</strong> (Login, loading, errors)<br>• <strong>Payment issue?</strong> (Failed transaction, billing)<br>• <strong>Booking problem?</strong> (Can't book, approval)<br>• <strong>Account issue?</strong> (Access, password)<br><br>Type your issue and I'll guide you through the solution or escalate to our technical team if needed.", 300);
+                    },
+                    view_profile: () => {
+                        addUserMessage("View my profile");
+                        if (userContext.isLoggedIn) {
+                            addBotMessage("Opening your profile...", 300);
+                            setTimeout(() => window.location.href = '/profile', 1000);
+                        }
+                    },
+                    security: () => {
+                        addUserMessage("Security settings");
+                        addBotMessage("<strong>🔒 Account Security</strong><br><br><strong>Current Security Status:</strong><br>✓ Email verified<br>✓ Strong password<br>⚠️ 2FA not enabled (recommended)<br><br><strong>Security Tips:</strong><br>• Use unique password<br>• Enable 2-factor authentication<br>• Never share your password<br>• Review login activity<br>• Update recovery email<br><br>Would you like to enable 2FA for extra security?", 300, {
+                            buttons: [
+                                { label: '🛡️ Enable 2FA', action: 'view_profile' },
+                                { label: '🔑 Change Password', action: 'view_profile' }
+                            ]
+                        });
+                    },
+                    register: () => {
+                        addBotMessage("Taking you to registration page...", 300);
+                        setTimeout(() => window.location.href = '/register', 1000);
+                    },
+                    login: () => {
+                        addBotMessage("Taking you to login page...", 300);
+                        setTimeout(() => window.location.href = '/login', 1000);
+                    },
+                    add_property: () => {
+                        addUserMessage("Add a property");
+                        if (userContext.isLoggedIn) {
+                            addBotMessage("Great! Let me guide you through adding your property...", 300);
+                            setTimeout(() => window.location.href = '/add-property', 1000);
+                        } else {
+                            addBotMessage("Please login as a landlord to add properties.", 300);
+                        }
+                    },
+                    landlord_dashboard: () => {
+                        addUserMessage("View landlord dashboard");
+                        addBotMessage("Opening landlord dashboard...", 300);
+                        setTimeout(() => window.location.href = '/dashboard', 1000);
+                    },
+                    my_bookings: () => {
+                        addUserMessage("View my bookings");
+                        if (userContext.isLoggedIn) {
+                            addBotMessage("Opening your bookings...", 300);
+                            setTimeout(() => window.location.href = '/my-bookings', 1000);
+                        } else {
+                            addBotMessage("Please login to view your bookings.", 300);
+                        }
+                    },
+                    emergency: () => {
+                        addUserMessage("Report emergency");
+                        addBotMessage("<strong>🚨 EMERGENCY MAINTENANCE</strong><br><br>I'll connect you with urgent support right away!<br><br>For immediate assistance:<br><br>📞 <strong>Emergency Hotline:</strong> 0917-XXX-XXXX<br>📱 <strong>24/7 Support:</strong> Available now<br><br>Please describe your emergency and we'll dispatch help immediately.<br><br><strong>Common Emergencies:</strong><br>• No water/electricity<br>• Gas leak (evacuate immediately!)<br>• Flooding<br>• Fire (call 911 first!)<br>• Broken locks/security issues", 300);
+                    },
+                    maintenance_request: () => {
+                        addUserMessage("Submit maintenance request");
+                        if (userContext.isLoggedIn) {
+                            addBotMessage("Opening maintenance request form...", 300);
+                            setTimeout(() => window.location.href = '/maintenance', 1000);
+                        } else {
+                            addBotMessage("Please login to submit maintenance requests.", 300);
+                        }
+                    },
+                    leave_review: () => {
+                        addUserMessage("Leave a review");
+                        if (userContext.isLoggedIn) {
+                            addBotMessage("Opening review form...", 300);
+                            setTimeout(() => window.location.href = '/reviews', 1000);
+                        } else {
+                            addBotMessage("Please login to leave reviews.", 300);
+                        }
+                    },
+                    read_reviews: () => {
+                        addUserMessage("Read property reviews");
+                        addBotMessage("You can read reviews on any property page. Reviews are shown with verified tenant badges for authenticity.", 300);
+                    }
+                };
+                
+                const handler = actionMap[action];
+                if (handler) {
+                    handler();
+                } else {
+                    addUserMessage(action);
+                    processUserMessage(action);
+                }
+            }
+
+            function showPersonalizedRecommendations() {
+                addBotMessage("Based on popular choices, here are my top recommendations:", 300);
+                
+                setTimeout(() => {
+                    const recommendations = [
+                        {
+                            title: "Modern Studio in BGC",
+                            location: "Bonifacio Global City",
+                            price: "₱18,000/month",
+                            features: "WiFi, Furnished, 24/7 Security",
+                            rating: "⭐ 4.8 (24 reviews)",
+                            available: "Available Now"
+                        },
+                        {
+                            title: "Spacious 2BR near Ayala",
+                            location: "Makati City",
+                            price: "₱25,000/month",
+                            features: "Parking, Pool, Gym",
+                            rating: "⭐ 4.9 (18 reviews)",
+                            available: "Available Dec 1"
+                        },
+                        {
+                            title: "Affordable Bedspace",
+                            location: "Quezon City",
+                            price: "₱4,500/month",
+                            features: "WiFi, Near MRT, Female Only",
+                            rating: "⭐ 4.7 (31 reviews)",
+                            available: "Available Now"
+                        }
+                    ];
+
+                    recommendations.forEach((prop, index) => {
+                        setTimeout(() => {
+                            const propCard = document.createElement('div');
+                            propCard.className = 'property-card-chat';
+                            propCard.innerHTML = `
+                                <div class="property-title">${prop.title}</div>
+                                <div class="property-details">
+                                    <i class="bi bi-geo-alt"></i> ${prop.location}<br>
+                                    <small>${prop.features}</small><br>
+                                    <small>${prop.rating}</small><br>
+                                    <small style="color: var(--fb-primary);">✓ ${prop.available}</small>
+                                </div>
+                                <div class="property-price">${prop.price}</div>
+                            `;
+                            propCard.onclick = () => {
+                                addUserMessage(`Tell me more about ${prop.title}`);
+                                addBotMessage(`<strong>${prop.title}</strong> is an excellent choice!<br><br>📍 <strong>Location:</strong> ${prop.location}<br>💰 <strong>Price:</strong> ${prop.price}<br>✨ <strong>Features:</strong> ${prop.features}<br>${prop.rating}<br><br>${prop.available}. Would you like to book this property?`, 300, {
+                                    buttons: [
+                                        { label: '✓ Book Now', action: 'start_booking' },
+                                        { label: '📖 Read Reviews', action: 'read_reviews' },
+                                        { label: '🔍 Find Similar', action: 'search_properties' }
+                                    ]
+                                });
+                            };
+                            chatbotMessages.appendChild(propCard);
+                            scrollToBottom();
+                        }, index * 400);
+                    });
+                }, 800);
+            }
+
+            // ============================================
+            // EVENT LISTENERS
+            // ============================================
+
+            chatbotToggle.addEventListener('click', function() {
+                isChatOpen = !isChatOpen;
+                chatbotWindow.classList.toggle('active', isChatOpen);
+                
+                if (isChatOpen) {
+                    chatbotNotification.style.display = 'none';
+                    chatbotInput.focus();
+                    
+                    if (conversationHistory.length === 0) {
+                        initChat();
+                    }
+                }
+            });
+
+            minimizeChat.addEventListener('click', function() {
+                chatbotWindow.classList.remove('active');
+                isChatOpen = false;
+            });
+
+            closeChat.addEventListener('click', function() {
+                chatbotWindow.classList.remove('active');
+                isChatOpen = false;
+            });
+
+            clearChat.addEventListener('click', function() {
+                if (confirm('Clear all chat messages?')) {
+                    chatbotMessages.innerHTML = '';
+                    conversationHistory = [];
+                    sessionStorage.removeItem('boardify_chat_history');
+                    initChat();
+                }
+            });
+
+            sendMessage.addEventListener('click', sendUserMessage);
+            
+            chatbotInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendUserMessage();
+                }
+            });
+
+            document.querySelectorAll('.quick-action-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const action = this.getAttribute('data-action');
+                    let message = "";
+                    
+                    switch(action) {
+                        case 'find_properties':
+                            message = "I want to find properties";
+                            break;
+                        case 'booking_help':
+                            message = "How does booking work?";
+                            break;
+                        case 'billing_info':
+                            message = "I have billing questions";
+                            break;
+                    }
+                    
+                    addUserMessage(message);
+                    hideQuickActions();
+                    processUserMessage(message);
+                });
+            });
+
+            document.querySelectorAll('.suggestion').forEach(suggestion => {
+                suggestion.addEventListener('click', function() {
+                    const text = this.textContent.replace(/['"]/g, '');
+                    chatbotInput.value = text;
+                    chatbotInput.focus();
+                });
+            });
+
+            function sendUserMessage() {
+                const message = chatbotInput.value.trim();
+                if (message) {
+                    addUserMessage(message);
+                    chatbotInput.value = '';
+                    hideQuickActions();
+                    processUserMessage(message);
+                }
+            }
+
+            // ============================================
+            // ADVANCED FEATURES
+            // ============================================
+
+            // Context-aware greeting based on current page
+            function getContextualGreeting() {
+                const path = window.location.pathname;
+                const greetings = {
+                    '/properties': "I see you're browsing properties! Need help finding something specific?",
+                    '/booking': "Working on a booking? I can help guide you through the process!",
+                    '/billing': "Need help with payments or billing? I'm here to assist!",
+                    '/profile': "Managing your profile? Let me know if you need any help!",
+                    '/dashboard': "Welcome to your dashboard! What would you like to do today?"
+                };
+                
+                return greetings[path] || null;
+            }
+
+            // Smart notification system
+            function checkAutoOpen() {
+                const currentPath = window.location.pathname;
+                const autoOpenPages = ['/properties', '/booking', '/billing'];
+                
+                if (autoOpenPages.some(page => currentPath.includes(page))) {
+                    setTimeout(() => {
+                        if (!isChatOpen) {
+                            chatbotNotification.textContent = '!';
+                            chatbotNotification.style.display = 'flex';
+                        }
+                    }, 3000);
+                }
+            }
+
+            // Save conversation history to session storage
+            function saveConversation() {
+                try {
+                    sessionStorage.setItem('boardify_chat_history', JSON.stringify(conversationHistory));
+                } catch (e) {
+                    console.log('Could not save chat history');
+                }
+            }
+
+            // Load previous conversation
+            function loadConversation() {
+                try {
+                    const saved = sessionStorage.getItem('boardify_chat_history');
+                    if (saved) {
+                        const history = JSON.parse(saved);
+                        if (history.length > 0) {
+                            conversationHistory = history;
+                            history.forEach(msg => {
+                                if (msg.type === 'bot') {
+                                    addBotMessage(msg.text, 0, msg.options || {});
+                                } else {
+                                    addUserMessage(msg.text);
+                                }
+                            });
+                            return true;
+                        }
+                    }
+                } catch (e) {
+                    console.log('Could not load chat history');
+                }
+                return false;
+            }
+
+            // Auto-save conversation periodically
+            setInterval(saveConversation, 10000); // Every 10 seconds
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl/Cmd + K to open chatbot
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    if (!isChatOpen) {
+                        chatbotToggle.click();
+                    }
+                    chatbotInput.focus();
+                }
+                
+                // Escape to close chatbot
+                if (e.key === 'Escape' && isChatOpen) {
+                    closeChat.click();
+                }
+            });
+
+            // Smart suggestions based on context
+            function updateSmartSuggestions() {
+                const suggestionsContainer = document.getElementById('chatbotSuggestions');
+                const path = window.location.pathname;
+                
+                const suggestions = {
+                    '/properties': [
+                        '"Filter by price"',
+                        '"Show available now"',
+                        '"Near MRT stations"'
+                    ],
+                    '/booking': [
+                        '"What documents needed?"',
+                        '"How long approval?"',
+                        '"Cancel booking"'
+                    ],
+                    '/billing': [
+                        '"Payment methods"',
+                        '"Download receipt"',
+                        '"Setup auto-pay"'
+                    ],
+                    'default': [
+                        '"Find apartments in Makati"',
+                        '"How to book?"',
+                        '"Payment options"'
+                    ]
+                };
+                
+                const relevantSuggestions = suggestions[path] || suggestions.default;
+                
+                suggestionsContainer.innerHTML = `
+                    <small>Try asking:</small>
+                    ${relevantSuggestions.map(s => `<span class="suggestion">${s}</span>`).join('')}
+                `;
+                
+                // Reattach click handlers
+                suggestionsContainer.querySelectorAll('.suggestion').forEach(suggestion => {
+                    suggestion.addEventListener('click', function() {
+                        const text = this.textContent.replace(/['"]/g, '');
+                        chatbotInput.value = text;
+                        chatbotInput.focus();
+                    });
+                });
+            }
+
+            // Initialize
+            const hasHistory = loadConversation();
+            if (!hasHistory) {
+                setTimeout(() => {
+                    if (conversationHistory.length === 0 && isChatOpen) {
+                        initChat();
+                    }
+                }, 100);
+            }
+            
+            checkAutoOpen();
+            updateSmartSuggestions();
+            
+            console.log('🤖 Boardify AI Assistant loaded successfully!');
+            console.log('💡 Press Ctrl+K to open chat anytime');
+        });
+    </script>
+    <script>
+// Auto-dismiss flash messages after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const flashMessages = document.querySelectorAll('.alert');
+    
+    flashMessages.forEach(function(message) {
+        // Auto-hide after 5 seconds
+        setTimeout(function() {
+            // Create fade-out animation
+            message.style.transition = 'opacity 0.3s ease-in-out';
+            message.style.opacity = '0';
+            
+            // Remove from DOM after fade out
+            setTimeout(function() {
+                if (message.parentNode) {
+                    message.remove();
+                }
+            }, 300);
+        }, 3000); // 5000ms = 5 seconds
+        
+        // Manual close with X button
+        const closeButton = message.querySelector('.btn-close');
+        if (closeButton) {
+            closeButton.addEventListener('click', function() {
+                message.style.transition = 'opacity 0.3s ease-in-out';
+                message.style.opacity = '0';
+                setTimeout(function() {
+                    if (message.parentNode) {
+                        message.remove();
+                    }
+                }, 300);
+            });
+        }
+    });
+});
+</script>
+</body>
+</html>

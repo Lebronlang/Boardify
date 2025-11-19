@@ -1,0 +1,421 @@
+{% extends "admin_base.html" %}
+
+{% block header_title %}SUPPORT CONTROL{% endblock %}
+{% block header_subtitle %}TICKET MANAGEMENT SYSTEM | {{ user.name }} | <span id="datetime"></span>{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #f8fafc !important;
+    }
+
+    .ticket-card {
+        background: #ffffff !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .ticket-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(59, 130, 246, 0.05),
+            transparent
+        );
+        transition: left 0.5s;
+    }
+
+    .ticket-card:hover::before {
+        left: 100%;
+    }
+
+    .ticket-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(59, 130, 246, 0.15) !important;
+        border-color: #3b82f6 !important;
+    }
+
+    .ticket-header {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%) !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+        padding: 1rem 1.5rem;
+    }
+
+    .ticket-body {
+        padding: 1.5rem;
+        background: transparent !important;
+    }
+
+    .ticket-id {
+        font-family: 'Inter', sans-serif;
+        color: #1e40af !important;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .ticket-user {
+        color: #0f172a !important;
+        font-family: 'Inter', sans-serif;
+        font-weight: 500;
+    }
+
+    .ticket-subject {
+        font-family: 'Inter', sans-serif;
+        color: #0f172a !important;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+        font-size: 1.1rem;
+    }
+
+    .ticket-message {
+        color: #334155 !important;
+        font-family: 'Inter', sans-serif;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border-left: 3px solid #3b82f6;
+        border-radius: 5px;
+    }
+
+    .ticket-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .ticket-timestamp {
+        color: #64748b !important;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.85rem;
+    }
+
+    .status-badge {
+        font-family: 'Inter', sans-serif;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-pending {
+        background: #fef3c7 !important;
+        color: #92400e !important;
+        border: 1px solid #fcd34d;
+    }
+
+    .status-resolved {
+        background: #d1fae5 !important;
+        color: #065f46 !important;
+        border: 1px solid #6ee7b7;
+    }
+
+    .status-in-progress {
+        background: #dbeafe !important;
+        color: #1e40af !important;
+        border: 1px solid #93c5fd;
+    }
+
+    .action-form {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .status-select {
+        background: #ffffff !important;
+        border: 2px solid #cbd5e1 !important;
+        color: #0f172a !important;
+        font-family: 'Inter', sans-serif;
+        border-radius: 6px;
+        padding: 0.5rem;
+        min-width: 120px;
+        font-weight: 500;
+    }
+
+    .status-select:focus {
+        outline: none;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .update-btn {
+        background: #3b82f6 !important;
+        border: 2px solid #3b82f6 !important;
+        color: #ffffff !important;
+        font-family: 'Inter', sans-serif;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .update-btn:hover {
+        background: #2563eb !important;
+        border-color: #2563eb !important;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        transform: translateY(-2px);
+    }
+
+    .no-tickets {
+        text-align: center;
+        padding: 3rem;
+        color: #64748b !important;
+        font-family: 'Inter', sans-serif;
+        background: #ffffff;
+        border-radius: 10px;
+        border: 2px solid #e2e8f0;
+    }
+
+    .no-tickets i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #94a3b8;
+        opacity: 0.5;
+    }
+
+    .no-tickets h4 {
+        color: #0f172a !important;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .no-tickets p {
+        color: #64748b !important;
+    }
+
+    .ticket-stats {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .stat-badge {
+        background: #ffffff !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 10px;
+        padding: 1rem 1.5rem;
+        text-align: center;
+        flex: 1;
+        min-width: 150px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-badge:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        border-color: #3b82f6 !important;
+    }
+
+    .stat-count {
+        font-family: 'Inter', sans-serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #3b82f6 !important;
+        display: block;
+    }
+
+    .stat-label {
+        font-family: 'Inter', sans-serif;
+        color: #64748b !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+        font-weight: 600;
+    }
+
+    .filter-controls {
+        background: #ffffff !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 10px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .filter-label {
+        font-family: 'Inter', sans-serif;
+        color: #0f172a !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-right: 1rem;
+        font-weight: 600;
+    }
+
+    .filter-select {
+        background: #ffffff !important;
+        border: 2px solid #cbd5e1 !important;
+        color: #0f172a !important;
+        font-family: 'Inter', sans-serif;
+        border-radius: 6px;
+        padding: 0.5rem;
+        min-width: 150px;
+        font-weight: 500;
+    }
+
+    .filter-select:focus {
+        outline: none;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Override any global dark styles */
+    * {
+        color: inherit;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        color: #0f172a !important;
+    }
+
+    .admin-container {
+        color: #334155;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <!-- Statistics Overview -->
+    <div class="ticket-stats">
+        <div class="stat-badge">
+            <span class="stat-count">{{ total_tickets }}</span>
+            <span class="stat-label">Total Tickets</span>
+        </div>
+        <div class="stat-badge">
+            <span class="stat-count">{{ pending_tickets }}</span>
+            <span class="stat-label">Pending</span>
+        </div>
+        <div class="stat-badge">
+            <span class="stat-count">{{ resolved_tickets }}</span>
+            <span class="stat-label">Resolved</span>
+        </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="filter-controls">
+        <form method="GET" class="d-flex align-items-center flex-wrap gap-3">
+            <span class="filter-label">FILTER BY STATUS:</span>
+            <select name="status" class="filter-select" onchange="this.form.submit()">
+                <option value="all" {% if request.args.get('status') == 'all' or not request.args.get('status') %}selected{% endif %}>All Tickets</option>
+                <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="resolved" {% if request.args.get('status') == 'resolved' %}selected{% endif %}>Resolved</option>
+            </select>
+        </form>
+    </div>
+
+    <!-- Tickets List -->
+    {% if tickets %}
+        {% for ticket in tickets %}
+        <div class="ticket-card">
+            <div class="ticket-header d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="ticket-id">TICKET #{{ ticket.id }}</span>
+                    <span class="ticket-user ms-3">FROM: {{ ticket.user.name }}</span>
+                </div>
+                <span class="status-badge status-{{ ticket.status }}">{{ ticket.status|upper }}</span>
+            </div>
+            
+            <div class="ticket-body">
+                <h4 class="ticket-subject">{{ ticket.subject }}</h4>
+                <div class="ticket-message">
+                    {{ ticket.message }}
+                </div>
+                
+                <div class="ticket-meta">
+                    <span class="ticket-timestamp">
+                        <i class="bi bi-clock me-1"></i>
+                        {{ ticket.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                    </span>
+                    
+                    <form method="POST" class="action-form">
+                        <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
+                        <select name="status" class="status-select">
+                            <option value="pending" {% if ticket.status == 'pending' %}selected{% endif %}>PENDING</option>
+                            <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>RESOLVED</option>
+                        </select>
+                        <button type="submit" class="update-btn">
+                            <i class="bi bi-arrow-clockwise me-1"></i>UPDATE
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-tickets">
+            <i class="bi bi-inbox"></i>
+            <h4>NO TICKETS FOUND</h4>
+            <p>There are currently no support tickets matching your criteria.</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    // DateTime Display
+    function updateDateTime() {
+        const now = new Date();
+        const options = { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit', 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit',
+            hour12: false 
+        };
+        const dateTimeEl = document.getElementById('datetime');
+        if (dateTimeEl) {
+            dateTimeEl.textContent = now.toLocaleString('en-US', options);
+        }
+    }
+    
+    // Initialize and update datetime
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
+
+    // Add smooth animations for status updates
+    document.addEventListener('DOMContentLoaded', function() {
+        const updateButtons = document.querySelectorAll('.update-btn');
+        
+        updateButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                const form = this.closest('form');
+                const ticketCard = form.closest('.ticket-card');
+                
+                // Add loading animation
+                this.innerHTML = '<i class="bi bi-arrow-repeat spinner"></i> UPDATING...';
+                this.disabled = true;
+                
+                // Simulate processing animation
+                ticketCard.style.opacity = '0.7';
+            });
+        });
+    });
+</script>
+{% endblock %}

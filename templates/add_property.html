@@ -1,0 +1,2137 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex" style="min-height: 100vh;">
+    <!-- Sidebar -->
+    <nav class="sidebar text-white p-4 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">
+                <i class="bi bi-house-heart-fill me-2"></i>Boardify
+            </h3>
+            <button class="theme-toggle-btn" id="themeToggle" onclick="toggleTheme()">
+                <i class="bi bi-sun-fill" id="themeIcon"></i>
+            </button>
+        </div>
+
+        <div class="nav-links flex-grow-1">
+            <a href="{{ url_for('dashboard') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-speedometer2 me-3"></i> Dashboard
+            </a>
+            <a href="{{ url_for('viewproperties') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-building me-3"></i> Properties
+            </a>
+            <a href="{{ url_for('add_property') }}" class="nav-link d-flex align-items-center active">
+                <i class="bi bi-plus-circle me-3"></i> Add Property
+            </a>
+            <a href="{{ url_for('approved_bookings') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-check2-square me-3"></i> Approvals
+            </a>
+            <a href="{{ url_for('billing') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-receipt me-3"></i> Bills
+            </a>
+            <a href="{{ url_for('policies') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-file-text me-3"></i> Policies
+            </a>
+        </div>
+
+        <div class="mt-auto">
+            <a href="{{ url_for('help_support') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-question-circle me-3"></i> Help & Support
+            </a>
+            <a href="{{ url_for('logout') }}" class="nav-link d-flex align-items-center text-danger">
+                <i class="bi bi-box-arrow-right me-3"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="flex-grow-1 main-content">
+        <!-- Back Navigation -->
+        <div class="back-navigation-bar">
+            <div class="container-fluid">
+                <a href="{{ url_for('viewproperties') }}" class="back-link-btn">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Properties
+                </a>
+            </div>
+        </div>
+
+        <div class="container-fluid p-4">
+            <!-- Page Header -->
+            <div class="page-header-card mb-4">
+                <div class="header-icon-wrapper">
+                    <i class="bi bi-plus-circle-fill"></i>
+                </div>
+                <div>
+                    <h1 class="page-title">Add New Property</h1>
+                    <p class="page-subtitle">List your property and start receiving bookings</p>
+                </div>
+            </div>
+
+            <!-- Form Container -->
+            <div class="row justify-content-center">
+                <div class="col-lg-11">
+                    <form method="POST" enctype="multipart/form-data" class="property-form" id="propertyForm">
+                        <div class="row g-4">
+                            <!-- Left Column - Basic Info -->
+                            <div class="col-lg-6">
+                                <!-- Basic Information Card -->
+                                <div class="form-section-card mb-4">
+                                    <div class="section-header">
+                                        <div class="section-icon">
+                                            <i class="bi bi-info-circle-fill"></i>
+                                        </div>
+                                        <h3 class="section-title">Basic Information</h3>
+                                    </div>
+
+                                    <div class="section-body">
+                                        <div class="form-group-enhanced">
+                                            <label for="title" class="form-label-enhanced">
+                                                <i class="bi bi-tag-fill me-2"></i>Property Title *
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control-enhanced" 
+                                                   id="title" 
+                                                   name="title" 
+                                                   placeholder="e.g., Cozy 2BR Apartment in Downtown"
+                                                   required>
+                                            <div class="form-helper-text">
+                                                <i class="bi bi-lightbulb me-1"></i>
+                                                Choose a descriptive title that highlights your property's best features
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group-enhanced">
+                                            <label for="description" class="form-label-enhanced">
+                                                <i class="bi bi-file-text-fill me-2"></i>Description *
+                                            </label>
+                                            <textarea class="form-control-enhanced" 
+                                                      id="description" 
+                                                      name="description" 
+                                                      rows="5" 
+                                                      placeholder="Describe your property's features, amenities, and what makes it special..."
+                                                      required></textarea>
+                                            <div class="form-helper-text">
+                                                <i class="bi bi-chat-text me-1"></i>
+                                                Include details about rooms, amenities, neighborhood, and house rules
+                                                <span class="float-end"><span id="charCount">0</span> characters</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group-enhanced">
+                                            <label for="location" class="form-label-enhanced">
+                                                <i class="bi bi-geo-alt-fill me-2"></i>Location
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control-enhanced" 
+                                                   id="location" 
+                                                   name="location" 
+                                                   placeholder="e.g., Makati City, Metro Manila">
+                                            <div class="form-helper-text">
+                                                <i class="bi bi-geo-alt me-1"></i>
+                                                Help guests find your property easily
+                                            </div>
+                                        </div>
+
+                                        <!-- Gender Preference -->
+                                        <div class="form-group-enhanced">
+                                            <label class="form-label-enhanced">
+                                                <i class="bi bi-gender-ambiguous me-2"></i>Gender Preference *
+                                            </label>
+                                            <div class="gender-options">
+                                                <label class="gender-option">
+                                                    <input type="radio" name="gender_preference" value="both" required>
+                                                    <span class="gender-option-content">
+                                                        <i class="bi bi-gender-ambiguous"></i>
+                                                        <span>Both Genders</span>
+                                                    </span>
+                                                </label>
+                                                <label class="gender-option">
+                                                    <input type="radio" name="gender_preference" value="female">
+                                                    <span class="gender-option-content">
+                                                        <i class="bi bi-gender-female"></i>
+                                                        <span>Girls Only</span>
+                                                    </span>
+                                                </label>
+                                                <label class="gender-option">
+                                                    <input type="radio" name="gender_preference" value="male">
+                                                    <span class="gender-option-content">
+                                                        <i class="bi bi-gender-male"></i>
+                                                        <span>Boys Only</span>
+                                                    </span>
+                                                </label>
+                                            </div>
+                                            <div class="form-helper-text">
+                                                <i class="bi bi-people me-1"></i>
+                                                Select who can rent this property
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column - Pricing & Details -->
+                            <div class="col-lg-6">
+                                <!-- Pricing & Details Card -->
+                                <div class="form-section-card mb-4">
+                                    <div class="section-header">
+                                        <div class="section-icon">
+                                            <i class="bi bi-cash-stack"></i>
+                                        </div>
+                                        <h3 class="section-title">Pricing & Details</h3>
+                                    </div>
+
+                                    <div class="section-body">
+                                        <!-- Property Type -->
+                                        <div class="form-group-enhanced">
+                                            <label for="property_type" class="form-label-enhanced">
+                                                <i class="bi bi-house-door me-2"></i>Property Type *
+                                            </label>
+                                            <select class="form-select-enhanced" id="property_type" name="property_type" required>
+                                                <option value="">Select property type</option>
+                                                <option value="apartment">Apartment</option>
+                                                <option value="house">House</option>
+                                                <option value="room">Single Room</option>
+                                                <option value="bedspacer">Bedspacer</option>
+                                                <option value="boardinghouse">Boarding House</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Room Configuration -->
+                                        <div class="room-configuration" id="roomConfiguration">
+                                            <!-- This will be populated dynamically based on property type -->
+                                        </div>
+
+                                        <!-- Slots -->
+                                        <div class="form-group-enhanced">
+                                            <label for="slots" class="form-label-enhanced">
+                                                <i class="bi bi-people-fill me-2"></i>Total Slots/Tenants *
+                                            </label>
+                                            <input type="number" 
+                                                   class="form-control-enhanced" 
+                                                   id="slots" 
+                                                   name="slots" 
+                                                   min="1" 
+                                                   max="50" 
+                                                   value="10"
+                                                   placeholder="10"
+                                                   required>
+                                            <div class="form-helper-text">
+                                                <i class="bi bi-people me-1"></i>
+                                                Total number of tenants that can stay in this property at the same time
+                                            </div>
+                                        </div>
+
+                                        <!-- Price -->
+                                        <div class="form-group-enhanced">
+                                            <label for="price" class="form-label-enhanced">
+                                                <i class="bi bi-currency-dollar me-2"></i>Monthly Rent (₱) *
+                                            </label>
+                                            <div class="input-group-enhanced">
+                                                <span class="input-prefix">₱</span>
+                                                <input type="number" 
+                                                       class="form-control-enhanced" 
+                                                       id="price" 
+                                                       name="price" 
+                                                       placeholder="5000"
+                                                       min="0"
+                                                       step="50"
+                                                       required>
+                                            </div>
+                                            <div class="form-helper-text">
+                                                <i class="bi bi-calculator me-1"></i>
+                                                Base price for entire property or single room
+                                            </div>
+                                        </div>
+
+                                        <!-- Bedspacer Pricing -->
+                                        <div class="bedspacer-pricing" id="bedspacerPricing" style="display: none;">
+                                            <div class="form-group-enhanced">
+                                                <label for="price_per_bed" class="form-label-enhanced">
+                                                    <i class="bi bi-currency-dollar me-2"></i>Price per Bed *
+                                                </label>
+                                                <div class="input-group-enhanced">
+                                                    <span class="input-prefix">₱</span>
+                                                    <input type="number" 
+                                                           class="form-control-enhanced" 
+                                                           id="price_per_bed" 
+                                                           name="price_per_bed" 
+                                                           placeholder="5000"
+                                                           min="0"
+                                                           step="50">
+                                                </div>
+                                                <div class="form-helper-text">
+                                                    <i class="bi bi-currency-dollar me-1"></i>
+                                                    Price for individual bed in bedspacer setup
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Bedrooms & Bathrooms -->
+                                        <div class="row g-3">
+                                            <div class="col-6">
+                                                <div class="form-group-enhanced">
+                                                    <label for="bedrooms" class="form-label-enhanced">
+                                                        <i class="bi bi-door-closed me-2"></i>Bedrooms
+                                                    </label>
+                                                    <input type="number" 
+                                                           class="form-control-enhanced" 
+                                                           id="bedrooms" 
+                                                           name="bedrooms" 
+                                                           min="0" 
+                                                           max="20"
+                                                           placeholder="2">
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="form-group-enhanced">
+                                                    <label for="bathrooms" class="form-label-enhanced">
+                                                        <i class="bi bi-droplet me-2"></i>Bathrooms
+                                                    </label>
+                                                    <input type="number" 
+                                                           class="form-control-enhanced" 
+                                                           id="bathrooms" 
+                                                           name="bathrooms" 
+                                                           min="0" 
+                                                           max="10" 
+                                                           step="0.5"
+                                                           placeholder="1">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Room Details Section -->
+                        <div class="form-section-card mb-4" id="roomDetailsSection" style="display: none;">
+                            <div class="section-header">
+                                <div class="section-icon">
+                                    <i class="bi bi-door-closed"></i>
+                                </div>
+                                <h3 class="section-title">Room Details & Vacancies</h3>
+                            </div>
+                            <div class="section-body">
+                                <div class="room-details-container" id="roomDetailsContainer">
+                                    <!-- Room details will be populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Image Upload Section -->
+                        <div class="form-section-card mb-4">
+                            <div class="section-header">
+                                <div class="section-icon">
+                                    <i class="bi bi-images"></i>
+                                </div>
+                                <h3 class="section-title">Property Photos</h3>
+                            </div>
+
+                            <div class="section-body">
+                                <div class="upload-info-banner mb-4">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <span>Upload multiple photos to showcase your property better. First image will be the main photo. (Max: 5MB each, up to 10 photos)</span>
+                                </div>
+                                
+                                <div class="upload-area" id="uploadArea">
+                                    <input type="file" 
+                                           class="file-input-hidden" 
+                                           id="images" 
+                                           name="images" 
+                                           accept="image/*"
+                                           multiple>
+                                    <div class="upload-content">
+                                        <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                                        <p class="upload-title">Click to upload or drag & drop</p>
+                                        <p class="upload-subtitle">PNG, JPG, JPEG (Max 5MB each)</p>
+                                    </div>
+                                </div>
+
+                                <!-- Image Preview -->
+                                <div class="image-preview-container" id="previewContainer" style="display: none;">
+                                    <div class="preview-header">
+                                        <h6 class="preview-title">
+                                            <i class="bi bi-eye me-1"></i>Photo Preview
+                                            <span class="image-count" id="imageCount">(0 photos)</span>
+                                        </h6>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" id="clearAll">
+                                            <i class="bi bi-trash me-1"></i>Clear All
+                                        </button>
+                                    </div>
+                                    <div class="preview-grid" id="previewGrid">
+                                        <!-- Preview images will be added here dynamically -->
+                                    </div>
+                                    <div class="main-photo-indicator">
+                                        <small class="text-muted">
+                                            <i class="bi bi-star-fill text-warning me-1"></i>
+                                            First image will be used as the main property photo
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Amenities Section -->
+                        <div class="form-section-card mb-4">
+                            <div class="section-header">
+                                <div class="section-icon">
+                                    <i class="bi bi-star-fill"></i>
+                                </div>
+                                <h3 class="section-title">Amenities & Features</h3>
+                            </div>
+
+                            <div class="section-body">
+                                <div class="amenities-grid">
+                                    <label class="amenity-option">
+                                        <input type="checkbox" name="amenities" value="wifi">
+                                        <span class="amenity-content">
+                                            <i class="bi bi-wifi"></i>
+                                            <span>WiFi</span>
+                                        </span>
+                                    </label>
+                                    <label class="amenity-option">
+                                        <input type="checkbox" name="amenities" value="ac">
+                                        <span class="amenity-content">
+                                            <i class="bi bi-snow"></i>
+                                            <span>Air Conditioning</span>
+                                        </span>
+                                    </label>
+                                    <label class="amenity-option">
+                                        <input type="checkbox" name="amenities" value="parking">
+                                        <span class="amenity-content">
+                                            <i class="bi bi-car-front"></i>
+                                            <span>Parking</span>
+                                        </span>
+                                    </label>
+                                    <label class="amenity-option">
+                                        <input type="checkbox" name="amenities" value="kitchen">
+                                        <span class="amenity-content">
+                                            <i class="bi bi-egg-fried"></i>
+                                            <span>Kitchen</span>
+                                        </span>
+                                    </label>
+                                    <label class="amenity-option">
+                                        <input type="checkbox" name="amenities" value="laundry">
+                                        <span class="amenity-content">
+                                            <i class="bi bi-droplet"></i>
+                                            <span>Laundry</span>
+                                        </span>
+                                    </label>
+                                    <label class="amenity-option">
+                                        <input type="checkbox" name="amenities" value="gym">
+                                        <span class="amenity-content">
+                                            <i class="bi bi-heart-pulse"></i>
+                                            <span>Gym</span>
+                                        </span>
+                                    </label>
+                                    <label class="amenity-option">
+                                        <input type="checkbox" name="amenities" value="pool">
+                                        <span class="amenity-content">
+                                            <i class="bi bi-water"></i>
+                                            <span>Swimming Pool</span>
+                                        </span>
+                                    </label>
+                                    <label class="amenity-option">
+                                        <input type="checkbox" name="amenities" value="security">
+                                        <span class="amenity-content">
+                                            <i class="bi bi-shield-check"></i>
+                                            <span>24/7 Security</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Section -->
+                        <div class="form-section-card">
+                            <div class="section-body p-0">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="terms" required>
+                                    <label class="form-check-label" for="terms">
+                                        I agree to the <a href="#" target="_blank">Terms & Conditions</a>
+                                    </label>
+                                </div>
+
+                                <div class="d-flex gap-3">
+                                    <button type="button" class="btn-cancel-changes" onclick="history.back()">
+                                        <i class="bi bi-x-circle me-2"></i>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" class="btn-save-changes" id="submitBtn">
+                                        <i class="bi bi-plus-square me-2"></i>
+                                        Add Property
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Use same CSS variables as dashboard and edit property */
+:root {
+    --fb-primary: #1877f2;
+    --fb-primary-hover: #166fe5;
+    --fb-primary-active: #1567d3;
+    --fb-secondary: #42b72a;
+    --fb-secondary-hover: #36a420;
+    --fb-light-blue: #e7f3ff;
+    --fb-lighter-blue: #f0f8ff;
+    
+    --bg-primary: #ffffff;
+    --bg-secondary: #f0f2f5;
+    --bg-tertiary: #e4e6eb;
+    --bg-hover: #f2f3f5;
+    
+    --text-primary: #050505;
+    --text-secondary: #65676b;
+    --text-tertiary: #8a8d91;
+    --text-white: #ffffff;
+    
+    --border-color: #ced0d4;
+    --divider-color: #e4e6eb;
+    
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.1);
+    --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-4: 0 8px 16px rgba(0, 0, 0, 0.15);
+    --shadow-hover: 0 8px 24px rgba(24, 119, 242, 0.2);
+    
+    --success: #31a24c;
+    --danger: #e74c3c;
+    --warning: #f39c12;
+    --info: #3498db;
+}
+
+body.dark-theme {
+    --bg-primary: #18191a;
+    --bg-secondary: #242526;
+    --bg-tertiary: #3a3b3c;
+    --bg-hover: #4e4f50;
+    --text-primary: #e4e6eb;
+    --text-secondary: #b0b3b8;
+    --text-tertiary: #8a8d91;
+    --border-color: #3e4042;
+    --divider-color: #3e4042;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.3);
+    --shadow-4: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Sidebar - Same as dashboard */
+.sidebar {
+    background: var(--bg-primary);
+    width: 280px;
+    min-width: 280px;
+    box-shadow: var(--shadow-2);
+    border-right: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.sidebar h3 {
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: var(--fb-primary);
+}
+
+.theme-toggle-btn {
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--fb-primary);
+}
+
+.theme-toggle-btn:hover {
+    background: var(--fb-primary);
+    color: white;
+    transform: rotate(180deg);
+    border-color: var(--fb-primary);
+}
+
+.sidebar .nav-link {
+    color: var(--text-secondary) !important;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.sidebar .nav-link.active {
+    background: var(--fb-light-blue);
+    color: var(--fb-primary) !important;
+}
+
+body.dark-theme .sidebar .nav-link.active {
+    background: rgba(24, 119, 242, 0.2);
+}
+
+.sidebar .nav-link:hover {
+    background: var(--fb-light-blue);
+    color: var(--fb-primary) !important;
+}
+
+body.dark-theme .sidebar .nav-link:hover {
+    background: var(--bg-hover);
+}
+
+.sidebar .nav-link.text-danger {
+    color: var(--danger) !important;
+}
+
+.sidebar .nav-link.text-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Main Content */
+.main-content {
+    background: var(--bg-secondary);
+    min-height: 100vh;
+    transition: background-color 0.3s ease;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Back Navigation */
+.back-navigation-bar {
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-1);
+}
+
+.back-link-btn {
+    display: inline-flex;
+    align-items: center;
+    color: var(--fb-primary);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.back-link-btn:hover {
+    background: var(--fb-light-blue);
+    color: var(--fb-primary);
+    transform: translateX(-4px);
+}
+
+body.dark-theme .back-link-btn:hover {
+    background: rgba(24, 119, 242, 0.2);
+}
+
+/* Page Header */
+.page-header-card {
+    background: linear-gradient(135deg, var(--fb-primary) 0%, var(--fb-primary-hover) 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: var(--shadow-3);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    animation: fadeInDown 0.5s ease-out;
+}
+
+.header-icon-wrapper {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+}
+
+.page-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1rem;
+    margin: 0.5rem 0 0 0;
+}
+
+/* Form Section Card */
+.form-section-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: var(--shadow-2);
+    overflow: hidden;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.section-header {
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.section-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--fb-light-blue);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--fb-primary);
+    flex-shrink: 0;
+}
+
+body.dark-theme .section-icon {
+    background: rgba(24, 119, 242, 0.2);
+}
+
+.section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.section-body {
+    padding: 2rem;
+}
+
+/* Form Controls */
+.form-group-enhanced {
+    margin-bottom: 1.75rem;
+}
+
+.form-label-enhanced {
+    display: flex;
+    align-items: center;
+    color: var(--text-primary);
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+}
+
+.form-label-enhanced i {
+    color: var(--fb-primary);
+}
+
+.form-control-enhanced,
+.form-select-enhanced {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.form-control-enhanced:focus,
+.form-select-enhanced:focus {
+    outline: none;
+    border-color: var(--fb-primary);
+    box-shadow: 0 0 0 4px var(--fb-light-blue);
+    background: var(--bg-primary);
+}
+
+body.dark-theme .form-control-enhanced:focus,
+body.dark-theme .form-select-enhanced:focus {
+    box-shadow: 0 0 0 4px rgba(24, 119, 242, 0.2);
+}
+
+.form-control-enhanced::placeholder {
+    color: var(--text-tertiary);
+}
+
+textarea.form-control-enhanced {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.form-helper-text {
+    display: block;
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.form-helper-text i {
+    color: var(--fb-primary);
+    margin-right: 0.25rem;
+}
+
+/* Input Group */
+.input-group-enhanced {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-prefix {
+    position: absolute;
+    left: 1rem;
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 1.1rem;
+    z-index: 1;
+}
+
+.input-group-enhanced .form-control-enhanced {
+    padding-left: 2.5rem;
+}
+
+/* Gender Options */
+.gender-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+.gender-option {
+    cursor: pointer;
+    margin: 0;
+}
+
+.gender-option input[type="radio"] {
+    display: none;
+}
+
+.gender-option-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    transition: all 0.3s ease;
+    text-align: center;
+    height: 100%;
+}
+
+.gender-option input:checked + .gender-option-content {
+    background: var(--fb-primary);
+    border-color: var(--fb-primary);
+    color: white;
+    box-shadow: var(--shadow-hover);
+}
+
+.gender-option-content i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.gender-option-content span {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.gender-option:hover .gender-option-content {
+    border-color: var(--fb-primary);
+    transform: translateY(-2px);
+}
+
+/* Room Configuration Styles */
+.room-config-section {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.room-config-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.room-config-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.room-type-badge {
+    background: var(--fb-primary);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.room-config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.room-details-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.room-detail-card {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.room-detail-card:hover {
+    border-color: var(--fb-primary);
+    box-shadow: var(--shadow-hover);
+}
+
+.room-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.room-detail-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.room-capacity-badge {
+    background: var(--fb-secondary);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.room-detail-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+/* Amenities Grid */
+.amenities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+}
+
+.amenity-option {
+    cursor: pointer;
+    margin: 0;
+}
+
+.amenity-option input[type="checkbox"] {
+    display: none;
+}
+
+.amenity-content {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    transition: all 0.3s ease;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.amenity-option input:checked + .amenity-content {
+    background: var(--fb-primary);
+    border-color: var(--fb-primary);
+    color: white;
+    box-shadow: var(--shadow-hover);
+}
+
+.amenity-content i {
+    margin-right: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.amenity-option:hover .amenity-content {
+    border-color: var(--fb-primary);
+    transform: translateY(-1px);
+}
+
+/* Upload Area */
+.upload-area {
+    border: 3px dashed var(--border-color);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--bg-secondary);
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.upload-area:hover {
+    border-color: var(--fb-primary);
+    background: var(--fb-light-blue);
+    transform: translateY(-2px);
+}
+
+body.dark-theme .upload-area:hover {
+    background: rgba(24, 119, 242, 0.1);
+}
+
+.upload-area.drag-over {
+    border-color: var(--fb-primary);
+    background: var(--fb-light-blue);
+    transform: scale(1.02);
+}
+
+.file-input-hidden {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.upload-icon {
+    font-size: 4rem;
+    color: var(--fb-primary);
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.upload-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.upload-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+    margin: 0;
+}
+
+.upload-info-banner {
+    background: var(--fb-light-blue);
+    border: 1px solid var(--fb-primary);
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    color: var(--fb-primary);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+body.dark-theme .upload-info-banner {
+    background: rgba(24, 119, 242, 0.2);
+}
+
+/* Image Preview Container */
+.image-preview-container {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.preview-title {
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.image-count {
+    color: var(--text-secondary);
+    font-weight: normal;
+    margin-left: 0.5rem;
+}
+
+.preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.preview-item {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 1;
+    border: 2px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.preview-item:hover {
+    border-color: var(--fb-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.preview-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.preview-remove:hover {
+    background: var(--danger);
+    transform: scale(1.1);
+}
+
+.preview-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    color: white;
+    padding: 8px;
+    font-size: 0.7rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.preview-item:hover .preview-overlay {
+    opacity: 1;
+}
+
+.preview-filename {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.preview-filetype {
+    display: block;
+    font-size: 0.6rem;
+    opacity: 0.8;
+}
+
+.main-photo-indicator {
+    text-align: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Action Buttons */
+.btn-save-changes,
+.btn-cancel-changes {
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    flex: 1;
+}
+
+.btn-save-changes {
+    background: var(--fb-primary);
+    color: white;
+    box-shadow: var(--shadow-2);
+}
+
+.btn-save-changes:hover {
+    background: var(--fb-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.btn-cancel-changes {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+}
+
+.btn-cancel-changes:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+/* Form Check */
+.form-check {
+    padding-left: 2.5rem;
+}
+
+.form-check-input {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-left: -2.5rem;
+    margin-top: 0.2rem;
+}
+
+.form-check-input:checked {
+    background-color: var(--fb-primary);
+    border-color: var(--fb-primary);
+}
+
+.form-check-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.form-check-label a {
+    color: var(--fb-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.form-check-label a:hover {
+    text-decoration: underline;
+}
+
+/* Alert Styles */
+.upload-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    min-width: 300px;
+    border-radius: 12px;
+    border: none;
+    box-shadow: var(--shadow-4);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-left: 4px solid;
+    padding: 1rem 1.5rem;
+}
+
+.upload-alert.alert-success {
+    border-left-color: var(--success);
+}
+
+.upload-alert.alert-danger {
+    border-left-color: var(--danger);
+}
+
+.upload-alert.alert-warning {
+    border-left-color: var(--warning);
+}
+
+.upload-alert.alert-info {
+    border-left-color: var(--info);
+}
+
+/* Button Styles */
+.btn {
+    border-radius: 12px;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-outline-danger {
+    background: transparent;
+    border: 2px solid var(--danger);
+    color: var(--danger);
+}
+
+.btn-outline-danger:hover {
+    background: var(--danger);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Loading State */
+.btn.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Form Validation Styles */
+.is-invalid {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 0.2rem rgba(239, 68, 68, 0.25) !important;
+}
+
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--danger);
+}
+
+/* Animations */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .gender-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .room-config-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .room-detail-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .amenities-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .preview-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    
+    .d-flex.gap-3 {
+        flex-direction: column;
+    }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--fb-primary);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Character counter for description
+    const descriptionTextarea = document.getElementById('description');
+    const charCount = document.getElementById('charCount');
+
+    if (descriptionTextarea && charCount) {
+        descriptionTextarea.addEventListener('input', function() {
+            charCount.textContent = this.value.length;
+        });
+    }
+
+    // Enhanced image upload functionality
+    const uploadZone = document.getElementById('uploadArea');
+    const imageInput = document.getElementById('images');
+    const previewContainer = document.getElementById('previewContainer');
+    const previewGrid = document.getElementById('previewGrid');
+    const imageCount = document.getElementById('imageCount');
+    const clearAllBtn = document.getElementById('clearAll');
+
+    let selectedFiles = [];
+    const maxFiles = 10;
+    const maxFileSize = 5 * 1024 * 1024; // 5MB in bytes
+
+    // Click to upload
+    uploadZone.addEventListener('click', () => {
+        imageInput.click();
+    });
+
+    // Drag and drop functionality
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.style.background = 'var(--fb-light-blue)';
+        uploadZone.style.borderColor = 'var(--fb-primary)';
+    });
+
+    uploadZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadZone.style.background = '';
+        uploadZone.style.borderColor = '';
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.style.background = '';
+        uploadZone.style.borderColor = '';
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFiles(Array.from(files));
+        }
+    });
+
+    // File input change
+    imageInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFiles(Array.from(e.target.files));
+        }
+    });
+
+    // Clear all button
+    clearAllBtn.addEventListener('click', () => {
+        selectedFiles = [];
+        updateImageInput();
+        updatePreview();
+        // Reset the file input
+        imageInput.value = '';
+        showAlert('All images cleared', 'info');
+    });
+
+    function handleFiles(files) {
+        // Filter valid image files
+        const validFiles = files.filter(file => {
+            // Check if file is an image
+            if (!file.type.startsWith('image/')) {
+                showAlert(`${file.name} is not an image file. Please select image files only.`, 'error');
+                return false;
+            }
+            
+            // Check file size
+            if (file.size > maxFileSize) {
+                showAlert(`${file.name} is too large. Maximum size is 5MB.`, 'error');
+                return false;
+            }
+            
+            // Check if file is duplicate
+            if (selectedFiles.some(existingFile => existingFile.name === file.name && existingFile.size === file.size)) {
+                showAlert(`${file.name} is already selected.`, 'warning');
+                return false;
+            }
+            
+            return true;
+        });
+
+        // Check total file count
+        if (selectedFiles.length + validFiles.length > maxFiles) {
+            showAlert(`You can only upload up to ${maxFiles} images. You have ${selectedFiles.length} images selected. Please remove some images first.`, 'error');
+            return;
+        }
+
+        // Add new files to selected files
+        selectedFiles = [...selectedFiles, ...validFiles];
+        
+        updateImageInput();
+        updatePreview();
+        
+        // Show success message for new files
+        if (validFiles.length > 0) {
+            showAlert(`Successfully added ${validFiles.length} image(s)`, 'success');
+        }
+    }
+
+    function updateImageInput() {
+        // Create a new DataTransfer object to update the file input
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        imageInput.files = dt.files;
+    }
+
+    function updatePreview() {
+        previewGrid.innerHTML = '';
+        
+        if (selectedFiles.length > 0) {
+            previewContainer.style.display = 'block';
+            imageCount.textContent = `(${selectedFiles.length} photo${selectedFiles.length > 1 ? 's' : ''})`;
+            
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const previewItem = createPreviewItem(e.target.result, index, file.name, file.type);
+                    previewGrid.appendChild(previewItem);
+                };
+                reader.onerror = () => {
+                    console.error('Error reading file:', file.name);
+                    showAlert(`Error reading file: ${file.name}`, 'error');
+                };
+                reader.readAsDataURL(file);
+            });
+        } else {
+            previewContainer.style.display = 'none';
+        }
+    }
+
+    function createPreviewItem(src, index, fileName, fileType) {
+        const item = document.createElement('div');
+        item.className = 'preview-item';
+        item.innerHTML = `
+            <img src="${src}" alt="${fileName}" class="preview-image" title="${fileName}">
+            <div class="preview-overlay">
+                <span class="preview-filename">${fileName}</span>
+                <span class="preview-filetype">${fileType.split('/')[1]?.toUpperCase() || 'IMAGE'}</span>
+            </div>
+            <button type="button" class="preview-remove" onclick="removePreview(${index})" title="Remove image">
+                <i class="bi bi-x"></i>
+            </button>
+        `;
+        return item;
+    }
+
+    // Make removePreview function globally accessible
+    window.removePreview = function(index) {
+        if (index >= 0 && index < selectedFiles.length) {
+            const removedFile = selectedFiles[index];
+            selectedFiles.splice(index, 1);
+            updateImageInput();
+            updatePreview();
+            showAlert(`Removed ${removedFile.name}`, 'info');
+        }
+    };
+
+    // Alert function for user feedback
+    function showAlert(message, type = 'info') {
+        // Remove existing alerts
+        const existingAlerts = document.querySelectorAll('.upload-alert');
+        existingAlerts.forEach(alert => alert.remove());
+
+        const alert = document.createElement('div');
+        alert.className = `upload-alert alert-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'info'}`;
+        alert.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="bi bi-${type === 'error' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                <span>${message}</span>
+            </div>
+            <button type="button" class="btn-close" onclick="this.parentElement.remove()" style="background: none; border: none; font-size: 1.2rem; margin-left: 1rem;">×</button>
+        `;
+        
+        document.body.appendChild(alert);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (alert.parentElement) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+
+    // Form validation and submission - FIXED VERSION
+    const form = document.getElementById('propertyForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Track if form is being submitted to prevent beforeunload
+    let isSubmitting = false;
+
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            // Prevent default first to handle validation
+            e.preventDefault();
+
+            // Validate required fields first
+            const title = document.getElementById('title')?.value.trim();
+            const description = document.getElementById('description')?.value.trim();
+            const price = document.getElementById('price')?.value;
+            const propertyType = document.getElementById('property_type')?.value;
+            const genderPreference = document.querySelector('input[name="gender_preference"]:checked');
+            const terms = document.getElementById('terms')?.checked;
+            const slots = document.getElementById('slots')?.value;
+
+            let isValid = true;
+            let errorMessage = '';
+
+            // Basic validation
+            if (!title) {
+                isValid = false;
+                errorMessage = 'Please enter a property title.';
+            } else if (!description) {
+                isValid = false;
+                errorMessage = 'Please enter a property description.';
+            } else if (!price) {
+                isValid = false;
+                errorMessage = 'Please enter the property price.';
+            } else if (!propertyType) {
+                isValid = false;
+                errorMessage = 'Please select a property type.';
+            } else if (!genderPreference) {
+                isValid = false;
+                errorMessage = 'Please select a gender preference.';
+            } else if (!slots || slots < 1) {
+                isValid = false;
+                errorMessage = 'Please enter a valid number of slots (minimum 1).';
+            } else if (selectedFiles.length === 0) {
+                isValid = false;
+                errorMessage = 'Please upload at least one property photo.';
+            } else if (!terms) {
+                isValid = false;
+                errorMessage = 'Please agree to the Terms & Conditions.';
+            }
+
+            // Additional validation for specific property types
+            if (propertyType === 'bedspacer') {
+                const pricePerBed = document.getElementById('price_per_bed')?.value;
+                if (!pricePerBed) {
+                    isValid = false;
+                    errorMessage = 'Please enter the price per bed for bedspacer setup.';
+                }
+            }
+
+            if (!isValid) {
+                showAlert(errorMessage, 'error');
+                // Scroll to the first error
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return false;
+            }
+
+            // Mark as submitting to prevent beforeunload
+            isSubmitting = true;
+            
+            // Add loading state
+            setLoadingState(true);
+
+            // Clear the draft since we're submitting
+            localStorage.removeItem('property_form_draft');
+
+            // Submit the form after a short delay to show loading state
+            setTimeout(() => {
+                form.submit();
+            }, 500);
+        });
+    }
+
+    // Enhanced form validation
+    const requiredFields = document.querySelectorAll('[required]');
+
+    requiredFields.forEach(field => {
+        field.addEventListener('blur', validateField);
+        field.addEventListener('input', clearValidation);
+    });
+
+    function validateField(e) {
+        const field = e.target;
+        const value = field.value.trim();
+        
+        if (!value) {
+            showFieldError(field, 'This field is required');
+        } else {
+            clearFieldError(field);
+        }
+    }
+
+    function clearValidation(e) {
+        clearFieldError(e.target);
+    }
+
+    function showFieldError(field, message) {
+        field.classList.add('is-invalid');
+        
+        let feedback = field.nextElementSibling;
+        if (!feedback || !feedback.classList.contains('invalid-feedback')) {
+            feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback';
+            field.parentNode.insertBefore(feedback, field.nextSibling);
+        }
+        feedback.textContent = message;
+        feedback.style.color = 'var(--danger)';
+    }
+
+    function clearFieldError(field) {
+        field.classList.remove('is-invalid');
+        const feedback = field.nextElementSibling;
+        if (feedback && feedback.classList.contains('invalid-feedback')) {
+            feedback.remove();
+        }
+    }
+
+    // Price formatting
+    const priceInput = document.getElementById('price');
+    if (priceInput) {
+        priceInput.addEventListener('blur', function() {
+            const value = parseFloat(this.value);
+            if (value && !isNaN(value)) {
+                this.value = Math.round(value);
+            }
+        });
+    }
+
+    // Property type change handler with slot suggestions
+    const propertyTypeSelect = document.getElementById('property_type');
+    const roomConfiguration = document.getElementById('roomConfiguration');
+    const roomDetailsSection = document.getElementById('roomDetailsSection');
+    const roomDetailsContainer = document.getElementById('roomDetailsContainer');
+    const bedspacerPricing = document.getElementById('bedspacerPricing');
+    const slotsInput = document.getElementById('slots');
+
+    if (propertyTypeSelect) {
+        propertyTypeSelect.addEventListener('change', function() {
+            const selectedType = this.value;
+            updateRoomConfiguration(selectedType);
+            updateBedspacerPricing(selectedType);
+            suggestSlotsBasedOnType(selectedType);
+        });
+    }
+
+    // Slot suggestion function
+    function suggestSlotsBasedOnType(propertyType) {
+        const slotSuggestions = {
+            'studio': 2,
+            'room': 2,
+            'bedspacer': 8,
+            'boardinghouse': 20,
+            'apartment': 4,
+            'condo': 4,
+            'house': 6,
+            'other': 10
+        };
+        
+        if (slotSuggestions[propertyType] && slotsInput) {
+            slotsInput.value = slotSuggestions[propertyType];
+            showAlert(`Suggested ${slotSuggestions[propertyType]} slots for ${propertyType}`, 'info');
+        }
+    }
+
+    function updateRoomConfiguration(propertyType) {
+        if (!roomConfiguration) return;
+        
+        roomConfiguration.innerHTML = '';
+        
+        switch(propertyType) {
+            case 'bedspacer':
+                createBedspacerConfiguration();
+                showRoomDetailsSection();
+                break;
+            case 'room':
+                createSingleRoomConfiguration();
+                showRoomDetailsSection();
+                break;
+            case 'boardinghouse':
+                createBoardingHouseConfiguration();
+                showRoomDetailsSection();
+                break;
+            default:
+                hideRoomDetailsSection();
+                break;
+        }
+    }
+
+    function updateBedspacerPricing(propertyType) {
+        if (!bedspacerPricing) return;
+        
+        if (propertyType === 'bedspacer') {
+            bedspacerPricing.style.display = 'block';
+            const pricePerBed = document.getElementById('price_per_bed');
+            if (pricePerBed) pricePerBed.required = true;
+        } else {
+            bedspacerPricing.style.display = 'none';
+            const pricePerBed = document.getElementById('price_per_bed');
+            if (pricePerBed) pricePerBed.required = false;
+        }
+    }
+
+    function showRoomDetailsSection() {
+        if (roomDetailsSection) roomDetailsSection.style.display = 'block';
+    }
+
+    function hideRoomDetailsSection() {
+        if (roomDetailsSection) roomDetailsSection.style.display = 'none';
+    }
+
+    function createBedspacerConfiguration() {
+        const configHTML = `
+            <div class="room-config-section">
+                <div class="room-config-header">
+                    <h5 class="room-config-title">Bedspacer Setup</h5>
+                    <span class="room-type-badge">Bedspacer</span>
+                </div>
+                <div class="room-config-grid">
+                    <div class="form-group-enhanced">
+                        <label for="total_beds" class="form-label-enhanced">Total Beds *</label>
+                        <input type="number" class="form-control-enhanced" id="total_beds" name="total_beds" min="1" max="20" placeholder="4" required>
+                    </div>
+                    <div class="form-group-enhanced">
+                        <label for="vacant_beds" class="form-label-enhanced">Vacant Beds *</label>
+                        <input type="number" class="form-control-enhanced" id="vacant_beds" name="vacant_beds" min="1" max="20" placeholder="2" required>
+                    </div>
+                </div>
+            </div>
+        `;
+        roomConfiguration.innerHTML = configHTML;
+        
+        // Add event listeners for dynamic validation
+        const totalBedsInput = document.getElementById('total_beds');
+        const vacantBedsInput = document.getElementById('vacant_beds');
+        
+        if (totalBedsInput && vacantBedsInput) {
+            totalBedsInput.addEventListener('input', function() {
+                const total = parseInt(this.value) || 0;
+                const vacant = parseInt(vacantBedsInput.value) || 0;
+                if (vacant > total) {
+                    vacantBedsInput.value = total;
+                }
+                vacantBedsInput.max = total;
+            });
+        }
+    }
+
+    function createSingleRoomConfiguration() {
+        const configHTML = `
+            <div class="room-config-section">
+                <div class="room-config-header">
+                    <h5 class="room-config-title">Room Details</h5>
+                    <span class="room-type-badge">Single Room</span>
+                </div>
+                <div class="room-config-grid">
+                    <div class="form-group-enhanced">
+                        <label for="room_size" class="form-label-enhanced">Room Size (sqm)</label>
+                        <input type="number" class="form-control-enhanced" id="room_size" name="room_size" min="1" max="100" placeholder="12">
+                    </div>
+                    <div class="form-group-enhanced">
+                        <label for="max_occupants" class="form-label-enhanced">Max Occupants</label>
+                        <input type="number" class="form-control-enhanced" id="max_occupants" name="max_occupants" min="1" max="10" placeholder="2">
+                    </div>
+                </div>
+            </div>
+        `;
+        roomConfiguration.innerHTML = configHTML;
+    }
+
+    function createBoardingHouseConfiguration() {
+        const configHTML = `
+            <div class="room-config-section">
+                <div class="room-config-header">
+                    <h5 class="room-config-title">Boarding House Setup</h5>
+                    <span class="room-type-badge">Boarding House</span>
+                </div>
+                <div class="room-config-grid">
+                    <div class="form-group-enhanced">
+                        <label for="total_rooms" class="form-label-enhanced">Total Rooms *</label>
+                        <input type="number" class="form-control-enhanced" id="total_rooms" name="total_rooms" min="1" max="50" placeholder="10" required>
+                    </div>
+                    <div class="form-group-enhanced">
+                        <label for="vacant_rooms" class="form-label-enhanced">Vacant Rooms *</label>
+                        <input type="number" class="form-control-enhanced" id="vacant_rooms" name="vacant_rooms" min="1" max="50" placeholder="3" required>
+                    </div>
+                </div>
+            </div>
+        `;
+        roomConfiguration.innerHTML = configHTML;
+        
+        // Add event listeners for dynamic validation
+        const totalRoomsInput = document.getElementById('total_rooms');
+        const vacantRoomsInput = document.getElementById('vacant_rooms');
+        
+        if (totalRoomsInput && vacantRoomsInput) {
+            totalRoomsInput.addEventListener('input', function() {
+                const total = parseInt(this.value) || 0;
+                const vacant = parseInt(vacantRoomsInput.value) || 0;
+                if (vacant > total) {
+                    vacantRoomsInput.value = total;
+                }
+                vacantRoomsInput.max = total;
+            });
+        }
+    }
+
+    // Auto-save draft functionality
+    let formDraft = {};
+    const DRAFT_KEY = 'property_form_draft';
+    
+    // Load draft from localStorage
+    try {
+        const savedDraft = localStorage.getItem(DRAFT_KEY);
+        if (savedDraft) {
+            formDraft = JSON.parse(savedDraft);
+            populateFormFromDraft();
+        }
+    } catch (e) {
+        console.warn('Could not load form draft:', e);
+    }
+    
+    // Save draft on input changes with debouncing
+    const saveDraft = debounce(() => {
+        // Don't save if we're in the process of submitting
+        if (isSubmitting) return;
+        
+        formDraft = getFormData();
+        try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(formDraft));
+        } catch (e) {
+            console.warn('Could not save form draft:', e);
+        }
+    }, 1000);
+    
+    // Attach event listeners for auto-save
+    const formElements = document.querySelectorAll('#propertyForm input, #propertyForm select, #propertyForm textarea');
+    formElements.forEach(element => {
+        element.addEventListener('input', saveDraft);
+        element.addEventListener('change', saveDraft);
+    });
+    
+    function getFormData() {
+        const formData = new FormData(document.getElementById('propertyForm'));
+        const data = {};
+        for (let [key, value] of formData.entries()) {
+            if (key === 'images') continue; // Skip file inputs
+            data[key] = value;
+        }
+        return data;
+    }
+    
+    function populateFormFromDraft() {
+        Object.keys(formDraft).forEach(key => {
+            const element = document.querySelector(`[name="${key}"]`);
+            if (element && formDraft[key] !== undefined && formDraft[key] !== null) {
+                if (element.type === 'checkbox' || element.type === 'radio') {
+                    element.checked = element.value === formDraft[key];
+                } else {
+                    element.value = formDraft[key];
+                }
+            }
+        });
+    }
+    
+    // Debounce utility function
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Enhanced image validation with more detailed feedback
+    function validateImageFile(file) {
+        const errors = [];
+        
+        // Check file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!validTypes.includes(file.type)) {
+            errors.push(`"${file.name}" is not a supported image format. Please use JPG, PNG, or GIF.`);
+        }
+        
+        // Check file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            errors.push(`"${file.name}" is too large. Maximum size is 5MB.`);
+        }
+        
+        // Check dimensions (optional)
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = function() {
+                resolve({ file, errors });
+            };
+            img.onerror = function() {
+                errors.push(`"${file.name}" appears to be corrupted or not a valid image.`);
+                resolve({ file, errors });
+            };
+            img.src = URL.createObjectURL(file);
+        });
+    }
+    
+    // Enhanced file handling with better error reporting
+    async function handleFilesWithValidation(files) {
+        const validationPromises = files.map(validateImageFile);
+        const results = await Promise.all(validationPromises);
+        
+        const validFiles = [];
+        const allErrors = [];
+        
+        results.forEach(({ file, errors }) => {
+            if (errors.length === 0) {
+                validFiles.push(file);
+            } else {
+                allErrors.push(...errors);
+            }
+        });
+        
+        // Show all errors at once
+        if (allErrors.length > 0) {
+            showAlert(allErrors.join('<br>'), 'error');
+        }
+        
+        return validFiles;
+    }
+    
+    // Update the existing handleFiles function to use validation
+    window.handleFilesWithValidation = handleFilesWithValidation;
+
+    // Add keyboard navigation for accessibility
+    document.addEventListener('keydown', function(e) {
+        // Escape key closes modals or clears selections
+        if (e.key === 'Escape') {
+            const activeModal = document.querySelector('.modal.show');
+            if (activeModal) {
+                bootstrap.Modal.getInstance(activeModal).hide();
+            }
+        }
+        
+        // Enter key on buttons without forms
+        if (e.key === 'Enter' && e.target.tagName === 'BUTTON' && e.target.type !== 'submit') {
+            e.target.click();
+        }
+    });
+    
+    // FIXED: beforeunload event - only show warning if form has changes and not submitting
+    window.addEventListener('beforeunload', function(e) {
+        // Only show warning if form has changes and we're not actively submitting
+        if (!isSubmitting && form.checkValidity()) {
+            const confirmationMessage = 'You have unsaved changes. Are you sure you want to leave?';
+            e.returnValue = confirmationMessage;
+            return confirmationMessage;
+        }
+    });
+    
+    // Enhanced number input handling
+    const numberInputs = document.querySelectorAll('input[type="number"]');
+    numberInputs.forEach(input => {
+        input.addEventListener('wheel', function(e) {
+            e.preventDefault();
+        });
+        
+        // Ensure numbers are within bounds
+        input.addEventListener('blur', function() {
+            const min = parseFloat(this.min);
+            const max = parseFloat(this.max);
+            let value = parseFloat(this.value);
+            
+            if (!isNaN(min) && value < min) {
+                this.value = min;
+            } else if (!isNaN(max) && value > max) {
+                this.value = max;
+            }
+        });
+    });
+    
+    // Add loading states for better UX
+    function setLoadingState(loading) {
+        const submitBtn = document.getElementById('submitBtn');
+        if (loading) {
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
+        } else {
+            submitBtn.classList.remove('loading');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-plus-square me-2"></i>Add Property';
+        }
+    }
+
+    // Initialize form with default state
+    updateRoomConfiguration('');
+    updateBedspacerPricing('');
+
+    console.log('Property form enhanced with additional features');
+});
+</script>
+
+{% endblock %}

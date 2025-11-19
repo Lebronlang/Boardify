@@ -1,0 +1,2326 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="properties-page">
+    <!-- Enhanced Hero Section with Search -->
+    <div class="hero-section">
+        <div class="container py-5">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-7">
+                    <div class="hero-content">
+                        <h1 class="hero-title">
+                            <i class="bi bi-house-heart-fill me-3"></i>
+                            Find Your Perfect Home
+                        </h1>
+                        <p class="hero-subtitle">Discover comfortable living spaces with amazing amenities and trusted landlords</p>
+                        
+                        <!-- Advanced Search Bar -->
+                        <div class="search-bar-wrapper">
+                            <div class="search-bar">
+                                <i class="bi bi-search search-icon"></i>
+                                <input type="text" class="search-input" placeholder="Search by location, title, or price..." id="searchInput">
+                                <button class="search-btn" id="advancedFilterBtn">
+                                    <i class="bi bi-sliders me-2"></i>Filters
+                                </button>
+                                <button class="clear-search-btn" id="clearSearchBtn" style="display: none;">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="quick-stats">
+                            <div class="stat-badge">
+                                <i class="bi bi-building-check"></i>
+                                <span><span id="totalPropertiesCount">{{ properties|length }}</span> Properties</span>
+                            </div>
+                            <div class="stat-badge">
+                                <i class="bi bi-people"></i>
+                                <span>500+ Happy Tenants</span>
+                            </div>
+                            <div class="stat-badge">
+                                <i class="bi bi-star-fill"></i>
+                                <span>4.8 Average Rating</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-5">
+                    <div class="filter-panel">
+                        <h5 class="filter-panel-title">
+                            <i class="bi bi-funnel-fill me-2"></i>Quick Filters
+                        </h5>
+                        <div class="filter-chips">
+                            <button class="filter-chip active" data-filter="all">
+                                <i class="bi bi-grid-3x3-gap"></i>
+                                All Properties
+                            </button>
+                            <button class="filter-chip" data-filter="available">
+                                <i class="bi bi-check-circle"></i>
+                                Available Now
+                            </button>
+                            <button class="filter-chip" data-filter="budget">
+                                <i class="bi bi-wallet2"></i>
+                                Budget Friendly (₱3000 below)
+                            </button>
+                            <button class="filter-chip" data-filter="girls-only">
+                                <i class="bi bi-gender-female"></i>
+                                Girls Only
+                            </button>
+                            <button class="filter-chip" data-filter="boys-only">
+                                <i class="bi bi-gender-male"></i>
+                                Boys Only
+                            </button>
+                            <button class="filter-chip" data-filter="high-rating">
+                                <i class="bi bi-star-fill"></i>
+                                Top Rated
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container py-5">
+        <!-- Properties Header with Controls -->
+        <div class="properties-header">
+            <div class="header-left">
+                <h2 class="section-title">
+                    {% if user.role == 'landlord' %}
+                        <i class="bi bi-building-gear me-2"></i>My Properties
+                    {% else %}
+                        <i class="bi bi-house-door me-2"></i>Available Properties
+                    {% endif %}
+                </h2>
+                <span class="property-count" id="propertyCount">{{ properties|length }} properties found</span>
+            </div>
+            
+            <div class="header-controls">
+                <!-- Sort Dropdown -->
+                <div class="sort-dropdown">
+                    <select class="form-select sort-select" id="sortSelect">
+                        <option value="default">Sort by: Default</option>
+                        <option value="price-low">Price: Low to High</option>
+                        <option value="price-high">Price: High to Low</option>
+                        <option value="newest">Newest First</option>
+                        <option value="slots">Most Available</option>
+                    </select>
+                </div>
+
+                <!-- View Toggle -->
+                <div class="view-toggle">
+                    <button class="view-btn active" data-view="grid" title="Grid View">
+                        <i class="bi bi-grid-3x3-gap"></i>
+                    </button>
+                    <button class="view-btn" data-view="list" title="List View">
+                        <i class="bi bi-list-ul"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Properties Grid -->
+        <div class="properties-grid" id="propertiesContainer">
+            {% if properties %}
+                {% for item in properties %}
+                <div class="property-card" 
+                     data-slots="{{ item.slots_left }}" 
+                     data-price="{{ item.property.price }}" 
+                     data-status="{{ item.property.status|lower }}"
+                     data-gender="{{ item.property.gender_preference|default('both') }}"
+                     data-property-id="{{ item.property.id }}"
+                     data-available-slots="{{ item.slots_left }}">
+                    
+                    <!-- Property Image Section -->
+                    <div class="property-image-wrapper">
+                        {% if item.property.image %}
+                            <img src="{{ url_for('static', filename='uploads/' + item.property.image) }}" 
+                                 class="property-image" 
+                                 alt="{{ item.property.title }}" 
+                                 loading="lazy">
+                        {% else %}
+                            <div class="property-image-placeholder">
+                                <i class="bi bi-house-door"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Image Overlay with Gradient -->
+                        <div class="image-gradient"></div>
+                        
+                        <!-- Hover Actions -->
+                        <div class="hover-actions">
+                            <a href="{{ url_for('property_detail', property_id=item.property.id) }}" class="action-btn primary">
+                                <i class="bi bi-eye-fill"></i>
+                                <span>View Details</span>
+                            </a>
+                        </div>
+
+                        <!-- Top Badges -->
+                        <div class="top-badges">
+                            <!-- Status Badge -->
+                            {% if item.slots_left > 0 %}
+                                <div class="badge-item status-available">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    Available
+                                </div>
+                            {% else %}
+                                <div class="badge-item status-full">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                    Full
+                                </div>
+                            {% endif %}
+
+                            <!-- Featured Badge (for promoted properties) -->
+                            {% if loop.index <= 3 %}
+                                <div class="badge-item featured">
+                                    <i class="bi bi-star-fill"></i>
+                                    Featured
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Favorite Button -->
+                        {% if session.get('user_role') == 'tenant' %}
+                        <button class="favorite-btn" data-property-id="{{ item.property.id }}">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                        {% endif %}
+
+                        <!-- Slots Indicator -->
+                        <div class="slots-indicator">
+                            <div class="slots-info">
+                                <i class="bi bi-people-fill"></i>
+                                <span class="slots-text">
+                                    {% if item.slots_left > 0 %}
+                                        {{ item.slots_left }}/{{ item.total_slots }} Available
+                                    {% else %}
+                                        Fully Booked
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="slots-progress">
+                                <div class="slots-progress-bar" data-width="{{ ((item.slots_left / item.total_slots * 100)|round(0, 'floor')|int) if item.total_slots > 0 else 0 }}"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Property Content -->
+                    <div class="property-content">
+                        <!-- Header -->
+                        <div class="content-header">
+                            <div class="title-section">
+                                <h3 class="property-title">
+                                    <a href="{{ url_for('property_detail', property_id=item.property.id) }}">
+                                        {{ item.property.title }}
+                                    </a>
+                                </h3>
+                                <div class="property-location">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                    <span>{{ item.property.location|default('Location not specified') }}</span>
+                                </div>
+                            </div>
+                            
+                            {% if user.role == 'landlord' and item.property.landlord_id == user.id %}
+                            <div class="owner-actions">
+                                <a href="{{ url_for('edit_property', property_id=item.property.id) }}" 
+                                   class="action-icon edit-icon" 
+                                   title="Edit Property">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <button class="action-icon delete-icon" 
+                                        title="Delete Property"
+                                        data-property-id="{{ item.property.id }}"
+                                        data-property-title="{{ item.property.title }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Property Meta -->
+                        <div class="property-meta">
+                            <div class="meta-item">
+                                <div class="meta-icon">
+                                    <i class="bi bi-person-circle"></i>
+                                </div>
+                                <div class="meta-text">
+                                    <span class="meta-label">Hosted by</span>
+                                    <span class="meta-value">{{ item.property.owner.name }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <p class="property-description">
+                            {{ item.property.description[:150] }}{% if item.property.description|length > 150 %}...{% endif %}
+                        </p>
+
+                        <!-- Property Features -->
+                        <div class="property-features">
+                            <div class="feature-item">
+                                <i class="bi bi-wifi"></i>
+                                <span>Free WiFi</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="bi bi-snow"></i>
+                                <span>AC</span>
+                            </div>
+                            {% if item.property.gender_preference and item.property.gender_preference != 'both' %}
+                            <div class="feature-item gender-feature">
+                                <i class="bi bi-{% if item.property.gender_preference == 'female' %}gender-female{% else %}gender-male{% endif %}"></i>
+                                <span>{{ 'Girls Only' if item.property.gender_preference == 'female' else 'Boys Only' }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="feature-item">
+                                <i class="bi bi-shield-check"></i>
+                                <span>Verified</span>
+                            </div>
+                        </div>
+
+                        <!-- Property Stats -->
+                        <div class="property-stats">
+                            <div class="stat">
+                                <i class="bi bi-calendar-check"></i>
+                                <span>{{ item.property.bookings|length }} Booking{{ 's' if item.property.bookings|length != 1 else '' }}</span>
+                            </div>
+                            <div class="stat">
+                                <i class="bi bi-star-fill"></i>
+                                <span>4.{{ loop.index % 9 }} Rating</span>
+                            </div>
+                            <div class="stat">
+                                <i class="bi bi-eye"></i>
+                                <span>{{ (loop.index * 47) }} Views</span>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="property-footer">
+                            <div class="price-section">
+                                <span class="price-amount">₱{{ "{:,}".format(item.property.price) }}</span>
+                                <span class="price-period">/ month</span>
+                            </div>
+
+                            <div class="action-section">
+                                {% if session.get('user_role') == 'tenant' %}
+                                    {% if item.user_has_booked %}
+                                        {% set user_booking = item.property.bookings|selectattr('tenant_id', 'equalto', session['user_id'])|first %}
+                                        {% if user_booking %}
+                                            {% if user_booking.status == 'pending' %}
+                                                <button class="btn-action status-pending" disabled>
+                                                    <i class="bi bi-clock-history"></i>
+                                                    <span>Pending</span>
+                                                </button>
+                                            {% elif user_booking.status == 'approved' %}
+                                                <button class="btn-action status-approved" disabled>
+                                                    <i class="bi bi-check-circle-fill"></i>
+                                                    <span>Confirmed</span>
+                                                </button>
+                                            {% elif user_booking.status == 'rejected' %}
+                                                <button class="btn-action status-rejected" disabled>
+                                                    <i class="bi bi-x-circle-fill"></i>
+                                                    <span>Rejected</span>
+                                                </button>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% elif item.slots_left > 0 %}
+                                        <a href="{{ url_for('property_detail', property_id=item.property.id) }}" class="btn-action primary">
+                                            <i class="bi bi-calendar-plus"></i>
+                                            <span>Book Now</span>
+                                        </a>
+                                    {% else %}
+                                        <button class="btn-action disabled" disabled>
+                                            <i class="bi bi-ban"></i>
+                                            <span>Unavailable</span>
+                                        </button>
+                                    {% endif %}
+                                {% elif session.get('user_role') == 'landlord' and item.property.landlord_id == user.id %}
+                                    <a href="{{ url_for('edit_property', property_id=item.property.id) }}" class="btn-action secondary">
+                                        <i class="bi bi-pencil-square"></i>
+                                        <span>Edit</span>
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('property_detail', property_id=item.property.id) }}" class="btn-action outline">
+                                        <i class="bi bi-eye"></i>
+                                        <span>View</span>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="bi bi-inbox"></i>
+                    </div>
+                    <h3>No Properties Found</h3>
+                    <p>
+                        {% if user.role == 'landlord' %}
+                            Start building your property portfolio today!
+                        {% else %}
+                            Try adjusting your filters or check back later for new listings.
+                        {% endif %}
+                    </p>
+                    {% if user.role == 'landlord' %}
+                        <a href="{{ url_for('add_property') }}" class="btn-primary-large">
+                            <i class="bi bi-plus-circle me-2"></i>Add Your First Property
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Pagination -->
+        {% if properties|length >= 9 %}
+        <div class="pagination-wrapper">
+            <button class="pagination-btn" id="prevPage" disabled>
+                <i class="bi bi-chevron-left"></i>
+                Previous
+            </button>
+            <div class="pagination-numbers">
+                <button class="page-number active">1</button>
+                <button class="page-number">2</button>
+                <button class="page-number">3</button>
+                <span class="page-dots">...</span>
+                <button class="page-number">10</button>
+            </div>
+            <button class="pagination-btn" id="nextPage">
+                Next
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Back to Top Button -->
+    <button class="back-to-top" id="backToTop">
+        <i class="bi bi-arrow-up"></i>
+    </button>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="delete-modal-overlay" id="deleteModal">
+    <div class="delete-modal">
+        <div class="delete-modal-icon">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <h3 class="delete-modal-title">Delete Property</h3>
+        <p class="delete-modal-message">Are you sure you want to delete this property?</p>
+        <div class="delete-modal-property-name" id="deletePropertyName"></div>
+        <div class="delete-modal-warning">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            <div class="delete-modal-warning-text">
+                This action cannot be undone. All bookings and data associated with this property will be permanently removed.
+            </div>
+        </div>
+        <div class="delete-modal-actions">
+            <button class="delete-modal-btn delete-modal-btn-cancel" id="cancelDelete">
+                <i class="bi bi-x-circle me-2"></i>Cancel
+            </button>
+            <button class="delete-modal-btn delete-modal-btn-confirm" id="confirmDelete" disabled>
+                <i class="bi bi-trash-fill me-2"></i>Delete Property
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        /* Facebook Blue Theme */
+        --fb-primary: #1877f2;
+        --fb-primary-hover: #166fe5;
+        --fb-primary-active: #1567d3;
+        --fb-secondary: #1877f2;
+        --fb-secondary-hover: #166fe5;
+        --fb-light-blue: #e7f3ff;
+        --fb-lighter-blue: #f0f8ff;
+        
+        /* Background Colors */
+        --bg-primary: #ffffff;
+        --bg-secondary: #f0f2f5;
+        --bg-tertiary: #e4e6eb;
+        --bg-hover: #f2f3f5;
+        --bg-card: #ffffff;
+        
+        /* Text Colors */
+        --text-primary: #050505;
+        --text-secondary: #65676b;
+        --text-tertiary: #8a8d91;
+        --text-white: #ffffff;
+        
+        /* Border & Shadows */
+        --border-color: #ced0d4;
+        --divider-color: #e4e6eb;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+        --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+        --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.15);
+        --shadow-hover: 0 8px 32px rgba(24, 119, 242, 0.25);
+        
+        /* Status Colors */
+        --success: #1877f2;
+        --success-light: #e7f3ff;
+        --danger: #e74c3c;
+        --danger-light: #fdecea;
+        --warning: #f39c12;
+        --warning-light: #fef4e6;
+        --info: #3498db;
+    }
+
+    /* Dark Theme */
+    body.dark-theme {
+        --bg-primary: #18191a;
+        --bg-secondary: #242526;
+        --bg-tertiary: #3a3b3c;
+        --bg-hover: #4e4f50;
+        --bg-card: #242526;
+        --text-primary: #e4e6eb;
+        --text-secondary: #b0b3b8;
+        --text-tertiary: #8a8d91;
+        --border-color: #3e4042;
+        --divider-color: #3e4042;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+        --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
+        --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.6);
+        --shadow-hover: 0 8px 32px rgba(24, 119, 242, 0.3);
+        --fb-light-blue: rgba(24, 119, 242, 0.15);
+        --fb-lighter-blue: rgba(24, 119, 242, 0.1);
+        --success-light: rgba(24, 119, 242, 0.15);
+        --danger-light: rgba(231, 76, 60, 0.15);
+        --warning-light: rgba(243, 156, 18, 0.15);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        transition: all 0.3s ease;
+    }
+
+    .properties-page {
+        min-height: 100vh;
+    }
+
+    /* Hero Section */
+    .hero-section {
+        background: linear-gradient(135deg, var(--fb-primary) 0%, #4a90e2 100%);
+        padding: 3rem 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120"><path fill="rgba(255,255,255,0.05)" d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" opacity=".25"/></svg>') no-repeat center bottom;
+        background-size: cover;
+        opacity: 0.3;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-title {
+        font-size: 2.75rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        line-height: 1.2;
+    }
+
+    .hero-title i {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+
+    .hero-subtitle {
+        font-size: 1.15rem;
+        color: rgba(255, 255, 255, 0.95);
+        margin-bottom: 2rem;
+        font-weight: 400;
+    }
+
+    /* Search Bar */
+    .search-bar-wrapper {
+        margin-bottom: 2rem;
+    }
+
+    .search-bar {
+        background: white;
+        border-radius: 50px;
+        padding: 0.5rem 0.5rem 0.5rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+    }
+
+    .search-bar:focus-within {
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+        transform: translateY(-2px);
+    }
+
+    .search-icon {
+        color: var(--text-tertiary);
+        font-size: 1.2rem;
+    }
+
+    .search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 1rem;
+        color: var(--text-primary);
+        background: transparent;
+    }
+
+    .search-input::placeholder {
+        color: var(--text-tertiary);
+    }
+
+    .search-btn {
+        background: var(--fb-primary);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+    }
+
+    .search-btn:hover {
+        background: var(--fb-primary-hover);
+        transform: translateX(-2px);
+    }
+
+    .clear-search-btn {
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .clear-search-btn:hover {
+        background: var(--danger);
+        color: white;
+        transform: scale(1.1);
+    }
+
+    /* Quick Stats */
+    .quick-stats {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .stat-badge {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        padding: 0.75rem 1.25rem;
+        border-radius: 50px;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .stat-badge i {
+        font-size: 1.1rem;
+    }
+
+    /* Filter Panel */
+    .filter-panel {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 1.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark-theme .filter-panel {
+        background: rgba(0, 0, 0, 0.2);
+    }
+
+    .filter-panel-title {
+        color: white;
+        margin-bottom: 1.25rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        font-size: 1.1rem;
+    }
+
+    .filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .filter-chip {
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(10px);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 0.7rem 1.25rem;
+        border-radius: 50px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        white-space: nowrap;
+    }
+
+    .filter-chip:hover {
+        background: rgba(255, 255, 255, 0.35);
+        transform: translateY(-2px);
+    }
+
+    .filter-chip.active {
+        background: white;
+        color: var(--fb-primary);
+        border-color: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Properties Header */
+    .properties-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2.5rem;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        margin: 0;
+    }
+
+    .section-title i {
+        color: var(--fb-primary);
+    }
+
+    .property-count {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary);
+        padding: 0.4rem 1rem;
+        border-radius: 50px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .header-controls {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .sort-dropdown {
+        position: relative;
+    }
+
+    .sort-select {
+        background: var(--bg-card);
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        padding: 0.6rem 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        outline: none;
+    }
+
+    .sort-select:hover {
+        border-color: var(--fb-primary);
+    }
+
+    .sort-select:focus {
+        border-color: var(--fb-primary);
+        box-shadow: 0 0 0 3px var(--fb-light-blue);
+    }
+
+    .view-toggle {
+        display: flex;
+        gap: 0.5rem;
+        background: var(--bg-card);
+        padding: 0.35rem;
+        border-radius: 10px;
+        border: 2px solid var(--border-color);
+    }
+
+    .view-btn {
+        background: transparent;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 1.1rem;
+    }
+
+    .view-btn:hover {
+        color: var(--fb-primary);
+        background: var(--bg-hover);
+    }
+
+    .view-btn.active {
+        background: var(--fb-primary);
+        color: white;
+    }
+
+    /* Properties Grid */
+    .properties-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .properties-grid.list-view {
+        grid-template-columns: 1fr;
+    }
+
+    .properties-grid.list-view .property-card {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .properties-grid.list-view .property-image-wrapper {
+        width: 400px;
+        min-width: 400px;
+        height: auto;
+    }
+
+    .properties-grid.list-view .property-content {
+        flex: 1;
+    }
+
+    /* Property Card */
+    .property-card {
+        background: var(--bg-card);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 2px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .property-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-hover);
+        border-color: var(--fb-primary);
+    }
+
+    /* Property Image Wrapper */
+    .property-image-wrapper {
+        position: relative;
+        height: 280px;
+        overflow: hidden;
+        background: var(--bg-tertiary);
+    }
+
+    .property-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s ease;
+    }
+
+    .property-card:hover .property-image {
+        transform: scale(1.1);
+    }
+
+    .property-image-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+        color: var(--text-tertiary);
+        font-size: 4rem;
+    }
+
+    .image-gradient {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 50%;
+        background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+        pointer-events: none;
+    }
+
+    /* Hover Actions */
+    .hover-actions {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 10;
+    }
+
+    .property-card:hover .hover-actions {
+        opacity: 1;
+    }
+
+    .action-btn {
+        background: white;
+        color: var(--fb-primary);
+        padding: 1rem 2rem;
+        border-radius: 50px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .action-btn:hover {
+        background: var(--fb-primary);
+        color: white;
+        transform: scale(1.05);
+    }
+
+    /* Top Badges */
+    .top-badges {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        z-index: 5;
+    }
+
+    .badge-item {
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(10px);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    body.dark-theme .badge-item {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .badge-item.status-available {
+        background: rgba(24, 119, 242, 0.95);
+        border-color: var(--fb-primary);
+    }
+
+    .badge-item.status-full {
+        background: rgba(231, 76, 60, 0.95);
+        border-color: var(--danger);
+    }
+
+    .badge-item.featured {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: #000;
+        border-color: #FFD700;
+        animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.85; }
+    }
+
+    /* Favorite Button */
+    .favorite-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.3rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 5;
+    }
+
+    body.dark-theme .favorite-btn {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .favorite-btn:hover {
+        background: var(--fb-primary);
+        border-color: var(--fb-primary);
+        transform: scale(1.1);
+    }
+
+    .favorite-btn.active {
+        background: var(--danger);
+        border-color: var(--danger);
+        color: white;
+    }
+
+    .favorite-btn.active i::before {
+        content: "\f415";
+    }
+
+    /* Slots Indicator */
+    .slots-indicator {
+        position: absolute;
+        bottom: 1rem;
+        left: 1rem;
+        right: 1rem;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(10px);
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        z-index: 5;
+    }
+
+    body.dark-theme .slots-indicator {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .slots-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .slots-info i {
+        font-size: 1.1rem;
+    }
+
+    .slots-progress {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .slots-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--fb-primary) 0%, #4a90e2 100%);
+        border-radius: 3px;
+        transition: width 0.5s ease;
+    }
+
+    /* Property Content */
+    .property-content {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .content-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+        gap: 1rem;
+    }
+
+    .title-section {
+        flex: 1;
+    }
+
+    .property-title {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 0.5rem 0;
+        line-height: 1.3;
+    }
+
+    .property-title a {
+        color: inherit;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .property-title a:hover {
+        color: var(--fb-primary);
+    }
+
+    .property-location {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .property-location i {
+        color: var(--fb-primary);
+    }
+
+    /* Enhanced Owner Actions for Landlords */
+    .owner-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .action-icon {
+        background: var(--bg-hover);
+        border: 2px solid var(--border-color);
+        color: var(--text-secondary);
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+    .action-icon:hover {
+        transform: scale(1.05);
+    }
+
+    .action-icon.edit-icon:hover {
+        background: var(--fb-light-blue);
+        border-color: var(--fb-primary);
+        color: var(--fb-primary);
+    }
+
+    .action-icon.delete-icon:hover {
+        background: var(--danger-light);
+        border-color: var(--danger);
+        color: var(--danger);
+    }
+
+    /* Property Meta */
+    .property-meta {
+        margin-bottom: 1rem;
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: var(--bg-secondary);
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+    }
+
+    .meta-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--fb-light-blue);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--fb-primary);
+        font-size: 1.2rem;
+    }
+
+    .meta-text {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .meta-label {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        font-weight: 500;
+    }
+
+    .meta-value {
+        font-size: 0.95rem;
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    /* Property Description */
+    .property-description {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    /* Property Features */
+    .property-features {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .feature-item {
+        background: var(--bg-secondary);
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+
+    .feature-item:hover {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary);
+        border-color: var(--fb-primary);
+    }
+
+    .feature-item i {
+        font-size: 1rem;
+    }
+
+    .feature-item.gender-feature {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary);
+        border-color: var(--fb-primary);
+    }
+
+    /* Property Stats */
+    .property-stats {
+        display: flex;
+        gap: 1.5rem;
+        padding: 1rem 0;
+        border-top: 1px solid var(--divider-color);
+        border-bottom: 1px solid var(--divider-color);
+        margin-bottom: 1rem;
+    }
+
+    .stat {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .stat i {
+        color: var(--fb-primary);
+        font-size: 1rem;
+    }
+
+    /* Property Footer */
+    .property-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: auto;
+        gap: 1rem;
+    }
+
+    .price-section {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .price-amount {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--fb-primary);
+        line-height: 1;
+    }
+
+    .price-period {
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+        font-weight: 500;
+    }
+
+    .action-section {
+        flex-shrink: 0;
+    }
+
+    .btn-action {
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .btn-action.primary {
+        background: var(--fb-primary);
+        color: white;
+    }
+
+    .btn-action.primary:hover {
+        background: var(--fb-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .btn-action.secondary {
+        background: var(--fb-primary);
+        color: white;
+    }
+
+    .btn-action.secondary:hover {
+        background: var(--fb-primary-hover);
+        transform: translateY(-2px);
+    }
+
+    .btn-action.outline {
+        background: transparent;
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+
+    .btn-action.outline:hover {
+        border-color: var(--fb-primary);
+        color: var(--fb-primary);
+        background: var(--fb-light-blue);
+    }
+
+    .btn-action.status-pending {
+        background: var(--warning-light);
+        color: var(--warning);
+        border-color: var(--warning);
+        cursor: not-allowed;
+    }
+
+    .btn-action.status-approved {
+        background: var(--success-light);
+        color: var(--success);
+        border-color: var(--success);
+        cursor: not-allowed;
+    }
+
+    .btn-action.status-rejected {
+        background: var(--danger-light);
+        color: var(--danger);
+        border-color: var(--danger);
+        cursor: not-allowed;
+    }
+
+    .btn-action.disabled {
+        background: var(--bg-tertiary);
+        color: var(--text-tertiary);
+        border-color: var(--border-color);
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    /* Delete Confirmation Modal */
+    .delete-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .delete-modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .delete-modal {
+        background: var(--bg-card);
+        border-radius: 20px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: var(--shadow-xl);
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+    }
+
+    .delete-modal-overlay.active .delete-modal {
+        transform: scale(1);
+    }
+
+    .delete-modal-icon {
+        width: 80px;
+        height: 80px;
+        background: var(--danger-light);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        color: var(--danger);
+        font-size: 2.5rem;
+        animation: shake 0.5s ease;
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+    }
+
+    .delete-modal-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        text-align: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .delete-modal-message {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        text-align: center;
+        margin-bottom: 0.5rem;
+        line-height: 1.6;
+    }
+
+    .delete-modal-property-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--fb-primary);
+        text-align: center;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: var(--fb-light-blue);
+        border-radius: 12px;
+    }
+
+    .delete-modal-warning {
+        background: var(--warning-light);
+        border: 2px solid var(--warning);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .delete-modal-warning i {
+        color: var(--warning);
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .delete-modal-warning-text {
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        font-weight: 600;
+        line-height: 1.5;
+    }
+
+    .delete-modal-actions {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .delete-modal-btn {
+        flex: 1;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .delete-modal-btn-cancel {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 2px solid var(--border-color);
+    }
+
+    .delete-modal-btn-cancel:hover {
+        background: var(--bg-hover);
+        border-color: var(--text-secondary);
+    }
+
+    .delete-modal-btn-confirm {
+        background: var(--danger);
+        color: white;
+    }
+
+    .delete-modal-btn-confirm:hover {
+        background: #c0392b;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .delete-modal-btn-confirm:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* Success Delete Animation */
+    @keyframes deleteSuccess {
+        0% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.5;
+            transform: scale(0.9) rotateZ(-5deg);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(0.8) rotateZ(-10deg);
+        }
+    }
+
+    .property-card.deleting {
+        animation: deleteSuccess 0.5s ease forwards;
+        pointer-events: none;
+    }
+
+    /* Empty State */
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 5rem 2rem;
+    }
+
+    .empty-icon {
+        width: 120px;
+        height: 120px;
+        background: var(--fb-light-blue);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 2rem;
+        color: var(--fb-primary);
+    }
+
+    .empty-icon i {
+        font-size: 4rem;
+    }
+
+    .empty-state h3 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .btn-primary-large {
+        background: var(--fb-primary);
+        color: white;
+        padding: 1rem 2.5rem;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary-large:hover {
+        background: var(--fb-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+        color: white;
+    }
+
+    /* Pagination */
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 3rem;
+    }
+
+    .pagination-btn {
+        background: var(--bg-card);
+        border: 2px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: var(--fb-primary);
+        border-color: var(--fb-primary);
+        color: white;
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .pagination-numbers {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .page-number {
+        background: var(--bg-card);
+        border: 2px solid var(--border-color);
+        color: var(--text-primary);
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .page-number:hover {
+        background: var(--fb-light-blue);
+        border-color: var(--fb-primary);
+        color: var(--fb-primary);
+    }
+
+    .page-number.active {
+        background: var(--fb-primary);
+        border-color: var(--fb-primary);
+        color: white;
+    }
+
+    .page-dots {
+        color: var(--text-tertiary);
+        font-weight: 700;
+    }
+
+    /* Back to Top Button */
+    .back-to-top {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: var(--fb-primary);
+        color: white;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-lg);
+        z-index: 999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .back-to-top.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .back-to-top:hover {
+        background: var(--fb-primary-hover);
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .properties-grid {
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        }
+    }
+
+    @media (max-width: 992px) {
+        .hero-title {
+            font-size: 2.25rem;
+        }
+
+        .properties-grid {
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .properties-grid.list-view .property-card {
+            flex-direction: column;
+        }
+
+        .properties-grid.list-view .property-image-wrapper {
+            width: 100%;
+            min-width: unset;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 1.75rem;
+        }
+
+        .hero-title i {
+            display: none;
+        }
+
+        .search-bar {
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            min-width: 200px;
+        }
+
+        .quick-stats {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .stat-badge {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .filter-chips {
+            justify-content: center;
+        }
+
+        .properties-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .header-left {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .header-controls {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .sort-select,
+        .view-toggle {
+            width: 100%;
+        }
+
+        .properties-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .property-footer {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .btn-action {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .property-stats {
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .pagination-wrapper {
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .pagination-numbers {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .delete-modal {
+            padding: 1.5rem;
+        }
+
+        .delete-modal-icon {
+            width: 60px;
+            height: 60px;
+            font-size: 2rem;
+        }
+
+        .delete-modal-title {
+            font-size: 1.5rem;
+        }
+
+        .delete-modal-actions {
+            flex-direction: column;
+        }
+
+        .delete-modal-btn {
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .hero-section {
+            padding: 2rem 0;
+        }
+
+        .property-content {
+            padding: 1.25rem;
+        }
+
+        .property-features {
+            gap: 0.5rem;
+        }
+
+        .feature-item {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .back-to-top {
+            bottom: 1rem;
+            right: 1rem;
+            width: 48px;
+            height: 48px;
+        }
+    }
+
+    /* Loading Animation */
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 2rem;
+    }
+
+    .loading-spinner.active {
+        display: block;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid var(--fb-light-blue);
+        border-top: 4px solid var(--fb-primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM Elements
+    const propertiesContainer = document.getElementById('propertiesContainer');
+    const propertyCards = document.querySelectorAll('.property-card');
+    const filterChips = document.querySelectorAll('.filter-chip');
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const sortSelect = document.getElementById('sortSelect');
+    const viewToggle = document.querySelectorAll('.view-btn');
+    const backToTopBtn = document.getElementById('backToTop');
+    const propertyCount = document.getElementById('propertyCount');
+    const totalPropertiesCount = document.getElementById('totalPropertiesCount');
+    
+    // Delete Modal Elements
+    const deleteModal = document.getElementById('deleteModal');
+    const deletePropertyName = document.getElementById('deletePropertyName');
+    const cancelDeleteBtn = document.getElementById('cancelDelete');
+    const confirmDeleteBtn = document.getElementById('confirmDelete');
+    
+    // Current filter state
+    let currentFilter = 'all';
+    let currentSearch = '';
+    let currentSort = 'default';
+    let currentView = 'grid';
+
+    // Initialize
+    initializeEventListeners();
+    updateSlotsProgressBars();
+
+    function initializeEventListeners() {
+        // Filter chips
+        filterChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                filterChips.forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                currentFilter = chip.dataset.filter;
+                filterProperties();
+            });
+        });
+
+        // Search input
+        searchInput.addEventListener('input', (e) => {
+            currentSearch = e.target.value.toLowerCase().trim();
+            clearSearchBtn.style.display = currentSearch ? 'flex' : 'none';
+            filterProperties();
+        });
+
+        // Clear search
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            currentSearch = '';
+            clearSearchBtn.style.display = 'none';
+            filterProperties();
+        });
+
+        // Sort select
+        sortSelect.addEventListener('change', (e) => {
+            currentSort = e.target.value;
+            sortProperties();
+        });
+
+        // View toggle
+        viewToggle.forEach(btn => {
+            btn.addEventListener('click', () => {
+                viewToggle.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentView = btn.dataset.view;
+                propertiesContainer.className = `properties-grid ${currentView}-view`;
+            });
+        });
+
+        // Back to top
+        backToTopBtn.addEventListener('click', scrollToTop);
+        window.addEventListener('scroll', toggleBackToTop);
+
+        // Delete property buttons
+        document.querySelectorAll('.delete-icon').forEach(btn => {
+            btn.addEventListener('click', openDeleteModal);
+        });
+
+        // Delete modal actions
+        cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+        confirmDeleteBtn.addEventListener('click', confirmDelete);
+
+        // Favorite buttons
+        document.querySelectorAll('.favorite-btn').forEach(btn => {
+            btn.addEventListener('click', toggleFavorite);
+        });
+    }
+
+    function filterProperties() {
+        let visibleCount = 0;
+        
+        propertyCards.forEach(card => {
+            const slots = parseInt(card.dataset.slots);
+            const price = parseFloat(card.dataset.price);
+            const gender = card.dataset.gender;
+            const title = card.querySelector('.property-title').textContent.toLowerCase();
+            const location = card.querySelector('.property-location span').textContent.toLowerCase();
+            const description = card.querySelector('.property-description').textContent.toLowerCase();
+            
+            let matchesFilter = true;
+            let matchesSearch = true;
+            
+            // Apply filter
+            switch (currentFilter) {
+                case 'available':
+                    matchesFilter = slots > 0;
+                    break;
+                case 'budget':
+                    matchesFilter = price <= 3000;
+                    break;
+                case 'girls-only':
+                    matchesFilter = gender === 'female';
+                    break;
+                case 'boys-only':
+                    matchesFilter = gender === 'male';
+                    break;
+                case 'high-rating':
+                    // For demo purposes, assume properties with ID ending with even numbers are high-rated
+                    matchesFilter = parseInt(card.dataset.propertyId) % 2 === 0;
+                    break;
+                case 'all':
+                default:
+                    matchesFilter = true;
+            }
+            
+            // Apply search
+            if (currentSearch) {
+                matchesSearch = title.includes(currentSearch) || 
+                              location.includes(currentSearch) || 
+                              description.includes(currentSearch);
+            }
+            
+            // Show/hide card
+            if (matchesFilter && matchesSearch) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        // Update counters
+        propertyCount.textContent = `${visibleCount} properties found`;
+        totalPropertiesCount.textContent = visibleCount;
+        
+        // Show empty state if no properties
+        const emptyState = document.querySelector('.empty-state');
+        if (visibleCount === 0) {
+            if (!emptyState) {
+                showEmptyState();
+            }
+        } else if (emptyState) {
+            emptyState.remove();
+        }
+    }
+
+    function sortProperties() {
+        const container = propertiesContainer;
+        const cards = Array.from(container.querySelectorAll('.property-card[style*="display: flex"]'));
+        
+        cards.sort((a, b) => {
+            const priceA = parseFloat(a.dataset.price);
+            const priceB = parseFloat(b.dataset.price);
+            const slotsA = parseInt(a.dataset.slots);
+            const slotsB = parseInt(b.dataset.slots);
+            const idA = parseInt(a.dataset.propertyId);
+            const idB = parseInt(b.dataset.propertyId);
+            
+            switch (currentSort) {
+                case 'price-low':
+                    return priceA - priceB;
+                case 'price-high':
+                    return priceB - priceA;
+                case 'newest':
+                    return idB - idA;
+                case 'slots':
+                    return slotsB - slotsA;
+                case 'default':
+                default:
+                    return 0;
+            }
+        });
+        
+        // Reorder cards
+        cards.forEach(card => container.appendChild(card));
+    }
+
+    function updateSlotsProgressBars() {
+        document.querySelectorAll('.slots-progress-bar').forEach(bar => {
+            const width = bar.dataset.width;
+            bar.style.width = `${width}%`;
+        });
+    }
+
+    function toggleFavorite(e) {
+        const btn = e.currentTarget;
+        btn.classList.toggle('active');
+        
+        // Here you would typically make an API call to update favorites
+        const propertyId = btn.dataset.propertyId;
+        console.log('Toggled favorite for property:', propertyId);
+        
+        // Show feedback
+        showNotification(btn.classList.contains('active') ? 
+            'Added to favorites' : 'Removed from favorites');
+    }
+
+    function openDeleteModal(e) {
+        const btn = e.currentTarget;
+        const propertyId = btn.dataset.propertyId;
+        const propertyTitle = btn.dataset.propertyTitle;
+        
+        deletePropertyName.textContent = propertyTitle;
+        deleteModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        
+        // Store property ID for deletion
+        deleteModal.dataset.propertyId = propertyId;
+        
+        // Enable confirm button after a short delay (safety measure)
+        setTimeout(() => {
+            confirmDeleteBtn.disabled = false;
+        }, 1000);
+    }
+
+    function closeDeleteModal() {
+        deleteModal.classList.remove('active');
+        document.body.style.overflow = '';
+        confirmDeleteBtn.disabled = true;
+    }
+
+    function confirmDelete() {
+        const propertyId = deleteModal.dataset.propertyId;
+        const propertyCard = document.querySelector(`.property-card[data-property-id="${propertyId}"]`);
+        
+        if (propertyCard) {
+            // Add deleting animation
+            propertyCard.classList.add('deleting');
+            
+            // Simulate API call
+            setTimeout(() => {
+                propertyCard.remove();
+                updatePropertyCount();
+                showNotification('Property deleted successfully');
+                closeDeleteModal();
+            }, 500);
+        }
+    }
+
+    function updatePropertyCount() {
+        const visibleCards = document.querySelectorAll('.property-card[style*="display: flex"]').length;
+        propertyCount.textContent = `${visibleCards} properties found`;
+        totalPropertiesCount.textContent = visibleCards;
+    }
+
+    function showEmptyState() {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-state';
+        emptyState.innerHTML = `
+            <div class="empty-icon">
+                <i class="bi bi-inbox"></i>
+            </div>
+            <h3>No Properties Found</h3>
+            <p>Try adjusting your filters or check back later for new listings.</p>
+        `;
+        propertiesContainer.appendChild(emptyState);
+    }
+
+    function showNotification(message) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--fb-primary);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: var(--shadow-lg);
+            z-index: 10001;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 3000);
+    }
+
+    function toggleBackToTop() {
+        if (window.pageYOffset > 300) {
+            backToTopBtn.classList.add('visible');
+        } else {
+            backToTopBtn.classList.remove('visible');
+        }
+    }
+
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+
+    // Enhanced filter function that fixes the available slots issue
+    function enhancedFilterProperties() {
+        let visibleCount = 0;
+        
+        propertyCards.forEach(card => {
+            const availableSlots = parseInt(card.dataset.availableSlots);
+            const price = parseFloat(card.dataset.price);
+            const gender = card.dataset.gender;
+            const title = card.querySelector('.property-title').textContent.toLowerCase();
+            const location = card.querySelector('.property-location span').textContent.toLowerCase();
+            const description = card.querySelector('.property-description').textContent.toLowerCase();
+            
+            let matchesFilter = true;
+            let matchesSearch = true;
+            
+            // Apply filter with proper slot checking
+            switch (currentFilter) {
+                case 'available':
+                    // FIX: Only show properties with available slots
+                    matchesFilter = availableSlots > 0;
+                    break;
+                case 'budget':
+                    // FIX: Budget friendly filter for ₱3000 and below
+                    matchesFilter = price <= 3000;
+                    break;
+                case 'girls-only':
+                    matchesFilter = gender === 'female';
+                    break;
+                case 'boys-only':
+                    matchesFilter = gender === 'male';
+                    break;
+                case 'high-rating':
+                    matchesFilter = parseInt(card.dataset.propertyId) % 2 === 0;
+                    break;
+                case 'all':
+                default:
+                    matchesFilter = true;
+            }
+            
+            // Apply search
+            if (currentSearch) {
+                matchesSearch = title.includes(currentSearch) || 
+                              location.includes(currentSearch) || 
+                              description.includes(currentSearch);
+            }
+            
+            // Show/hide card
+            if (matchesFilter && matchesSearch) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        // Update counters
+        updatePropertyDisplay(visibleCount);
+    }
+
+    function updatePropertyDisplay(visibleCount) {
+        propertyCount.textContent = `${visibleCount} properties found`;
+        totalPropertiesCount.textContent = visibleCount;
+        
+        // Handle empty state
+        const emptyState = document.querySelector('.empty-state');
+        if (visibleCount === 0 && !emptyState) {
+            showEmptyState();
+        } else if (visibleCount > 0 && emptyState) {
+            emptyState.remove();
+        }
+    }
+
+    // Override the original filter function with the enhanced one
+    window.filterProperties = enhancedFilterProperties;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,1842 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex" style="min-height: 100vh;">
+    <!-- Sidebar (Same as Property Detail) -->
+    <nav class="sidebar text-white p-4 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">
+                <i class="bi bi-house-heart-fill me-2"></i>Boardify
+            </h3>
+            <button class="theme-toggle-btn" id="themeToggle" onclick="toggleTheme()">
+                <i class="bi bi-sun-fill" id="themeIcon"></i>
+            </button>
+        </div>
+
+        <div class="nav-links flex-grow-1">
+            <a href="{{ url_for('dashboard') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-speedometer2 me-3"></i> Dashboard
+            </a>
+            <a href="{{ url_for('viewproperties') }}" class="nav-link d-flex align-items-center active">
+                <i class="bi bi-building me-3"></i> Properties
+            </a>
+            <a href="{{ url_for('add_property') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-plus-circle me-3"></i> Add Property
+            </a>
+            <a href="{{ url_for('approved_bookings') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-check2-square me-3"></i> Approvals
+            </a>
+            <a href="{{ url_for('billing') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-receipt me-3"></i> Bills
+            </a>
+            <a href="{{ url_for('policies') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-file-text me-3"></i> Policies
+            </a>
+        </div>
+
+        <div class="mt-auto">
+            <a href="{{ url_for('help_support') }}" class="nav-link d-flex align-items-center">
+                <i class="bi bi-question-circle me-3"></i> Help & Support
+            </a>
+            <a href="{{ url_for('logout') }}" class="nav-link d-flex align-items-center text-danger">
+                <i class="bi bi-box-arrow-right me-3"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="flex-grow-1 main-content">
+        <!-- Back Navigation -->
+        <div class="back-navigation-bar">
+            <div class="container-fluid">
+                <a href="{{ url_for('viewproperties') }}" class="back-link-btn">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Properties
+                </a>
+            </div>
+        </div>
+
+        <div class="container-fluid p-4">
+            <!-- Page Header -->
+            <div class="page-header-card mb-4">
+                <div class="header-icon-wrapper">
+                    <i class="bi bi-pencil-square"></i>
+                </div>
+                <div>
+                    <h1 class="page-title">Edit Property</h1>
+                    <p class="page-subtitle">Update your property information and details</p>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <form method="POST" enctype="multipart/form-data" id="editPropertyForm">
+                        <div class="row g-4">
+                            <!-- Left Column: Basic Info -->
+                            <div class="col-lg-8">
+                                <!-- Basic Information Card -->
+                                <div class="form-section-card mb-4">
+                                    <div class="section-header">
+                                        <div class="section-icon">
+                                            <i class="bi bi-info-circle-fill"></i>
+                                        </div>
+                                        <h3 class="section-title">Basic Information</h3>
+                                    </div>
+
+                                    <div class="section-body">
+                                        <!-- Property Title -->
+                                        <div class="form-group-enhanced">
+                                            <label for="title" class="form-label-enhanced">
+                                                <i class="bi bi-tag-fill me-2"></i>Property Title *
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control-enhanced" 
+                                                   id="title" 
+                                                   name="title" 
+                                                   value="{{ property.title }}" 
+                                                   placeholder="e.g., Cozy 2BR Apartment in Downtown"
+                                                   required>
+                                            <small class="form-helper-text">Choose a catchy and descriptive title</small>
+                                        </div>
+
+                                        <!-- Description -->
+                                        <div class="form-group-enhanced">
+                                            <label for="description" class="form-label-enhanced">
+                                                <i class="bi bi-file-text-fill me-2"></i>Description *
+                                            </label>
+                                            <textarea class="form-control-enhanced" 
+                                                      id="description" 
+                                                      name="description" 
+                                                      rows="5" 
+                                                      placeholder="Describe your property, its features, and what makes it special..."
+                                                      required>{{ property.description }}</textarea>
+                                            <small class="form-helper-text">
+                                                <span id="charCount">{{ property.description|length }}</span> characters
+                                            </small>
+                                        </div>
+
+                                        <!-- Location -->
+                                        <div class="form-group-enhanced">
+                                            <label for="location" class="form-label-enhanced">
+                                                <i class="bi bi-geo-alt-fill me-2"></i>Location *
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control-enhanced" 
+                                                   id="location" 
+                                                   name="location" 
+                                                   value="{{ property.location }}"
+                                                   placeholder="e.g., 123 Main Street, Cagayan de Oro"
+                                                   required>
+                                            <small class="form-helper-text">Full address for better visibility</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pricing & Capacity Card -->
+                                <div class="form-section-card mb-4">
+                                    <div class="section-header">
+                                        <div class="section-icon">
+                                            <i class="bi bi-cash-stack"></i>
+                                        </div>
+                                        <h3 class="section-title">Pricing & Capacity</h3>
+                                    </div>
+
+                                    <div class="section-body">
+                                        <div class="row g-3">
+                                            <!-- Monthly Rent -->
+                                            <div class="col-md-6">
+                                                <div class="form-group-enhanced">
+                                                    <label for="price" class="form-label-enhanced">
+                                                        <i class="bi bi-currency-dollar me-2"></i>Monthly Rent (₱) *
+                                                    </label>
+                                                    <div class="input-group-enhanced">
+                                                        <span class="input-prefix">₱</span>
+                                                        <input type="number" 
+                                                               class="form-control-enhanced" 
+                                                               id="price" 
+                                                               name="price" 
+                                                               value="{{ property.price }}" 
+                                                               step="0.01"
+                                                               min="0"
+                                                               placeholder="5000"
+                                                               required>
+                                                    </div>
+                                                    <small class="form-helper-text">Price per month per tenant</small>
+                                                </div>
+                                            </div>
+
+                                            <!-- Total Slots -->
+                                            <div class="col-md-6">
+                                                <div class="form-group-enhanced">
+                                                    <label for="total_slots" class="form-label-enhanced">
+                                                        <i class="bi bi-people-fill me-2"></i>Total Slots *
+                                                    </label>
+                                                    <input type="number" 
+                                                           class="form-control-enhanced" 
+                                                           id="total_slots" 
+                                                           name="total_slots" 
+                                                           value="{{ property.total_slots }}" 
+                                                           min="1"
+                                                           max="50"
+                                                           placeholder="4"
+                                                           required>
+                                                    <small class="form-helper-text">Maximum number of tenants</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Property Details Card -->
+                                <div class="form-section-card">
+                                    <div class="section-header">
+                                        <div class="section-icon">
+                                            <i class="bi bi-sliders"></i>
+                                        </div>
+                                        <h3 class="section-title">Property Details</h3>
+                                    </div>
+
+                                    <div class="section-body">
+                                        <div class="row g-3">
+                                            <!-- Gender Preference -->
+                                            <div class="col-md-6">
+                                                <div class="form-group-enhanced">
+                                                    <label for="gender_preference" class="form-label-enhanced">
+                                                        <i class="bi bi-gender-ambiguous me-2"></i>Gender Preference
+                                                    </label>
+                                                    <select class="form-select-enhanced" id="gender_preference" name="gender_preference">
+                                                        <option value="both" {% if property.gender_preference == 'both' %}selected{% endif %}>
+                                                            Both Genders
+                                                        </option>
+                                                        <option value="male" {% if property.gender_preference == 'male' %}selected{% endif %}>
+                                                            Boys Only
+                                                        </option>
+                                                        <option value="female" {% if property.gender_preference == 'female' %}selected{% endif %}>
+                                                            Girls Only
+                                                        </option>
+                                                    </select>
+                                                    <small class="form-helper-text">Who can book this property</small>
+                                                </div>
+                                            </div>
+
+                                            <!-- Status -->
+                                            <div class="col-md-6">
+                                                <div class="form-group-enhanced">
+                                                    <label for="status" class="form-label-enhanced">
+                                                        <i class="bi bi-toggle-on me-2"></i>Availability Status
+                                                    </label>
+                                                    <select class="form-select-enhanced" id="status" name="status">
+                                                        <option value="available" {% if property.status == 'available' %}selected{% endif %}>
+                                                            Available for Booking
+                                                        </option>
+                                                        <option value="unavailable" {% if property.status == 'unavailable' %}selected{% endif %}>
+                                                            Unavailable
+                                                        </option>
+                                                    </select>
+                                                    <small class="form-helper-text">Property booking status</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Image Gallery -->
+                            <div class="col-lg-4">
+                                <!-- Image Gallery Card -->
+                                <div class="form-section-card mb-4">
+                                    <div class="section-header">
+                                        <div class="section-icon">
+                                            <i class="bi bi-images"></i>
+                                        </div>
+                                        <h3 class="section-title">Property Images</h3>
+                                    </div>
+
+                                    <div class="section-body">
+                                        <!-- Existing Images Gallery -->
+                                        <div id="existingImagesGallery" class="images-gallery mb-4">
+                                            {% if images and images|length > 0 %}
+                                                {% for img in images %}
+                                                <div class="gallery-item" data-image-id="{{ img.id }}" data-image-filename="{{ img.filename }}">
+                                                    <img src="{{ url_for('static', filename='uploads/' + img.filename) }}" 
+                                                         alt="Property Image" 
+                                                         class="gallery-image">
+                                                    <div class="gallery-overlay">
+                                                        <button type="button" 
+                                                                class="btn-delete-image" 
+                                                                data-image-id="{{ img.id }}"
+                                                                data-image-filename="{{ img.filename }}"
+                                                                title="Delete Image">
+                                                            <i class="bi bi-trash-fill"></i>
+                                                        </button>
+                                                        {% if loop.first %}
+                                                        <span class="primary-badge">
+                                                            <i class="bi bi-star-fill"></i> Primary
+                                                        </span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <div class="no-images-placeholder">
+                                                    <i class="bi bi-image"></i>
+                                                    <p>No images uploaded yet</p>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Upload New Images -->
+                                        <div class="upload-section">
+                                            <label class="form-label-enhanced mb-3">
+                                                <i class="bi bi-cloud-upload-fill me-2"></i>Add New Images
+                                            </label>
+                                            
+                                            <div class="upload-area" id="uploadArea">
+                                                <input type="file" 
+                                                       class="file-input-hidden" 
+                                                       id="images" 
+                                                       name="images" 
+                                                       accept="image/*"
+                                                       multiple>
+                                                <div class="upload-content">
+                                                    <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                                                    <p class="upload-title">Click to upload or drag & drop</p>
+                                                    <p class="upload-subtitle">PNG, JPG, JPEG (Max 5MB each)</p>
+                                                    <p class="upload-subtitle"><strong>Multiple images supported</strong></p>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- New Images Preview -->
+                                            <div id="newImagesPreview" class="new-images-preview"></div>
+
+                                            <small class="form-helper-text text-center d-block mt-3">
+                                                <i class="bi bi-info-circle me-1"></i>First image will be the primary image
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons Card -->
+                                <div class="form-section-card sticky-actions">
+                                    <div class="section-body p-0">
+                                        <button type="submit" class="btn-save-changes">
+                                            <i class="bi bi-check-circle-fill me-2"></i>
+                                            Save Changes
+                                        </button>
+                                        
+                                        <a href="{{ url_for('viewproperties') }}" class="btn-cancel-changes">
+                                            <i class="bi bi-x-circle me-2"></i>
+                                            Cancel
+                                        </a>
+
+                                        <div class="action-divider"></div>
+
+                                        <button type="button" class="btn-preview-property" id="previewBtn">
+                                            <i class="bi bi-eye-fill me-2"></i>
+                                            Preview Changes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* ===== FACEBOOK BLUE THEME VARIABLES ===== */
+    :root {
+        --fb-primary: #1877f2;
+        --fb-primary-hover: #166fe5;
+        --fb-primary-active: #1567d3;
+        --fb-secondary: #42b72a;
+        --fb-secondary-hover: #36a420;
+        --fb-light-blue: #e7f3ff;
+        --fb-lighter-blue: #f0f8ff;
+        
+        --bg-primary: #ffffff;
+        --bg-secondary: #f0f2f5;
+        --bg-tertiary: #e4e6eb;
+        --bg-hover: #f2f3f5;
+        
+        --text-primary: #050505;
+        --text-secondary: #65676b;
+        --text-tertiary: #8a8d91;
+        --text-white: #ffffff;
+        
+        --border-color: #ced0d4;
+        --divider-color: #e4e6eb;
+        
+        --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.1);
+        --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.1);
+        --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.1);
+        --shadow-4: 0 8px 16px rgba(0, 0, 0, 0.15);
+        --shadow-hover: 0 8px 24px rgba(24, 119, 242, 0.2);
+        
+        --success: #31a24c;
+        --danger: #e74c3c;
+        --warning: #f39c12;
+        --info: #3498db;
+    }
+
+    body.dark-theme {
+        --bg-primary: #18191a;
+        --bg-secondary: #242526;
+        --bg-tertiary: #3a3b3c;
+        --bg-hover: #4e4f50;
+        --text-primary: #e4e6eb;
+        --text-secondary: #b0b3b8;
+        --text-tertiary: #8a8d91;
+        --border-color: #3e4042;
+        --divider-color: #3e4042;
+        --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.3);
+        --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.3);
+        --shadow-4: 0 8px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+        background: var(--bg-primary);
+        width: 280px;
+        min-width: 280px;
+        box-shadow: var(--shadow-2);
+        border-right: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    .sidebar h3 {
+        font-weight: 700;
+        font-size: 1.8rem;
+        color: var(--fb-primary);
+    }
+
+    .theme-toggle-btn {
+        background: var(--bg-tertiary);
+        border: 2px solid var(--border-color);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: var(--fb-primary);
+    }
+
+    .theme-toggle-btn:hover {
+        background: var(--fb-primary);
+        color: white;
+        transform: rotate(180deg);
+        border-color: var(--fb-primary);
+    }
+
+    .sidebar .nav-link {
+        color: var(--text-secondary) !important;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+        font-weight: 600;
+        text-decoration: none;
+        font-size: 0.95rem;
+    }
+
+    .sidebar .nav-link.active {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary) !important;
+    }
+
+    body.dark-theme .sidebar .nav-link.active {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    .sidebar .nav-link:hover {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary) !important;
+    }
+
+    body.dark-theme .sidebar .nav-link:hover {
+        background: var(--bg-hover);
+    }
+
+    .sidebar .nav-link.text-danger {
+        color: var(--danger) !important;
+    }
+
+    .sidebar .nav-link.text-danger:hover {
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    .main-content {
+        background: var(--bg-secondary);
+        min-height: 100vh;
+        transition: background-color 0.3s ease;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    /* ===== BACK NAVIGATION ===== */
+    .back-navigation-bar {
+        background: var(--bg-primary);
+        border-bottom: 1px solid var(--border-color);
+        padding: 1rem 0;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: var(--shadow-1);
+    }
+
+    .back-link-btn {
+        display: inline-flex;
+        align-items: center;
+        color: var(--fb-primary);
+        text-decoration: none;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .back-link-btn:hover {
+        background: var(--fb-light-blue);
+        color: var(--fb-primary);
+        transform: translateX(-4px);
+    }
+
+    body.dark-theme .back-link-btn:hover {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    /* ===== PAGE HEADER ===== */
+    .page-header-card {
+        background: linear-gradient(135deg, var(--fb-primary) 0%, var(--fb-primary-hover) 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: var(--shadow-3);
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        animation: fadeInDown 0.5s ease-out;
+    }
+
+    .header-icon-wrapper {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: white;
+        margin: 0;
+    }
+
+    .page-subtitle {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
+        margin: 0.5rem 0 0 0;
+    }
+
+    /* ===== FORM SECTION CARD ===== */
+    .form-section-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        box-shadow: var(--shadow-2);
+        overflow: hidden;
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .section-header {
+        background: var(--bg-secondary);
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .section-icon {
+        width: 50px;
+        height: 50px;
+        background: var(--fb-light-blue);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--fb-primary);
+        flex-shrink: 0;
+    }
+
+    body.dark-theme .section-icon {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .section-body {
+        padding: 2rem;
+    }
+
+    /* ===== IMAGE GALLERY ===== */
+    .images-gallery {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .gallery-item {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        aspect-ratio: 1;
+        box-shadow: var(--shadow-2);
+        transition: all 0.3s ease;
+    }
+
+    .gallery-item:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-4);
+    }
+
+    .gallery-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .gallery-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.6));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-end;
+        padding: 0.75rem;
+    }
+
+    .gallery-item:hover .gallery-overlay {
+        opacity: 1;
+    }
+
+    .btn-delete-image {
+        background: var(--danger);
+        color: white;
+        border: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-2);
+    }
+
+    .btn-delete-image:hover {
+        transform: scale(1.1);
+        background: #c0392b;
+    }
+
+    .primary-badge {
+        position: absolute;
+        bottom: 0.75rem;
+        left: 0.75rem;
+        background: var(--fb-primary);
+        color: white;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .no-images-placeholder {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-tertiary);
+    }
+
+    .no-images-placeholder i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: var(--text-tertiary);
+        opacity: 0.5;
+    }
+
+    .no-images-placeholder p {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    /* ===== NEW IMAGES PREVIEW ===== */
+    .new-images-preview {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .new-image-item {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        aspect-ratio: 1;
+        box-shadow: var(--shadow-2);
+        border: 2px solid var(--fb-primary);
+    }
+
+    .new-image-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .btn-remove-new-image {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        background: var(--danger);
+        color: white;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-2);
+    }
+
+    .btn-remove-new-image:hover {
+        transform: scale(1.1);
+        background: #c0392b;
+    }
+
+    /* ===== FORM CONTROLS ===== */
+    .form-group-enhanced {
+        margin-bottom: 1.75rem;
+    }
+
+    .form-label-enhanced {
+        display: flex;
+        align-items: center;
+        color: var(--text-primary);
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+    }
+
+    .form-label-enhanced i {
+        color: var(--fb-primary);
+    }
+
+    .form-control-enhanced,
+    .form-select-enhanced {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        background: var(--bg-secondary);
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        font-family: inherit;
+    }
+
+    .form-control-enhanced:focus,
+    .form-select-enhanced:focus {
+        outline: none;
+        border-color: var(--fb-primary);
+        box-shadow: 0 0 0 4px var(--fb-light-blue);
+        background: var(--bg-primary);
+    }
+
+    body.dark-theme .form-control-enhanced:focus,
+    body.dark-theme .form-select-enhanced:focus {
+        box-shadow: 0 0 0 4px rgba(24, 119, 242, 0.2);
+    }
+
+    .form-control-enhanced::placeholder {
+        color: var(--text-tertiary);
+    }
+
+    textarea.form-control-enhanced {
+        resize: vertical;
+        min-height: 120px;
+    }
+
+    .form-helper-text {
+        display: block;
+        color: var(--text-tertiary);
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+    }
+
+    /* ===== INPUT GROUP ===== */
+    .input-group-enhanced {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-prefix {
+        position: absolute;
+        left: 1rem;
+        color: var(--text-secondary);
+        font-weight: 700;
+        font-size: 1.1rem;
+        z-index: 1;
+    }
+
+    .input-group-enhanced .form-control-enhanced {
+        padding-left: 2.5rem;
+    }
+
+    /* ===== IMAGE UPLOAD ===== */
+    .upload-area {
+        border: 3px dashed var(--border-color);
+        border-radius: 16px;
+        padding: 2rem 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: var(--bg-secondary);
+        position: relative;
+    }
+
+    .upload-area:hover {
+        border-color: var(--fb-primary);
+        background: var(--fb-light-blue);
+        transform: translateY(-2px);
+    }
+
+    body.dark-theme .upload-area:hover {
+        background: rgba(24, 119, 242, 0.1);
+    }
+
+    .upload-area.drag-over {
+        border-color: var(--fb-primary);
+        background: var(--fb-light-blue);
+        transform: scale(1.02);
+    }
+
+    .file-input-hidden {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .upload-icon {
+        font-size: 3rem;
+        color: var(--fb-primary);
+        margin-bottom: 0.75rem;
+        display: block;
+    }
+
+    .upload-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .upload-subtitle {
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+        margin: 0.25rem 0;
+    }
+
+    /* ===== ACTION BUTTONS ===== */
+    .sticky-actions {
+        position: sticky;
+        top: 100px;
+    }
+
+    .btn-save-changes,
+    .btn-cancel-changes,
+    .btn-preview-property {
+        width: 100%;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        margin-bottom: 0.75rem;
+    }
+
+    .btn-save-changes {
+        background: var(--fb-primary);
+        color: white;
+        box-shadow: var(--shadow-2);
+    }
+
+    .btn-save-changes:hover {
+        background: var(--fb-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    .btn-cancel-changes {
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
+        border: 2px solid var(--border-color);
+    }
+
+    .btn-cancel-changes:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+        border-color: var(--text-secondary);
+    }
+
+    .btn-preview-property {
+        background: transparent;
+        color: var(--fb-primary);
+        border: 2px solid var(--fb-primary);
+    }
+
+    .btn-preview-property:hover {
+        background: var(--fb-light-blue);
+        transform: translateY(-2px);
+    }
+
+    body.dark-theme .btn-preview-property:hover {
+        background: rgba(24, 119, 242, 0.2);
+    }
+
+    .action-divider {
+        height: 1px;
+        background: var(--divider-color);
+        margin: 1rem 0;
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* ===== LOADING STATE ===== */
+    .btn-save-changes:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+
+    .btn-save-changes.loading {
+        pointer-events: none;
+    }
+
+    .btn-save-changes.loading i {
+        animation: spin 1s linear infinite;
+    }
+
+    .is-invalid {
+        border-color: var(--danger) !important;
+        box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.1) !important;
+    }
+
+    /* ===== RESPONSIVE DESIGN ===== */
+    @media (max-width: 992px) {
+        .sidebar {
+            width: 100%;
+            min-width: auto;
+            height: auto;
+            border-right: none;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .sticky-actions {
+            position: relative;
+            top: 0;
+        }
+
+        .page-header-card {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .header-icon-wrapper {
+            width: 70px;
+            height: 70px;
+            font-size: 2rem;
+        }
+
+        .page-title {
+            font-size: 1.75rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .section-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .section-body {
+            padding: 1.5rem;
+        }
+
+        .page-header-card {
+            padding: 1.5rem;
+        }
+
+        .header-icon-wrapper {
+            width: 60px;
+            height: 60px;
+            font-size: 1.75rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+        }
+
+        .upload-area {
+            padding: 1.5rem 1rem;
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .form-section-card {
+            border-radius: 12px;
+        }
+
+        .section-header {
+            padding: 1rem;
+        }
+
+        .section-body {
+            padding: 1rem;
+        }
+
+        .section-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+        }
+
+        .btn-save-changes,
+        .btn-cancel-changes,
+        .btn-preview-property {
+            font-size: 0.95rem;
+            padding: 0.875rem 1.25rem;
+        }
+
+        .images-gallery,
+        .new-images-preview {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* ===== SCROLLBAR STYLING ===== */
+    .sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+        background: var(--bg-secondary);
+        border-radius: 3px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+        background: var(--fb-primary);
+        border-radius: 3px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb:hover {
+        background: var(--fb-primary-hover);
+    }
+</style>
+
+<script>
+// ===== THEME TOGGLE FUNCTIONALITY =====
+function toggleTheme() {
+    const body = document.body;
+    const themeIcon = document.getElementById('themeIcon');
+    
+    body.classList.toggle('dark-theme');
+    
+    if (body.classList.contains('dark-theme')) {
+        themeIcon.className = 'bi bi-moon-fill';
+        localStorage.setItem('boardify_theme', 'dark');
+    } else {
+        themeIcon.className = 'bi bi-sun-fill';
+        localStorage.setItem('boardify_theme', 'light');
+    }
+}
+
+// ===== DELETE IMAGE FUNCTION =====
+function deleteImage(imageId, filename) {
+    // Show confirmation modal
+    showConfirmModal(
+        'Delete Image',
+        'Are you sure you want to delete this image? This action cannot be undone.',
+        () => {
+            // User confirmed deletion
+            const formData = new FormData();
+            formData.append('image_id', imageId);
+            formData.append('action', 'delete_image');
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove the image element from DOM
+                    const imageElement = document.querySelector(`[data-image-id="${imageId}"]`);
+                    if (imageElement) {
+                        imageElement.style.animation = 'fadeOut 0.3s ease-out';
+                        setTimeout(() => {
+                            imageElement.remove();
+                            
+                            // Check if gallery is empty
+                            const gallery = document.getElementById('existingImagesGallery');
+                            if (gallery && gallery.querySelectorAll('.gallery-item').length === 0) {
+                                gallery.innerHTML = `
+                                    <div class="no-images-placeholder">
+                                        <i class="bi bi-image"></i>
+                                        <p>No images uploaded yet</p>
+                                    </div>
+                                `;
+                            }
+                        }, 300);
+                    }
+                    showToast('Image deleted successfully!', 'success');
+                } else {
+                    showToast(data.message || 'Failed to delete image', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('An error occurred while deleting the image', 'danger');
+            });
+        }
+    );
+}
+
+// ===== SETUP DELETE BUTTON LISTENERS =====
+function setupDeleteButtons() {
+    // Use event delegation for dynamically loaded content
+    document.addEventListener('click', function(e) {
+        const deleteBtn = e.target.closest('.btn-delete-image');
+        if (deleteBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const imageId = deleteBtn.getAttribute('data-image-id');
+            const filename = deleteBtn.getAttribute('data-image-filename');
+            deleteImage(imageId, filename);
+        }
+    });
+}
+
+// ===== MAIN INITIALIZATION =====
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎨 Boardify Edit Property Page Loading...');
+    
+    // Load saved theme
+    initializeTheme();
+    
+    // Initialize all features
+    initializeCharacterCount();
+    initializeImageUpload();
+    initializeFormValidation();
+    initializePreview();
+    setupDeleteButtons();
+    
+    console.log('✨ Edit Property Page Initialized!');
+});
+
+// ===== THEME INITIALIZATION =====
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('boardify_theme');
+    const body = document.body;
+    const themeIcon = document.getElementById('themeIcon');
+    
+    if (savedTheme === 'dark') {
+        body.classList.add('dark-theme');
+        if (themeIcon) themeIcon.className = 'bi bi-moon-fill';
+    } else {
+        if (themeIcon) themeIcon.className = 'bi bi-sun-fill';
+    }
+}
+
+// ===== CHARACTER COUNTER =====
+function initializeCharacterCount() {
+    const descriptionTextarea = document.getElementById('description');
+    const charCount = document.getElementById('charCount');
+    
+    if (descriptionTextarea && charCount) {
+        descriptionTextarea.addEventListener('input', function() {
+            charCount.textContent = this.value.length;
+            
+            // Visual feedback for length
+            if (this.value.length > 500) {
+                charCount.style.color = 'var(--warning)';
+            } else if (this.value.length > 1000) {
+                charCount.style.color = 'var(--danger)';
+            } else {
+                charCount.style.color = 'var(--text-tertiary)';
+            }
+        });
+    }
+}
+
+// ===== IMAGE UPLOAD WITH DRAG & DROP (MULTIPLE FILES) =====
+function initializeImageUpload() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('images');
+    const newImagesPreview = document.getElementById('newImagesPreview');
+    
+    if (!uploadArea || !fileInput) return;
+    
+    let selectedFiles = [];
+    
+    // Click to upload
+    uploadArea.addEventListener('click', function(e) {
+        if (e.target !== fileInput) {
+            fileInput.click();
+        }
+    });
+    
+    // File selection
+    fileInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        handleMultipleFiles(files);
+    });
+    
+    // Drag and drop
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+        
+        const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+        if (files.length > 0) {
+            handleMultipleFiles(files);
+        } else {
+            showToast('Please upload image files only', 'danger');
+        }
+    });
+    
+    function handleMultipleFiles(files) {
+        let validFiles = [];
+        let hasErrors = false;
+        
+        files.forEach(file => {
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast(`${file.name} is too large (max 5MB)`, 'danger');
+                hasErrors = true;
+                return;
+            }
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showToast(`${file.name} is not an image`, 'danger');
+                hasErrors = true;
+                return;
+            }
+            
+            validFiles.push(file);
+        });
+        
+        if (validFiles.length > 0) {
+            selectedFiles = [...selectedFiles, ...validFiles];
+            updateFileInput();
+            renderNewImagesPreviews();
+            
+            if (!hasErrors) {
+                showToast(`${validFiles.length} image(s) added successfully!`, 'success');
+            }
+        }
+    }
+    
+    function updateFileInput() {
+        const dataTransfer = new DataTransfer();
+        selectedFiles.forEach(file => dataTransfer.items.add(file));
+        fileInput.files = dataTransfer.files;
+    }
+    
+    function renderNewImagesPreviews() {
+        newImagesPreview.innerHTML = '';
+        
+        selectedFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'new-image-item';
+                previewItem.innerHTML = `
+                    <img src="${e.target.result}" alt="New Image">
+                    <button type="button" class="btn-remove-new-image" onclick="removeNewImage(${index})">
+                        <i class="bi bi-x"></i>
+                    </button>
+                    ${index === 0 ? '<span class="primary-badge"><i class="bi bi-star-fill"></i> Primary</span>' : ''}
+                `;
+                newImagesPreview.appendChild(previewItem);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    // Make removeNewImage globally accessible
+    window.removeNewImage = function(index) {
+        selectedFiles.splice(index, 1);
+        updateFileInput();
+        renderNewImagesPreviews();
+        showToast('Image removed', 'info');
+    };
+}
+
+// ===== FORM VALIDATION =====
+function initializeFormValidation() {
+    const form = document.getElementById('editPropertyForm');
+    
+    if (!form) return;
+    
+    // Real-time validation
+    const inputs = form.querySelectorAll('input[required], textarea[required], select[required]');
+    
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            validateField(this);
+        });
+        
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid')) {
+                validateField(this);
+            }
+        });
+    });
+    
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        inputs.forEach(input => {
+            if (!validateField(input)) {
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            showToast('Please fill in all required fields correctly', 'danger');
+            
+            // Scroll to first error
+            const firstError = form.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstError.focus();
+            }
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving Changes...';
+        }
+    });
+    
+    function validateField(field) {
+        let isValid = true;
+        const errorMsg = field.parentElement.querySelector('.error-message');
+        
+        // Remove existing error
+        if (errorMsg) {
+            errorMsg.remove();
+        }
+        field.classList.remove('is-invalid');
+        
+        // Check if empty
+        if (field.hasAttribute('required') && !field.value.trim()) {
+            isValid = false;
+            showFieldError(field, 'This field is required');
+        }
+        
+        // Validate price
+        if (field.id === 'price' && field.value) {
+            const price = parseFloat(field.value);
+            if (price <= 0) {
+                isValid = false;
+                showFieldError(field, 'Price must be greater than 0');
+            }
+        }
+        
+        // Validate slots
+        if (field.id === 'total_slots' && field.value) {
+            const slots = parseInt(field.value);
+            if (slots < 1 || slots > 50) {
+                isValid = false;
+                showFieldError(field, 'Slots must be between 1 and 50');
+            }
+        }
+        
+        return isValid;
+    }
+    
+    function showFieldError(field, message) {
+        field.classList.add('is-invalid');
+        
+        const errorDiv = document.createElement('small');
+        errorDiv.className = 'error-message form-helper-text';
+        errorDiv.style.color = 'var(--danger)';
+        errorDiv.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>' + message;
+        
+        field.parentElement.appendChild(errorDiv);
+    }
+}
+
+// ===== PREVIEW FUNCTIONALITY =====
+function initializePreview() {
+    const previewBtn = document.getElementById('previewBtn');
+    
+    if (previewBtn) {
+        previewBtn.addEventListener('click', function() {
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            const location = document.getElementById('location').value;
+            const price = document.getElementById('price').value;
+            const slots = document.getElementById('total_slots').value;
+            const gender = document.getElementById('gender_preference').value;
+            const status = document.getElementById('status').value;
+            
+            // Validate required fields
+            if (!title || !description || !location || !price || !slots) {
+                showToast('Please fill in all required fields to preview', 'warning');
+                return;
+            }
+            
+            // Create preview modal content
+            const previewContent = `
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    <h3 style="color: var(--fb-primary); margin-bottom: 1rem;">
+                        <i class="bi bi-eye-fill me-2"></i>${title}
+                    </h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                        <i class="bi bi-geo-alt-fill me-2" style="color: var(--fb-primary);"></i>${location}
+                    </p>
+                    <p style="line-height: 1.6; color: var(--text-primary);">${description}</p>
+                    <hr style="border-color: var(--border-color); margin: 1.5rem 0;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                        <div>
+                            <strong style="color: var(--text-secondary);">Price:</strong>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--fb-primary);">
+                                ₱${parseFloat(price).toLocaleString()}
+                            </div>
+                        </div>
+                        <div>
+                            <strong style="color: var(--text-secondary);">Slots:</strong>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
+                                ${slots}
+                            </div>
+                        </div>
+                        <div>
+                            <strong style="color: var(--text-secondary);">Gender:</strong>
+                            <div style="font-weight: 600; color: var(--text-primary);">
+                                ${gender === 'both' ? 'Both' : gender === 'male' ? 'Boys Only' : 'Girls Only'}
+                            </div>
+                        </div>
+                        <div>
+                            <strong style="color: var(--text-secondary);">Status:</strong>
+                            <div style="font-weight: 600; color: ${status === 'available' ? 'var(--success)' : 'var(--danger)'};">
+                                ${status === 'available' ? 'Available' : 'Unavailable'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            showPreviewModal(previewContent);
+        });
+    }
+}
+
+// ===== CONFIRMATION MODAL =====
+function showConfirmModal(title, message, onConfirm) {
+    // Remove existing modal
+    const existingModal = document.getElementById('confirmModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'confirmModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: var(--bg-primary);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        ">
+            <h3 style="color: var(--text-primary); margin-bottom: 1rem; display: flex; align-items: center;">
+                <i class="bi bi-exclamation-triangle-fill me-2" style="color: var(--warning);"></i>
+                ${title}
+            </h3>
+            <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.5rem;">${message}</p>
+            <div style="display: flex; gap: 0.75rem;">
+                <button id="confirmBtn" style="
+                    flex: 1;
+                    padding: 0.875rem;
+                    background: var(--danger);
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='var(--danger)'">
+                    <i class="bi bi-check-circle me-2"></i>Yes, Delete
+                </button>
+                <button id="cancelBtn" style="
+                    flex: 1;
+                    padding: 0.875rem;
+                    background: var(--bg-tertiary);
+                    color: var(--text-primary);
+                    border: 2px solid var(--border-color);
+                    border-radius: 10px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='var(--bg-tertiary)'">
+                    <i class="bi bi-x-circle me-2"></i>Cancel
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Event listeners
+    document.getElementById('confirmBtn').addEventListener('click', () => {
+        modal.remove();
+        if (onConfirm) onConfirm();
+    });
+    
+    document.getElementById('cancelBtn').addEventListener('click', () => {
+        modal.remove();
+    });
+    
+    // Close on background click
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+    
+    // Close on Escape key
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    };
+    document.addEventListener('keydown', escapeHandler);
+}
+
+// ===== PREVIEW MODAL =====
+function showPreviewModal(content) {
+    // Remove existing modal
+    const existingModal = document.getElementById('previewModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'previewModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: var(--bg-primary);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        ">
+            ${content}
+            <button onclick="document.getElementById('previewModal').remove()" style="
+                width: 100%;
+                margin-top: 1.5rem;
+                padding: 1rem;
+                background: var(--fb-primary);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            " onmouseover="this.style.background='var(--fb-primary-hover)'" onmouseout="this.style.background='var(--fb-primary)'">
+                <i class="bi bi-x-circle me-2"></i>Close Preview
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on background click
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+    
+    // Close on Escape key
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    };
+    document.addEventListener('keydown', escapeHandler);
+}
+
+// ===== TOAST NOTIFICATION =====
+function showToast(message, type = 'info') {
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.custom-toast');
+    existingToasts.forEach(toast => toast.remove());
+    
+    const toast = document.createElement('div');
+    toast.className = 'custom-toast';
+    
+    const icons = {
+        success: 'check-circle-fill',
+        danger: 'x-circle-fill',
+        warning: 'exclamation-triangle-fill',
+        info: 'info-circle-fill'
+    };
+    
+    const colors = {
+        success: 'var(--success)',
+        danger: 'var(--danger)',
+        warning: 'var(--warning)',
+        info: 'var(--fb-primary)'
+    };
+    
+    toast.innerHTML = `
+        <i class="bi bi-${icons[type] || 'info-circle-fill'} me-2"></i>
+        <span>${message}</span>
+    `;
+    
+    Object.assign(toast.style, {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        background: colors[type] || colors.info,
+        color: 'white',
+        padding: '1rem 1.5rem',
+        borderRadius: '12px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        zIndex: '99999',
+        display: 'flex',
+        alignItems: 'center',
+        fontWeight: '600',
+        fontSize: '0.95rem',
+        animation: 'slideInRight 0.3s ease-out'
+    });
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Add fadeOut animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+            transform: scale(1);
+        }
+        to {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+    }
+`;
+document.head.appendChild(style);
+
+console.log('✨ Edit Property Page - All Features Loaded!');
+</script>
+{% endblock %}

@@ -1,0 +1,659 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --bg-primary: #f8fafc;
+        --bg-secondary: #f1f5f9;
+        --bg-card: #ffffff;
+        --text-primary: #0f172a;
+        --text-secondary: #64748b;
+        --border-color: #e2e8f0;
+        --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        --hover-bg: #f8fafc;
+        --accent-primary: #3b82f6;
+        --accent-secondary: #8b5cf6;
+        --gradient-start: #3b82f6;
+        --gradient-end: #8b5cf6;
+        --success: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+    }
+
+    [data-theme="dark"] {
+        --bg-primary: #0f172a;
+        --bg-secondary: #1e293b;
+        --bg-card: #1e293b;
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --border-color: #334155;
+        --shadow: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -1px rgba(0,0,0,0.3);
+        --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.3);
+        --hover-bg: #334155;
+        --accent-primary: #60a5fa;
+        --accent-secondary: #a78bfa;
+        --gradient-start: #60a5fa;
+        --gradient-end: #a78bfa;
+        --success: #34d399;
+        --danger: #f87171;
+        --warning: #fbbf24;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        transition: background-color 0.3s ease, color 0.3s ease;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .bookings-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2.5rem;
+        min-height: 100vh;
+    }
+
+    .header-section {
+        margin-bottom: 3rem;
+        animation: slideDown 0.5s ease-out;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .title-icon {
+        width: 32px;
+        height: 32px;
+        padding: 6px;
+        background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+        border-radius: 10px;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .alert {
+        padding: 1rem 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        animation: slideDown 0.4s ease-out;
+        border: 2px solid;
+        font-weight: 500;
+        box-shadow: var(--shadow);
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border-color: #10b981;
+    }
+
+    [data-theme="dark"] .alert-success {
+        background: #064e3b;
+        color: #6ee7b7;
+        border-color: #10b981;
+    }
+
+    .alert-danger {
+        background: #fee2e2;
+        color: #991b1b;
+        border-color: #ef4444;
+    }
+
+    [data-theme="dark"] .alert-danger {
+        background: #7f1d1d;
+        color: #fca5a5;
+        border-color: #ef4444;
+    }
+
+    .alert-warning {
+        background: #fef3c7;
+        color: #92400e;
+        border-color: #f59e0b;
+    }
+
+    [data-theme="dark"] .alert-warning {
+        background: #78350f;
+        color: #fde68a;
+        border-color: #f59e0b;
+    }
+
+    .alert-info {
+        background: #dbeafe;
+        color: #1e3a8a;
+        border-color: #3b82f6;
+    }
+
+    [data-theme="dark"] .alert-info {
+        background: #1e3a8a;
+        color: #bfdbfe;
+        border-color: #3b82f6;
+    }
+
+    .btn-close {
+        background: transparent;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: currentColor;
+        opacity: 0.6;
+        transition: opacity 0.2s ease;
+        margin-left: auto;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .btn-close:hover {
+        opacity: 1;
+    }
+
+    .bookings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .booking-card {
+        background: var(--bg-card);
+        border: 2px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.75rem;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: fadeInUp 0.5s ease-out backwards;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .booking-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .booking-card:nth-child(1) { animation-delay: 0s; }
+    .booking-card:nth-child(2) { animation-delay: 0.1s; }
+    .booking-card:nth-child(3) { animation-delay: 0.2s; }
+    .booking-card:nth-child(4) { animation-delay: 0.3s; }
+    .booking-card:nth-child(5) { animation-delay: 0.4s; }
+    .booking-card:nth-child(6) { animation-delay: 0.5s; }
+    .booking-card:nth-child(7) { animation-delay: 0.6s; }
+    .booking-card:nth-child(8) { animation-delay: 0.7s; }
+    .booking-card:nth-child(9) { animation-delay: 0.8s; }
+    .booking-card:nth-child(10) { animation-delay: 0.9s; }
+
+    .booking-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        border-color: var(--accent-primary);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1.5rem;
+    }
+
+    .property-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    .verified-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        flex-shrink: 0;
+    }
+
+    .verified-icon {
+        width: 14px;
+        height: 14px;
+    }
+
+    .card-content {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .info-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .info-row:hover {
+        background: var(--hover-bg);
+        transform: translateX(5px);
+    }
+
+    .info-icon {
+        width: 20px;
+        height: 20px;
+        color: var(--accent-primary);
+        flex-shrink: 0;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: var(--text-secondary);
+        min-width: 85px;
+    }
+
+    .info-value {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .status-pending {
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: white;
+    }
+
+    .status-approved {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+    }
+
+    .status-rejected {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid var(--border-color);
+    }
+
+    .action-form {
+        flex: 1;
+    }
+
+    .btn-action {
+        flex: 1;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.938rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-action::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.5s ease, height 0.5s ease;
+    }
+
+    .btn-action:hover::before {
+        width: 300px;
+        height: 300px;
+    }
+
+    .btn-approve {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-approve:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-reject {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+        box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-reject:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-action:active {
+        transform: translateY(0);
+    }
+
+    .btn-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--bg-card);
+        border: 2px dashed var(--border-color);
+        border-radius: 16px;
+        margin-top: 2rem;
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .empty-icon {
+        width: 80px;
+        height: 80px;
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+        opacity: 0.5;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 0.5;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.3;
+            transform: scale(1.05);
+        }
+    }
+
+    .empty-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-text {
+        font-size: 1rem;
+        color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+        .bookings-container {
+            padding: 1.5rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+        }
+
+        .title-icon {
+            width: 28px;
+            height: 28px;
+        }
+
+        .bookings-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .booking-card {
+            padding: 1.25rem;
+        }
+
+        .card-header {
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .info-label {
+            min-width: 75px;
+            font-size: 0.875rem;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+</style>
+
+<div class="bookings-container">
+    <div class="header-section">
+        <h1 class="page-title">
+            <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                <path d="M9 12h6m-6 4h6"></path>
+            </svg>
+            Pending Bookings for Approval
+        </h1>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}" role="alert">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        {% if category == 'success' %}
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        {% elif category == 'danger' %}
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                        {% elif category == 'warning' %}
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        {% else %}
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        {% endif %}
+                    </svg>
+                    <span>{{ message }}</span>
+                    <button type="button" class="btn-close" onclick="this.parentElement.remove()">×</button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if bookings %}
+        <div class="bookings-grid">
+            {% for booking in bookings %}
+            <div class="booking-card">
+                <div class="card-header">
+                    <h2 class="property-title">{{ booking.property.title }}</h2>
+                </div>
+
+                <div class="card-content">
+                    <div class="info-row">
+                        <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span class="info-label">Tenant:</span>
+                        <span class="info-value">
+                            {{ booking.tenant.name }}
+                            {% if booking.tenant.is_verified %}
+                            <span class="verified-badge">
+                                <svg class="verified-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Verified
+                            </span>
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="info-row">
+                        <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <span class="info-label">Check-in:</span>
+                        <span class="info-value">
+                            {% if booking.start_date %}
+                                {{ booking.start_date.strftime('%Y-%m-%d') }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="info-row">
+                        <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <span class="info-label">Check-out:</span>
+                        <span class="info-value">
+                            {% if booking.end_date %}
+                                {{ booking.end_date.strftime('%Y-%m-%d') }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="info-row">
+                        <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span class="info-label">Status:</span>
+                        {% if booking.status == 'pending' %}
+                            <span class="status-badge status-pending">⏳ Pending Approval</span>
+                        {% elif booking.status == 'approved' %}
+                            <span class="status-badge status-approved">✓ Booking Confirmed</span>
+                        {% elif booking.status == 'rejected' %}
+                            <span class="status-badge status-rejected">✕ Booking Rejected</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if booking.status == 'pending' %}
+                <div class="action-buttons">
+                    <form action="{{ url_for('booking_action', booking_id=booking.id, action='approve') }}" method="POST" class="action-form">
+                        <button type="submit" class="btn-action btn-approve">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Approve
+                        </button>
+                    </form>
+                    <form action="{{ url_for('booking_action', booking_id=booking.id, action='reject') }}" method="POST" class="action-form">
+                        <button type="submit" class="btn-action btn-reject">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                            Reject
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                <path d="M9 12h6m-6 4h6"></path>
+            </svg>
+            <h3 class="empty-title">No Pending Bookings</h3>
+            <p class="empty-text">There are no pending bookings at the moment. Check back later!</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
