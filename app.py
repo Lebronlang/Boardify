@@ -60,19 +60,20 @@ app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 
-print("🔧 Initializing email configuration...")
-print(f"📧 MAIL_SERVER: {os.environ.get('MAIL_SERVER')}")
+print("🔧 Initializing Gmail SMTP configuration...")
+print(f"📧 MAIL_SERVER: smtp.gmail.com")
 print(f"📧 MAIL_USERNAME: {os.environ.get('MAIL_USERNAME')}")
 print(f"📧 MAIL_PASSWORD_SET: {bool(os.environ.get('MAIL_PASSWORD'))}")
 print(f"🌐 RENDER_EXTERNAL_URL: {os.environ.get('RENDER_EXTERNAL_URL')}")
 
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 465))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'False').lower() == 'true'
-app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'True').lower() == 'true'
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+# ========== GMAIL SMTP CONFIGURATION ==========
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')  # Remove the fallback here
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = ('Boardify', os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME')))
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')  # Remove the fallback here
 app.config['MAIL_TIMEOUT'] = 30
 app.config['MAIL_DEBUG'] = True
 
@@ -181,12 +182,19 @@ def send_verification_email(user):
         
         print(f"🌐 Verification URL: {verification_url}")
 
-        # Create email message
+        # Create email message - IMPROVED VERSION
         msg = Message(
             subject="Verify Your Email - Boardify",
             recipients=[user.email],
-            sender=app.config['MAIL_DEFAULT_SENDER'],
-            body=f"Please verify your email: {verification_url}"
+            html=f"""
+            <h2>Welcome to Boardify! 🎉</h2>
+            <p>Please verify your email address by clicking the link below:</p>
+            <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
+            <p>Or copy this link: {verification_url}</p>
+            <p>This link will expire in 24 hours.</p>
+            <br>
+            <p>Best regards,<br>Boardify Team</p>
+            """
         )
 
         # Try to send email
@@ -208,7 +216,6 @@ def send_verification_email(user):
             print("🔧 FIX: Check SSL/TLS configuration")
             
         return False
-
 
 @app.route('/test-email')
 def test_email():
@@ -240,6 +247,20 @@ def test_email():
         debug_info['email_test_result'] = f'ERROR: {str(e)}'
     
     return jsonify(debug_info)
+
+@app.route('/test-gmail')
+def test_gmail():
+    """Test Gmail configuration"""
+    try:
+        msg = Message(
+            subject="🎉 Boardify Gmail Test",
+            recipients=[app.config['MAIL_USERNAME']],
+            body="Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
+        )
+        mail.send(msg)
+        return "✅ Gmail test email sent successfully! Check your inbox."
+    except Exception as e:
+        return f"❌ Gmail test failed: {str(e)}"
 
 def verify_token(token, expiration=86400):
     """Verify the token and return email if valid - ENHANCED"""
@@ -1147,6 +1168,20 @@ def property_detail(property_id):
         avg_rating=round(avg_rating, 1) if avg_rating > 0 else 0,
         review_count=len(reviews)
     )
+
+@app.route('/test-gmail-simple')
+def test_gmail_simple():
+    """Simple Gmail test"""
+    try:
+        msg = Message(
+            subject="🎉 Gmail Test Successful!",
+            recipients=["lebrontan2004@gmail.com"],
+            body="Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
+        )
+        mail.send(msg)
+        return "✅ Gmail test email sent successfully! Check your inbox."
+    except Exception as e:
+        return f"❌ Gmail test failed: {str(e)}"
 
 @app.route('/add_property', methods=['GET', 'POST'])
 @login_required
