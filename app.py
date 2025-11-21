@@ -14,6 +14,7 @@ from sqlalchemy import or_
 from dotenv import load_dotenv
 from functools import wraps
 
+
 from models import db, User, Property, Booking, Billing, Message, Policy, HelpSupport, PropertyImage, Review
 
 # Load environment variables
@@ -70,12 +71,14 @@ app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # Hardcode Gmail server
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True  # Always use TLS for Gmail
 app.config['MAIL_USE_SSL'] = False  # Never use SSL with port 587
-app.config['MAIL_TIMEOUT'] = 30  # 30 seconds timeout
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = ('Boardify', os.environ.get('MAIL_USERNAME'))  # Add name
 app.config['SECURITY_PASSWORD_SALT'] = os.environ.get('SECURITY_PASSWORD_SALT', app.secret_key)
 
+
+app.config['MAIL_TIMEOUT'] = 10  # 10 seconds timeout
+app.config['MAIL_DEBUG'] = True  # Enable debugging
 
 # Fix for URL generation in Render
 if os.environ.get('RENDER'):
@@ -162,7 +165,7 @@ MAX_SLOTS = 9
 
 # ========== UTILITY FUNCTIONS ==========
 def send_verification_email(user):
-    """Send verification email using Gmail SMTP - IMPROVED"""
+    """Send verification email using Gmail SMTP - WITH TIMEOUT PROTECTION"""
     print(f"📧 Attempting to send verification email to: {user.email}")
     
     # Check if email is configured
@@ -184,155 +187,44 @@ def send_verification_email(user):
         
         print(f"🌐 Verification URL: {verification_url}")
 
-        # Test SMTP connection first
-        try:
-            with mail.connect() as conn:
-                print("✅ SMTP connection test successful")
-        except Exception as conn_error:
-            print(f"❌ SMTP connection failed: {conn_error}")
-            return False
-
         # Create email message using Flask-Mail
         msg = Message(
             subject="Verify Your Email - Boardify",
             recipients=[user.email],
-            sender=app.config['MAIL_DEFAULT_SENDER'],
-            reply_to=app.config['MAIL_USERNAME']  # Add reply-to
+            sender=app.config['MAIL_DEFAULT_SENDER']
         )
         
-        # HTML email body with better formatting
-        email_html = f'''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                body {{ 
-                    font-family: 'Arial', sans-serif; 
-                    line-height: 1.6; 
-                    color: #333; 
-                    margin: 0; 
-                    padding: 0; 
-                    background-color: #f4f4f4;
-                }}
-                .container {{ 
-                    max-width: 600px; 
-                    margin: 0 auto; 
-                    background: white;
-                    border-radius: 10px;
-                    overflow: hidden;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                }}
-                .header {{ 
-                    background: linear-gradient(135deg, #007bff, #0056b3);
-                    color: white; 
-                    padding: 30px 20px; 
-                    text-align: center; 
-                }}
-                .header h1 {{
-                    margin: 0;
-                    font-size: 28px;
-                    font-weight: bold;
-                }}
-                .content {{ 
-                    padding: 40px 30px; 
-                }}
-                .button {{ 
-                    display: inline-block; 
-                    padding: 14px 35px; 
-                    background: linear-gradient(135deg, #007bff, #0056b3);
-                    color: white; 
-                    text-decoration: none; 
-                    border-radius: 8px; 
-                    margin: 25px 0; 
-                    font-weight: bold;
-                    font-size: 16px;
-                    border: none;
-                    cursor: pointer;
-                }}
-                .button:hover {{
-                    background: linear-gradient(135deg, #0056b3, #004494);
-                }}
-                .footer {{ 
-                    margin-top: 30px; 
-                    font-size: 12px; 
-                    color: #777; 
-                    text-align: center; 
-                    padding: 20px;
-                    border-top: 1px solid #eee;
-                }}
-                .verification-link {{
-                    word-break: break-all; 
-                    color: #007bff; 
-                    background: #f8f9fa; 
-                    padding: 15px; 
-                    border-radius: 8px;
-                    border: 1px solid #e9ecef;
-                    margin: 20px 0;
-                    font-size: 14px;
-                }}
-                .note {{
-                    background: #fff3cd;
-                    border: 1px solid #ffeaa7;
-                    border-radius: 5px;
-                    padding: 15px;
-                    margin: 20px 0;
-                    color: #856404;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>🎉 Welcome to Boardify!</h1>
-                </div>
-                <div class="content">
-                    <h2>Hello {user.name},</h2>
-                    <p>Thank you for registering with Boardify. To complete your registration and access all features, please verify your email address by clicking the button below:</p>
-                    
-                    <center>
-                        <a href="{verification_url}" class="button">Verify Email Address</a>
-                    </center>
-                    
-                    <div class="note">
-                        <strong>⚠️ Important:</strong> This link will expire in 24 hours.
-                    </div>
-                    
-                    <p>If the button doesn't work, copy and paste this link into your browser:</p>
-                    <div class="verification-link">{verification_url}</div>
-                    
-                    <p>If you didn't create an account with Boardify, please ignore this email.</p>
-                    
-                    <p>Best regards,<br><strong>The Boardify Team</strong></p>
-                </div>
-                <div class="footer">
-                    <p>&copy; 2024 Boardify. All rights reserved.</p>
-                    <p>This is an automated message, please do not reply to this email.</p>
-                </div>
-            </div>
-        </body>
-        </html>
+        # SIMPLIFIED email body to reduce processing time
+        msg.html = f'''
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #007bff;">Welcome to Boardify!</h2>
+            <p>Hello {user.name},</p>
+            <p>Please verify your email by clicking the link below:</p>
+            <p><a href="{verification_url}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
+            <p>Or copy this link: {verification_url}</p>
+            <p><em>This link expires in 24 hours.</em></p>
+        </div>
         '''
         
-        # Set both HTML and plain text versions
-        msg.html = email_html
-        msg.body = f"""Hello {user.name},
+        msg.body = f"""Verify your Boardify account
 
-Thank you for registering with Boardify. Please verify your email address by visiting this link:
+Hello {user.name},
 
+Please verify your email by visiting:
 {verification_url}
 
-This link will expire in 24 hours.
+This link expires in 24 hours.
 
-If you didn't create an account with Boardify, please ignore this email.
-
-Best regards,
+Thank you,
 The Boardify Team
 """
 
-        # Send email via Gmail SMTP with timeout
+        # Send email with timeout protection
         print(f"📧 Sending email via Gmail to {user.email}...")
+        
+        # Use a simple approach without connection testing first
         mail.send(msg)
+        
         print(f"✅ Verification email sent successfully to {user.email}")
         return True
         
@@ -344,15 +236,39 @@ The Boardify Team
         error_msg = str(e).lower()
         if "authentication failed" in error_msg:
             print("🔐 AUTH ERROR: Check your Gmail App Password")
-        elif "connection refused" in error_msg:
-            print("🌐 CONNECTION ERROR: Check network/firewall settings")
+        elif "connection refused" in error_msg or "timeout" in error_msg:
+            print("🌐 CONNECTION ERROR: Check network/firewall settings or Gmail restrictions")
         elif "smtp" in error_msg:
             print("📧 SMTP ERROR: Check server/port configuration")
+        elif "ssl" in error_msg or "tls" in error_msg:
+            print("🔒 SSL/TLS ERROR: Check encryption settings")
+        else:
+            print("❌ UNKNOWN ERROR: Check email configuration")
             
         import traceback
         traceback.print_exc()
         return False
     
+@app.route('/quick-email-test')
+def quick_email_test():
+    """Quick email test without complex processing"""
+    try:
+        # Simple test message
+        msg = Message(
+            subject="Quick Test from Boardify",
+            recipients=[app.config['MAIL_USERNAME']],
+            body="This is a quick test email."
+        )
+        
+        mail.send(msg)
+        return jsonify({"status": "success", "message": "Email sent successfully!"})
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error", 
+            "message": f"Failed to send email: {str(e)}",
+            "error_type": type(e).__name__
+        })
 
 
 @app.route('/test-email')
@@ -694,6 +610,50 @@ def register():
 #             "message": f"Test failed: {str(e)}"
 #         }), 500
     
+
+@app.route('/debug-email-detailed')
+def debug_email_detailed():
+    """Detailed email debugging to find where it hangs"""
+    debug_info = {}
+    
+    try:
+        # Test 1: Basic configuration
+        debug_info['config_check'] = {
+            'mail_server': app.config['MAIL_SERVER'],
+            'mail_port': app.config['MAIL_PORT'],
+            'mail_username': app.config['MAIL_USERNAME'],
+            'mail_password_set': bool(app.config['MAIL_PASSWORD']),
+            'email_enabled': EMAIL_ENABLED
+        }
+        
+        # Test 2: SMTP Connection
+        debug_info['smtp_connection'] = 'Testing...'
+        import smtplib
+        try:
+            server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'], timeout=10)
+            debug_info['smtp_connection'] = 'Connected'
+            
+            # Test 3: STARTTLS
+            debug_info['starttls'] = 'Testing...'
+            server.starttls()
+            debug_info['starttls'] = 'Success'
+            
+            # Test 4: Authentication
+            debug_info['authentication'] = 'Testing...'
+            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+            debug_info['authentication'] = 'Success'
+            
+            server.quit()
+            debug_info['overall'] = 'ALL TESTS PASSED'
+            
+        except Exception as e:
+            debug_info['smtp_error'] = f'{type(e).__name__}: {str(e)}'
+            debug_info['overall'] = 'FAILED'
+            
+    except Exception as e:
+        debug_info['error'] = f'Setup error: {str(e)}'
+    
+    return jsonify(debug_info)
 
 # @app.route('/debug-email-setup')
 # def debug_email_setup():
