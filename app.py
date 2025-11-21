@@ -336,20 +336,7 @@ def add_security_headers(response):
     
     return response
 
-# ========== ERROR HANDLERS ==========
 
-@app.errorhandler(404)
-def not_found_error(error):
-    return render_template('404.html'), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    db.session.rollback()
-    return render_template('500.html'), 500
-
-@app.errorhandler(403)
-def forbidden_error(error):
-    return render_template('403.html'), 403
 
 # ========== ROUTES ==========
 
@@ -1959,6 +1946,27 @@ def verify_landlord(user_id):
     db.session.commit()
     flash(f"Landlord {user.name} has been approved by admin!", "success")
     return redirect(url_for('admin_verify'))
+
+@app.route('/debug-email-config')
+def debug_email_config():
+    """Check why email isn't working"""
+    config = {
+        'MAIL_SERVER': app.config.get('MAIL_SERVER'),
+        'MAIL_PORT': app.config.get('MAIL_PORT'), 
+        'MAIL_USE_TLS': app.config.get('MAIL_USE_TLS'),
+        'MAIL_USERNAME_SET': bool(app.config.get('MAIL_USERNAME')),
+        'MAIL_PASSWORD_SET': bool(app.config.get('MAIL_PASSWORD')),
+        'EMAIL_ENABLED': EMAIL_ENABLED
+    }
+    
+    # Test email connection
+    try:
+        with mail.connect() as conn:
+            config['CONNECTION_TEST'] = "✅ Email server connection successful"
+    except Exception as e:
+        config['CONNECTION_TEST'] = f"❌ Connection failed: {str(e)}"
+    
+    return jsonify(config)
 
 @app.route('/admin/reject/<int:user_id>', methods=['POST'])
 @login_required
