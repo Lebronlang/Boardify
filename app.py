@@ -70,6 +70,7 @@ app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # Hardcode Gmail server
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True  # Always use TLS for Gmail
 app.config['MAIL_USE_SSL'] = False  # Never use SSL with port 587
+app.config['MAIL_TIMEOUT'] = 30  # 30 seconds timeout
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = ('Boardify', os.environ.get('MAIL_USERNAME'))  # Add name
@@ -369,11 +370,13 @@ def test_email():
         'render_external_url': os.environ.get('RENDER_EXTERNAL_URL')
     }
     
-    # Test with a sample user
-    test_user = User(
-        name="Test User",
-        email=app.config['MAIL_USERNAME']  # Send to yourself for testing
-    )
+    # Create a simple test user object without saving to database
+    class TestUser:
+        def __init__(self, name, email):
+            self.name = name
+            self.email = email
+    
+    test_user = TestUser("Test User", app.config['MAIL_USERNAME'])
     
     try:
         result = send_verification_email(test_user)
