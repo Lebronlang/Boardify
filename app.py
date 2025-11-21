@@ -124,6 +124,11 @@ with app.app_context():
         if not os.path.exists('migrations'):
             from flask_migrate import init
             init()
+
+             # Test database connection
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1'))
+        
         db.create_all()
         print("✅ Database tables created successfully")
     except Exception as e:
@@ -942,7 +947,8 @@ def debug_database():
     }
     
     try:
-        db.session.execute('SELECT 1')
+        from sqlalchemy import text  # ← ADD THIS IMPORT
+        db.session.execute(text('SELECT 1'))  # ← FIX THIS LINE
         db_config['connection_test'] = 'SUCCESS'
     except Exception as e:
         db_config['connection_test'] = f'FAILED: {str(e)}'
