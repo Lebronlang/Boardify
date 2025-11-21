@@ -373,6 +373,9 @@ def apply_discounts():
     db.session.commit()
     print("💰 Discounts applied.")
 
+
+
+
 # ========== REQUEST HANDLERS ==========
 
 @app.before_request
@@ -544,12 +547,16 @@ def debug_email_setup():
     
     # Test database connection
     try:
-        db.session.execute('SELECT 1')
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1'))
         debug_info['database'] = 'Connected'
     except Exception as e:
         debug_info['database'] = f'Error: {str(e)}'
     
     return jsonify(debug_info)
+
+
+
 
 @app.route('/verify-email/<token>')
 def verify_email(token):
@@ -1984,6 +1991,8 @@ def send_message(receiver_id):
     db.session.commit()
 
     return redirect(url_for('messages', user_id=receiver_id))
+
+
 
 @app.route("/messages/<int:user_id>", methods=["GET", "POST"])
 @login_required
