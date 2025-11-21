@@ -14,6 +14,8 @@ from sqlalchemy import or_
 from dotenv import load_dotenv
 from functools import wraps
 
+from models import db, User, Property, Booking, Billing, Message, Policy, HelpSupport, PropertyImage, Review
+
 # Load environment variables
 load_dotenv()
 
@@ -38,6 +40,7 @@ if not database_url:
     db_path = os.path.join(BASE_DIR, 'boardify.db')
     database_url = f"sqlite:///{db_path}"
     print(f"📊 Using SQLite database at: {db_path}")  # Optional: see where it's created
+
 # Fix PostgreSQL URL for Render (postgres:// to postgresql://)
 if database_url and database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
@@ -99,7 +102,7 @@ ts = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
 # Import models AFTER app configuration
 try:
-    from models import db, User, Property, Booking, Billing, Message as MessageModel, Policy, HelpSupport, PropertyImage, Review
+    from models import db, User, Property, Booking, Billing, Message, Policy, HelpSupport, PropertyImage, Review
 except ImportError as e:
     print(f"❌ Error importing models: {e}")
     raise
@@ -107,6 +110,17 @@ except ImportError as e:
 # Initialize database and migrations
 db.init_app(app)
 migrate = Migrate(app, db)
+
+with app.app_context():
+    try:
+        # Check if migrations folder exists
+        if not os.path.exists('migrations'):
+            from flask_migrate import init
+            init()
+        db.create_all()
+        print("✅ Database tables created successfully")
+    except Exception as e:
+        print(f"⚠️ Database initialization error: {e}")
 
 # Login manager setup
 login_manager = LoginManager(app)
@@ -253,11 +267,10 @@ def calculate_final_amount(amount, status, due_date, payment_date=None):
     return amount - discount + penalty, discount, penalty
 
 def get_recent_messages(user_id, limit=3):
-    """Get recent messages for user"""
     return (
-        MessageModel.query
-        .filter((MessageModel.sender_id == user_id) | (MessageModel.receiver_id == user_id))
-        .order_by(MessageModel.timestamp.desc())
+        Message.query  # ✅ CORRECT
+        .filter((Message.sender_id == user_id) | (Message.receiver_id == user_id))
+        .order_by(Message.timestamp.desc())
         .limit(limit)
         .all()
     )
@@ -1769,52 +1782,19 @@ def delete_review(review_id):
 @app.route("/inbox")
 @login_required
 def inbox():
-    """Inbox - view message partners"""
     my_id = session["user_id"]
-
     chat_partners = (
         db.session.query(User)
-        .join(MessageModel, or_(MessageModel.sender_id == User.id, MessageModel.receiver_id == User.id))
-        .filter(or_(MessageModel.sender_id == my_id, MessageModel.receiver_id == my_id))
+        .join(Message, or_(Message.sender_id == User.id, Message.receiver_id == User.id))  # ✅ CORRECT
+        .filter(or_(Message.sender_id == my_id, Message.receiver_id == my_id))  # ✅ CORRECT
         .filter(User.id != my_id)
         .distinct()
         .all()
     )
-
     return render_template("inbox.html", partners=chat_partners)
 
-@app.route("/messages/<int:user_id>", methods=["GET", "POST"])
-@login_required
-def messages(user_id):
-    """View and send messages"""
-    my_id = session["user_id"]
-    other = User.query.get_or_404(user_id)
-
-    if request.method == "POST":
-        content = request.form.get("content", "").strip()
-        if content:
-            db.session.add(MessageModel(sender_id=my_id, receiver_id=other.id, content=content))
-            db.session.commit()
-            flash("Message sent!", "success")
-        else:
-            flash("Message cannot be empty.", "warning")
-        return redirect(url_for("messages", user_id=other.id))
-
-    chat = (
-        MessageModel.query
-        .filter(
-            or_(
-                (MessageModel.sender_id == my_id) & (MessageModel.receiver_id == other.id),
-                (MessageModel.sender_id == other.id) & (MessageModel.receiver_id == my_id),
-            )
-        )
-        .order_by(MessageModel.timestamp.asc())
-        .all()
-    )
-
-    return render_template("messages.html", chat=chat, other=other)
-
 @app.route('/send_message/<int:receiver_id>', methods=['POST'])
+@login_required
 def send_message(receiver_id):
     """Send message"""
     if 'user_id' not in session:
@@ -1828,11 +1808,42 @@ def send_message(receiver_id):
         flash("Message cannot be empty.")
         return redirect(url_for('messages', user_id=receiver_id))
 
-    new_message = MessageModel(sender_id=sender_id, receiver_id=receiver_id, content=content)
+    new_message = Message(sender_id=sender_id, receiver_id=receiver_id, content=content)
     db.session.add(new_message)
     db.session.commit()
 
     return redirect(url_for('messages', user_id=receiver_id))
+
+@app.route("/messages/<int:user_id>", methods=["GET", "POST"])
+@login_required
+def messages(user_id):
+    """View and send messages"""
+    my_id = session["user_id"]
+    other = User.query.get_or_404(user_id)
+
+    if request.method == "POST":
+        content = request.form.get("content", "").strip()
+        if content:
+            db.session.add(Message(sender_id=my_id, receiver_id=other.id, content=content))
+            db.session.commit()
+            flash("Message sent!", "success")
+        else:
+            flash("Message cannot be empty.", "warning")
+        return redirect(url_for("messages", user_id=other.id))
+
+    chat = (
+        Message.query
+        .filter(
+            or_(
+                (Message.sender_id == my_id) & (Message.receiver_id == other.id),
+                (Message.sender_id == other.id) & (Message.receiver_id == my_id),
+            )
+        )
+        .order_by(Message.timestamp.asc())
+        .all()
+    )
+
+    return render_template("messages.html", chat=chat, other=other)
 
 @app.route("/users")
 @login_required
@@ -2109,6 +2120,13 @@ with app.app_context():
         import traceback
         traceback.print_exc()
 
+# Before running the app
+if os.environ.get('RENDER'):
+    # Render uses ephemeral storage - uploads won't persist!
+    print("⚠️ WARNING: Uploads will be lost on restart!")
+    print("💡 Consider using Cloudinary or AWS S3 for production")
+
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # ========== APPLICATION ENTRY POINT ==========
 
 def create_app():

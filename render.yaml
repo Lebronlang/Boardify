@@ -12,3 +12,14 @@ services:
         generateValue: true
       - key: FLASK_ENV
         value: production
+      - key: RENDER
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: boardify-db
+          property: connectionString
+
+databases:
+  - name: boardify-db
+    databaseName: boardify
+    plan: free
