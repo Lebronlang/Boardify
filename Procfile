@@ -1,2 +1,1 @@
-# ✅ CORRECT (since your main file is app.py)
-web: gunicorn app:app
+web: gunicorn app:app --workers 4 --threads 2 --timeout 120
