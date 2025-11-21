@@ -149,7 +149,7 @@ MAX_SLOTS = 9
 
 # ========== UTILITY FUNCTIONS ==========
 def send_verification_email(user):
-    """Send verification email using Resend"""
+    """Send verification email using Resend - FIXED VERSION"""
     print(f"📧 Attempting to send verification email to: {user.email}")
     
     try:
@@ -158,20 +158,13 @@ def send_verification_email(user):
             import resend
         except ImportError:
             print("❌ Resend package not installed. Add 'resend==2.1.0' to requirements.txt")
-            # Fallback: auto-verify user
-            user.is_verified = True
-            db.session.commit()
-            print(f"✅ Auto-verified {user.email} (Resend not installed)")
+            # DON'T auto-verify - let user know email is not working
             return False
         
         # Check if API key is set
         resend.api_key = os.environ.get('RESEND_API_KEY')
         if not resend.api_key:
             print("❌ RESEND_API_KEY not set in environment variables")
-            # Fallback: auto-verify user
-            user.is_verified = True
-            db.session.commit()
-            print(f"✅ Auto-verified {user.email} (RESEND_API_KEY not set)")
             return False
 
         # Generate token
@@ -242,7 +235,7 @@ def send_verification_email(user):
         import traceback
         traceback.print_exc()
         
-        print(f"❌ Email verification failed for {user.email}")
+        # DON'T auto-verify - return False so user knows email failed
         return False
 
 def verify_token(token, expiration=86400):
@@ -387,7 +380,6 @@ def add_security_headers(response):
 def health_check():
     """Health check endpoint for monitoring"""
     try:
-        # Test database connection - FIXED SYNTAX
         from sqlalchemy import text
         db.session.execute(text('SELECT 1'))
         db_status = "healthy"
@@ -402,7 +394,6 @@ def health_check():
         "email": "enabled" if EMAIL_ENABLED else "disabled",
         "timestamp": datetime.utcnow().isoformat()
     })
-
 @app.route('/')
 def home():
     """Home page - redirect based on login status"""
@@ -469,20 +460,25 @@ def register():
                 gender=gender,
                 birthdate=birthdate,
                 license_image=filename,
-                is_verified=False if EMAIL_ENABLED else True,  # Auto-verify if email disabled
+                is_verified=False,  # Always start as unverified when email is enabled
                 is_approved_by_admin=False if role == 'landlord' else True
             )
             
             db.session.add(new_user)
             db.session.commit()
 
-            # Send verification email
+            # Send verification email - FIXED LOGIC
             if EMAIL_ENABLED:
-                if send_verification_email(new_user):
+                email_sent = send_verification_email(new_user)
+                if email_sent:
                     flash("Registration successful! Please check your email to verify your account before logging in.", "success")
                 else:
-                    flash("Registration successful but verification email failed to send. Please contact support or try resending from the login page.", "warning")
+                    # User remains unverified - they need to resend verification
+                    flash("Registration successful but we couldn't send the verification email. Please use the 'Resend Verification' option on the login page.", "warning")
             else:
+                # Only auto-verify if email is completely disabled
+                new_user.is_verified = True
+                db.session.commit()
                 flash("Registration successful! You can now login.", "success")
 
             return redirect(url_for('login'))
@@ -838,60 +834,6 @@ def check_resend_config():
     
 
     
-@app.route('/test-email-fixed')
-def test_email_fixed():
-    """Fixed email test"""
-    try:
-        print("🔧 Testing fixed email configuration...")
-        
-        # Test SMTP connection
-        try:
-            with mail.connect() as conn:
-                smtp_status = "connected"
-                print("✅ SMTP connection successful")
-        except Exception as e:
-            smtp_status = f"connection_failed: {str(e)}"
-            print(f"❌ SMTP connection failed: {e}")
-            return jsonify({
-                "status": "smtp_failed",
-                "message": f"Cannot connect to Gmail: {str(e)}",
-                "smtp_status": smtp_status,
-                "solution": "Render may block outgoing SMTP on free tier"
-            })
-        
-        # Try to send test email with correct syntax
-        test_recipient = app.config['MAIL_USERNAME']
-        try:
-            # CORRECT Flask-Mail syntax
-            msg = Message(
-                'Boardify Test Email - Fixed',  # Subject as first argument
-                recipients=[test_recipient],
-                sender=app.config['MAIL_DEFAULT_SENDER']
-            )
-            msg.body = f'Test email sent at {datetime.utcnow().isoformat()}'
-            
-            print(f"📧 Attempting to send email to {test_recipient}...")
-            mail.send(msg)
-            email_sent = True
-            message = f"Test email sent to {test_recipient}"
-            print("✅ Email sent successfully")
-        except Exception as e:
-            email_sent = False
-            message = f"Failed to send email: {str(e)}"
-            print(f"❌ Email sending failed: {e}")
-        
-        return jsonify({
-            "status": "success" if email_sent else "partial",
-            "message": message,
-            "smtp_connection": smtp_status,
-            "email_sent": email_sent
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": f"Route error: {str(e)}"
-        }), 500
 
 
 
@@ -990,67 +932,7 @@ def profile():
         verified=user.is_verified
     )
 
-@app.route('/test-email')
-def test_email():
-    """Test email configuration - SIMPLIFIED VERSION"""
-    try:
-        print("🔧 Starting email test...")
-        
-        # Check basic email config
-        config_status = {
-            'MAIL_SERVER': app.config.get('MAIL_SERVER'),
-            'MAIL_PORT': app.config.get('MAIL_PORT'),
-            'MAIL_USERNAME': app.config.get('MAIL_USERNAME'),
-            'MAIL_PASSWORD_SET': bool(app.config.get('MAIL_PASSWORD')),
-            'EMAIL_ENABLED': EMAIL_ENABLED
-        }
-        
-        if not EMAIL_ENABLED:
-            return jsonify({
-                "status": "email_disabled", 
-                "message": "Email is not enabled",
-                "config": config_status
-            })
-        
-        # Test SMTP connection
-        try:
-            with mail.connect() as conn:
-                smtp_status = "connected"
-        except Exception as e:
-            smtp_status = f"connection_failed: {str(e)}"
-        
-        # Try to send test email
-        test_recipient = app.config['MAIL_USERNAME']
-        try:
-            msg = Message(
-                subject='Boardify Test Email',
-                recipients=[test_recipient],
-                body=f'Test email sent at {datetime.utcnow().isoformat()}'
-            )
-            mail.send(msg)
-            email_sent = True
-            message = f"Test email sent to {test_recipient}"
-        except Exception as e:
-            email_sent = False
-            message = f"Failed to send email: {str(e)}"
-        
-        return jsonify({
-            "status": "success" if email_sent else "partial",
-            "message": message,
-            "smtp_connection": smtp_status,
-            "email_sent": email_sent,
-            "config": config_status
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": f"Route error: {str(e)}",
-            "config": {
-                'EMAIL_ENABLED': EMAIL_ENABLED,
-                'MAIL_SERVER': app.config.get('MAIL_SERVER')
-            }
-        }), 500
+
     
 @app.route('/debug-database')
 def debug_database():
@@ -1071,48 +953,7 @@ def debug_database():
     return jsonify(db_config)
 
 
-@app.route('/test-resend-simple')
-def test_resend_simple():
-    """Simple Resend test"""
-    try:
-        # Check if resend is installed
-        try:
-            import resend
-        except ImportError:
-            return jsonify({
-                "status": "error", 
-                "message": "Resend package not installed. Add 'resend==2.1.0' to requirements.txt"
-            }), 500
-        
-        api_key = os.environ.get('RESEND_API_KEY')
-        if not api_key:
-            return jsonify({
-                "status": "error", 
-                "message": "RESEND_API_KEY not set in environment variables"
-            })
-        
-        resend.api_key = api_key
-        
-        # Simple test email
-        params = {
-            "from": "Boardify <onboarding@resend.dev>",
-            "to": ["lebrontan2004@gmail.com"],
-            "subject": "🎉 Resend Test - Boardify",
-            "html": "<strong>Hello from Resend! Your email is working! 🚀</strong>"
-        }
 
-        result = resend.Emails.send(params)
-        return jsonify({
-            "status": "success", 
-            "message": "✅ Test email sent! Check your Gmail inbox.",
-            "email_id": result['id']
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "status": "error", 
-            "message": f"Resend error: {str(e)}"
-        }), 500
 
 @app.route('/debug-db-details')
 def debug_db_details():
@@ -2343,26 +2184,7 @@ def verify_landlord(user_id):
     flash(f"Landlord {user.name} has been approved by admin!", "success")
     return redirect(url_for('admin_verify'))
 
-@app.route('/debug-email-config')
-def debug_email_config():
-    """Check why email isn't working"""
-    config = {
-        'MAIL_SERVER': app.config.get('MAIL_SERVER'),
-        'MAIL_PORT': app.config.get('MAIL_PORT'), 
-        'MAIL_USE_TLS': app.config.get('MAIL_USE_TLS'),
-        'MAIL_USERNAME_SET': bool(app.config.get('MAIL_USERNAME')),
-        'MAIL_PASSWORD_SET': bool(app.config.get('MAIL_PASSWORD')),
-        'EMAIL_ENABLED': EMAIL_ENABLED
-    }
-    
-    # Test email connection
-    try:
-        with mail.connect() as conn:
-            config['CONNECTION_TEST'] = "✅ Email server connection successful"
-    except Exception as e:
-        config['CONNECTION_TEST'] = f"❌ Connection failed: {str(e)}"
-    
-    return jsonify(config)
+
 
 @app.route('/admin/reject/<int:user_id>', methods=['POST'])
 @login_required
