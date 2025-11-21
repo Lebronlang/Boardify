@@ -407,10 +407,12 @@ def add_security_headers(response):
 def health_check():
     """Health check endpoint for monitoring"""
     try:
-        # Test database connection
-        db.session.execute('SELECT 1')
+        # Test database connection - FIXED SYNTAX
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1'))
         db_status = "healthy"
-    except:
+    except Exception as e:
+        print(f"Database health check error: {e}")
         db_status = "unhealthy"
     
     return jsonify({
