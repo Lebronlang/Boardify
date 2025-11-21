@@ -355,45 +355,7 @@ def forbidden_error(error):
 
 
 
-@app.route('/test-email-setup')
-def test_email_setup():
-    """Test email configuration with detailed output"""
-    if not EMAIL_ENABLED:
-        return """
-        <h1>Email Configuration Status</h1>
-        <p style='color: red;'>❌ Email is NOT configured</p>
-        <p>Required environment variables:</p>
-        <ul>
-            <li>MAIL_USERNAME: {'✅ Set' if app.config['MAIL_USERNAME'] else '❌ Missing'}</li>
-            <li>MAIL_PASSWORD: {'✅ Set' if app.config['MAIL_PASSWORD'] else '❌ Missing'}</li>
-            <li>MAIL_SERVER: {app.config['MAIL_SERVER']}</li>
-            <li>MAIL_PORT: {app.config['MAIL_PORT']}</li>
-        </ul>
-        <p>For Gmail, make sure to:</p>
-        <ol>
-            <li>Enable 2-factor authentication</li>
-            <li>Generate an App Password (16 characters)</li>
-            <li>Use the App Password, NOT your regular password</li>
-        </ol>
-        """
-    
-    try:
-        # Test connection
-        with mail.connect() as conn:
-            pass
-        return "<h1>✅ Email configuration is working!</h1><p>Connection test successful.</p>"
-    except Exception as e:
-        return f"""
-        <h1>❌ Email Configuration Error</h1>
-        <p>Error: {str(e)}</p>
-        <p>Check your Gmail settings:</p>
-        <ol>
-            <li>2-factor authentication must be enabled</li>
-            <li>Use App Password (16 characters), not regular password</li>
-            <li>Allow less secure apps: OFF (App Passwords don't need this)</li>
-        </ol>
-        """
-    
+
 @app.route('/health')
 def health_check():
     """Health check endpoint for monitoring"""
@@ -2040,28 +2002,6 @@ def upload_trend():
 
     return redirect(url_for('dashboard'))
 
-@app.route('/test-email')
-def test_email():
-    """Test email configuration"""
-    if not EMAIL_ENABLED:
-        return "Email is not configured. Please set MAIL_USERNAME and MAIL_PASSWORD environment variables."
-    
-    try:
-        test_recipient = request.args.get('to', 'test@example.com')
-        msg = Message(
-            'Test Email from Boardify',
-            recipients=[test_recipient],
-            sender=app.config['MAIL_DEFAULT_SENDER']
-        )
-        msg.body = 'If you receive this, email is working correctly!'
-        msg.html = '<h1>Test Email</h1><p>If you receive this, email is working correctly!</p>'
-        
-        mail.send(msg)
-        return f"✅ Email sent successfully to {test_recipient}! Check your inbox."
-    except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        return f"❌ Email failed: {str(e)}<br><br><pre>{error_details}</pre>"
 
 @app.route('/export-data')
 @login_required
