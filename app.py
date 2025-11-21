@@ -66,20 +66,15 @@ print(f"📧 MAIL_USERNAME: {os.environ.get('MAIL_USERNAME')}")
 print(f"📧 MAIL_PASSWORD_SET: {bool(os.environ.get('MAIL_PASSWORD'))}")
 print(f"🌐 RENDER_EXTERNAL_URL: {os.environ.get('RENDER_EXTERNAL_URL')}")
 
-# Email configuration (secure) - FIXED
-# Email configuration - USE PORT 465 WITH SSL
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 465                    # ← 465 instead of 587
-app.config['MAIL_USE_TLS'] = False               # ← False instead of True  
-app.config['MAIL_USE_SSL'] = True                # ← True instead of False
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 465))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'False').lower() == 'true'
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'True').lower() == 'true'
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = ('Boardify', os.environ.get('MAIL_USERNAME'))
-app.config['SECURITY_PASSWORD_SALT'] = os.environ.get('SECURITY_PASSWORD_SALT', app.secret_key)
+app.config['MAIL_DEFAULT_SENDER'] = ('Boardify', os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME')))
 app.config['MAIL_TIMEOUT'] = 30
-
-
-app.config['MAIL_DEBUG'] = True  # Enable debugging
+app.config['MAIL_DEBUG'] = True
 
 # Fix for URL generation in Render
 if os.environ.get('RENDER'):
