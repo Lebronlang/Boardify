@@ -923,16 +923,55 @@ def test_email():
             }
         }), 500
     
-@app.route('/')
-def home_debug():
-    return jsonify({
-        "message": "Boardify is running",
-        "endpoints": {
-            "health": "/health",
-            "test_email": "/test-email",
-            "debug_config": "/debug-config"
-        }
-    })
+@app.route('/debug-database')
+def debug_database():
+    """Debug database configuration"""
+    db_config = {
+        'database_url': app.config.get('SQLALCHEMY_DATABASE_URI', 'NOT SET'),
+        'database_type': 'PostgreSQL' if 'postgresql' in app.config.get('SQLALCHEMY_DATABASE_URI', '') else 'SQLite',
+        'render_database_url': bool(os.environ.get('DATABASE_URL'))
+    }
+    
+    try:
+        db.session.execute('SELECT 1')
+        db_config['connection_test'] = 'SUCCESS'
+    except Exception as e:
+        db_config['connection_test'] = f'FAILED: {str(e)}'
+    
+    return jsonify(db_config)
+
+@app.route('/debug-db-details')
+def debug_db_details():
+    """Detailed database debugging"""
+    import sqlalchemy as sa
+    
+    config = {
+        'database_url_set': bool(os.environ.get('DATABASE_URL')),
+        'database_url_preview': os.environ.get('DATABASE_URL', '')[:30] + '...' if os.environ.get('DATABASE_URL') else 'NOT SET',
+        'sqlalchemy_uri': app.config.get('SQLALCHEMY_DATABASE_URI', 'NOT SET')[:30] + '...',
+    }
+    
+    try:
+        # Test connection
+        with db.engine.connect() as conn:
+            result = conn.execute(sa.text('SELECT version(), current_database(), current_user'))
+            db_info = result.fetchone()
+            
+        config.update({
+            'status': '✅ CONNECTED',
+            'database_version': db_info[0],
+            'database_name': db_info[1],
+            'current_user': db_info[2]
+        })
+        
+    except Exception as e:
+        config.update({
+            'status': '❌ CONNECTION FAILED',
+            'error': str(e),
+            'error_type': type(e).__name__
+        })
+    
+    return jsonify(config)
 
 @app.route('/debug-config')
 def debug_config():
