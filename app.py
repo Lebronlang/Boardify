@@ -66,13 +66,13 @@ print(f"📧 MAIL_PASSWORD_SET: {bool(os.environ.get('MAIL_PASSWORD'))}")
 print(f"🌐 RENDER_EXTERNAL_URL: {os.environ.get('RENDER_EXTERNAL_URL')}")
 
 # Email configuration (secure) - FIXED
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
-app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # Hardcode Gmail server
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True  # Always use TLS for Gmail
+app.config['MAIL_USE_SSL'] = False  # Never use SSL with port 587
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME'))
+app.config['MAIL_DEFAULT_SENDER'] = ('Boardify', os.environ.get('MAIL_USERNAME'))  # Add name
 app.config['SECURITY_PASSWORD_SALT'] = os.environ.get('SECURITY_PASSWORD_SALT', app.secret_key)
 
 
@@ -102,6 +102,18 @@ EMAIL_ENABLED = bool(
     app.config['MAIL_PASSWORD'] and 
     app.config['MAIL_SERVER']
 )
+
+
+# Print email config for debugging
+print("🔧 Email Configuration:")
+print(f"   Server: {app.config['MAIL_SERVER']}")
+print(f"   Port: {app.config['MAIL_PORT']}")
+print(f"   TLS: {app.config['MAIL_USE_TLS']}")
+print(f"   SSL: {app.config['MAIL_USE_SSL']}")
+print(f"   Username: {app.config['MAIL_USERNAME']}")
+print(f"   Password Set: {bool(app.config['MAIL_PASSWORD'])}")
+print(f"   Sender: {app.config['MAIL_DEFAULT_SENDER']}")
+print(f"   Email Enabled: {EMAIL_ENABLED}")
 
 # Initialize extensions
 mail = Mail(app)
@@ -149,7 +161,7 @@ MAX_SLOTS = 9
 
 # ========== UTILITY FUNCTIONS ==========
 def send_verification_email(user):
-    """Send verification email using Gmail SMTP"""
+    """Send verification email using Gmail SMTP - IMPROVED"""
     print(f"📧 Attempting to send verification email to: {user.email}")
     
     # Check if email is configured
@@ -171,52 +183,153 @@ def send_verification_email(user):
         
         print(f"🌐 Verification URL: {verification_url}")
 
+        # Test SMTP connection first
+        try:
+            with mail.connect() as conn:
+                print("✅ SMTP connection test successful")
+        except Exception as conn_error:
+            print(f"❌ SMTP connection failed: {conn_error}")
+            return False
+
         # Create email message using Flask-Mail
         msg = Message(
             subject="Verify Your Email - Boardify",
             recipients=[user.email],
-            sender=app.config['MAIL_DEFAULT_SENDER']
+            sender=app.config['MAIL_DEFAULT_SENDER'],
+            reply_to=app.config['MAIL_USERNAME']  # Add reply-to
         )
         
-        # HTML email body
-        msg.html = f'''
+        # HTML email body with better formatting
+        email_html = f'''
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
             <style>
-                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                .header {{ background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
-                .content {{ background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }}
-                .button {{ display: inline-block; padding: 12px 30px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
-                .footer {{ margin-top: 20px; font-size: 12px; color: #777; text-align: center; }}
+                body {{ 
+                    font-family: 'Arial', sans-serif; 
+                    line-height: 1.6; 
+                    color: #333; 
+                    margin: 0; 
+                    padding: 0; 
+                    background-color: #f4f4f4;
+                }}
+                .container {{ 
+                    max-width: 600px; 
+                    margin: 0 auto; 
+                    background: white;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                }}
+                .header {{ 
+                    background: linear-gradient(135deg, #007bff, #0056b3);
+                    color: white; 
+                    padding: 30px 20px; 
+                    text-align: center; 
+                }}
+                .header h1 {{
+                    margin: 0;
+                    font-size: 28px;
+                    font-weight: bold;
+                }}
+                .content {{ 
+                    padding: 40px 30px; 
+                }}
+                .button {{ 
+                    display: inline-block; 
+                    padding: 14px 35px; 
+                    background: linear-gradient(135deg, #007bff, #0056b3);
+                    color: white; 
+                    text-decoration: none; 
+                    border-radius: 8px; 
+                    margin: 25px 0; 
+                    font-weight: bold;
+                    font-size: 16px;
+                    border: none;
+                    cursor: pointer;
+                }}
+                .button:hover {{
+                    background: linear-gradient(135deg, #0056b3, #004494);
+                }}
+                .footer {{ 
+                    margin-top: 30px; 
+                    font-size: 12px; 
+                    color: #777; 
+                    text-align: center; 
+                    padding: 20px;
+                    border-top: 1px solid #eee;
+                }}
+                .verification-link {{
+                    word-break: break-all; 
+                    color: #007bff; 
+                    background: #f8f9fa; 
+                    padding: 15px; 
+                    border-radius: 8px;
+                    border: 1px solid #e9ecef;
+                    margin: 20px 0;
+                    font-size: 14px;
+                }}
+                .note {{
+                    background: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    border-radius: 5px;
+                    padding: 15px;
+                    margin: 20px 0;
+                    color: #856404;
+                }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Welcome to Boardify!</h1>
+                    <h1>🎉 Welcome to Boardify!</h1>
                 </div>
                 <div class="content">
                     <h2>Hello {user.name},</h2>
-                    <p>Thank you for registering with Boardify. Please verify your email address by clicking the button below:</p>
+                    <p>Thank you for registering with Boardify. To complete your registration and access all features, please verify your email address by clicking the button below:</p>
+                    
                     <center>
                         <a href="{verification_url}" class="button">Verify Email Address</a>
                     </center>
-                    <p>Or copy and paste this link into your browser:</p>
-                    <p style="word-break: break-all; color: #007bff; background: #f8f9fa; padding: 10px; border-radius: 5px;">{verification_url}</p>
-                    <p><strong>This link will expire in 24 hours.</strong></p>
+                    
+                    <div class="note">
+                        <strong>⚠️ Important:</strong> This link will expire in 24 hours.
+                    </div>
+                    
+                    <p>If the button doesn't work, copy and paste this link into your browser:</p>
+                    <div class="verification-link">{verification_url}</div>
+                    
                     <p>If you didn't create an account with Boardify, please ignore this email.</p>
+                    
+                    <p>Best regards,<br><strong>The Boardify Team</strong></p>
                 </div>
                 <div class="footer">
                     <p>&copy; 2024 Boardify. All rights reserved.</p>
+                    <p>This is an automated message, please do not reply to this email.</p>
                 </div>
             </div>
         </body>
         </html>
         '''
+        
+        # Set both HTML and plain text versions
+        msg.html = email_html
+        msg.body = f"""Hello {user.name},
 
-        # Send email via Gmail SMTP
+Thank you for registering with Boardify. Please verify your email address by visiting this link:
+
+{verification_url}
+
+This link will expire in 24 hours.
+
+If you didn't create an account with Boardify, please ignore this email.
+
+Best regards,
+The Boardify Team
+"""
+
+        # Send email via Gmail SMTP with timeout
         print(f"📧 Sending email via Gmail to {user.email}...")
         mail.send(msg)
         print(f"✅ Verification email sent successfully to {user.email}")
@@ -225,9 +338,50 @@ def send_verification_email(user):
     except Exception as e:
         print(f"❌ Error sending email: {str(e)}")
         print(f"❌ Error type: {type(e).__name__}")
+        
+        # More specific error handling
+        error_msg = str(e).lower()
+        if "authentication failed" in error_msg:
+            print("🔐 AUTH ERROR: Check your Gmail App Password")
+        elif "connection refused" in error_msg:
+            print("🌐 CONNECTION ERROR: Check network/firewall settings")
+        elif "smtp" in error_msg:
+            print("📧 SMTP ERROR: Check server/port configuration")
+            
         import traceback
         traceback.print_exc()
         return False
+    
+
+
+@app.route('/test-email')
+def test_email():
+    """Test email configuration"""
+    debug_info = {
+        'email_configured': EMAIL_ENABLED,
+        'mail_server': app.config['MAIL_SERVER'],
+        'mail_port': app.config['MAIL_PORT'],
+        'mail_use_tls': app.config['MAIL_USE_TLS'],
+        'mail_use_ssl': app.config['MAIL_USE_SSL'],
+        'mail_username': app.config['MAIL_USERNAME'],
+        'mail_password_set': bool(app.config['MAIL_PASSWORD']),
+        'mail_default_sender': app.config['MAIL_DEFAULT_SENDER'],
+        'render_external_url': os.environ.get('RENDER_EXTERNAL_URL')
+    }
+    
+    # Test with a sample user
+    test_user = User(
+        name="Test User",
+        email=app.config['MAIL_USERNAME']  # Send to yourself for testing
+    )
+    
+    try:
+        result = send_verification_email(test_user)
+        debug_info['email_test_result'] = 'SUCCESS' if result else 'FAILED'
+    except Exception as e:
+        debug_info['email_test_result'] = f'ERROR: {str(e)}'
+    
+    return jsonify(debug_info)
 
 def verify_token(token, expiration=86400):
     """Verify the token and return email if valid - ENHANCED"""
