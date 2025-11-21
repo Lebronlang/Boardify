@@ -58,6 +58,13 @@ app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
+
+print("🔧 Initializing email configuration...")
+print(f"📧 MAIL_SERVER: {os.environ.get('MAIL_SERVER')}")
+print(f"📧 MAIL_USERNAME: {os.environ.get('MAIL_USERNAME')}")
+print(f"📧 MAIL_PASSWORD_SET: {bool(os.environ.get('MAIL_PASSWORD'))}")
+print(f"🌐 RENDER_EXTERNAL_URL: {os.environ.get('RENDER_EXTERNAL_URL')}")
+
 # Email configuration (secure) - FIXED
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
@@ -137,7 +144,10 @@ MAX_SLOTS = 9
 
 # ========== UTILITY FUNCTIONS ==========
 def send_verification_email(user):
-    """Send verification email to user - FIXED FOR RENDER"""
+    """Send verification email to user - ENHANCED FOR RENDER"""
+    print(f"📧 Attempting to send verification email to: {user.email}")
+    print(f"📧 Email enabled: {EMAIL_ENABLED}")
+    
     if not EMAIL_ENABLED:
         print(f"⚠️  Email not configured. Skipping verification email for {user.email}")
         # Auto-verify in development if email is disabled
@@ -147,21 +157,40 @@ def send_verification_email(user):
         return False
         
     try:
+        # Generate token
         token = ts.dumps(user.email, salt='email-verify')
+        print(f"🔐 Generated token for {user.email}")
         
-        # URL generation fix for Render
+        # ENHANCED URL generation for Render
         if os.environ.get('RENDER'):
             # Use Render's external URL directly
-            base_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://your-app.onrender.com')
+            base_url = os.environ.get('RENDER_EXTERNAL_URL')
+            if not base_url:
+                # Try to construct it from service name
+                service_name = os.environ.get('RENDER_SERVICE_NAME')
+                if service_name:
+                    base_url = f"https://{service_name}.onrender.com"
+                else:
+                    # Fallback - you'll need to set RENDER_EXTERNAL_URL manually
+                    base_url = "https://your-app-name.onrender.com"  # CHANGE THIS TO YOUR ACTUAL URL
+                    print(f"⚠️  Using fallback URL: {base_url}")
+            
             verification_url = f"{base_url}/verify-email/{token}"
+            print(f"🌐 Using Render URL: {verification_url}")
         else:
             # Local development
             verification_url = url_for('verify_email', token=token, _external=True)
+            print(f"🌐 Using local URL: {verification_url}")
+        
+        # Test email configuration
+        print(f"📧 Testing email config: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}")
+        print(f"📧 Using sender: {app.config['MAIL_DEFAULT_SENDER']}")
         
         msg = Message(
             subject='Verify Your Email - Boardify',
             recipients=[user.email],
-            sender=app.config['MAIL_DEFAULT_SENDER']
+            sender=app.config['MAIL_DEFAULT_SENDER'],
+            reply_to=app.config['MAIL_DEFAULT_SENDER']  # Add reply-to
         )
         
         msg.html = f'''
@@ -189,7 +218,7 @@ def send_verification_email(user):
                         <a href="{verification_url}" class="button">Verify Email Address</a>
                     </center>
                     <p>Or copy and paste this link into your browser:</p>
-                    <p style="word-break: break-all; color: #007bff;">{verification_url}</p>
+                    <p style="word-break: break-all; color: #007bff; background: #f8f9fa; padding: 10px; border-radius: 5px;">{verification_url}</p>
                     <p><strong>This link will expire in 24 hours.</strong></p>
                     <p>If you didn't create an account with Boardify, please ignore this email.</p>
                 </div>
@@ -201,29 +230,60 @@ def send_verification_email(user):
         </html>
         '''
         
+        # Add plain text version as fallback
+        msg.body = f'''
+        Verify Your Boardify Account
+        
+        Hello {user.name},
+        
+        Please verify your email address by clicking this link:
+        {verification_url}
+        
+        This link will expire in 24 hours.
+        
+        If you didn't create a Boardify account, please ignore this email.
+        
+        Thanks,
+        The Boardify Team
+        '''
+        
+        print(f"📧 Sending email to {user.email}...")
         mail.send(msg)
         print(f"✅ Verification email sent successfully to {user.email}")
         return True
         
     except Exception as e:
-        print(f"❌ Error sending email to {user.email}: {str(e)}")
+        print(f"❌ CRITICAL ERROR sending email to {user.email}: {str(e)}")
+        print(f"❌ Error type: {type(e).__name__}")
         import traceback
         traceback.print_exc()
+        
+        # Log specific email configuration issues
+        if "authentication failed" in str(e).lower():
+            print("🔐 AUTHENTICATION ERROR: Check your MAIL_USERNAME and MAIL_PASSWORD")
+        elif "connection refused" in str(e).lower():
+            print("🔌 CONNECTION ERROR: Check MAIL_SERVER and MAIL_PORT")
+        elif "tls" in str(e).lower():
+            print("🔒 TLS ERROR: Try MAIL_USE_SSL=True with port 465")
+            
         return False
 
 def verify_token(token, expiration=86400):
-    """Verify the token and return email if valid - FIXED"""
+    """Verify the token and return email if valid - ENHANCED"""
+    print(f"🔐 Verifying token: {token[:20]}...")
     try:
         email = ts.loads(token, salt='email-verify', max_age=expiration)
+        print(f"✅ Token verified successfully for: {email}")
         return email
     except SignatureExpired:
-        print("Token expired")
+        print("❌ Token expired")
         return None
     except BadSignature:
-        print("Invalid token")
+        print("❌ Invalid token signature")
         return None
     except Exception as e:
-        print(f"Token verification error: {e}")
+        print(f"❌ Token verification error: {e}")
+        print(f"❌ Error type: {type(e).__name__}")
         return None
 
 def allowed_file(file):
@@ -454,6 +514,40 @@ def register():
             return redirect(url_for('register'))
 
     return render_template('register.html')
+
+@app.route('/debug-email-setup')
+def debug_email_setup():
+    """Comprehensive email debugging for Render"""
+    debug_info = {
+        'environment': {
+            'RENDER': bool(os.environ.get('RENDER')),
+            'RENDER_EXTERNAL_URL': os.environ.get('RENDER_EXTERNAL_URL'),
+            'FLASK_ENV': os.environ.get('FLASK_ENV'),
+        },
+        'email_config': {
+            'MAIL_SERVER': app.config.get('MAIL_SERVER'),
+            'MAIL_PORT': app.config.get('MAIL_PORT'),
+            'MAIL_USE_TLS': app.config.get('MAIL_USE_TLS'),
+            'MAIL_USE_SSL': app.config.get('MAIL_USE_SSL'),
+            'MAIL_USERNAME': 'SET' if app.config.get('MAIL_USERNAME') else 'MISSING',
+            'MAIL_PASSWORD': 'SET' if app.config.get('MAIL_PASSWORD') else 'MISSING',
+            'MAIL_DEFAULT_SENDER': app.config.get('MAIL_DEFAULT_SENDER'),
+        },
+        'app_config': {
+            'SECRET_KEY_SET': bool(app.config.get('SECRET_KEY')),
+            'EMAIL_ENABLED': EMAIL_ENABLED,
+            'SERVER_NAME': app.config.get('SERVER_NAME'),
+        }
+    }
+    
+    # Test database connection
+    try:
+        db.session.execute('SELECT 1')
+        debug_info['database'] = 'Connected'
+    except Exception as e:
+        debug_info['database'] = f'Error: {str(e)}'
+    
+    return jsonify(debug_info)
 
 @app.route('/verify-email/<token>')
 def verify_email(token):
@@ -766,6 +860,50 @@ def profile():
         age=age,
         verified=user.is_verified
     )
+
+@app.route('/test-email')
+def test_email():
+    """Test email configuration"""
+    if not EMAIL_ENABLED:
+        return jsonify({"error": "Email not configured"}), 400
+    
+    try:
+        # Test connection
+        with mail.connect() as conn:
+            pass
+        
+        # Try to send a test email
+        test_email = os.environ.get('MAIL_USERNAME')
+        msg = Message(
+            subject='Boardify Test Email',
+            recipients=[test_email],
+            body='This is a test email from Boardify. If you receive this, email is working!'
+        )
+        mail.send(msg)
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Test email sent to {test_email}",
+            "config": {
+                "server": app.config['MAIL_SERVER'],
+                "port": app.config['MAIL_PORT'],
+                "tls": app.config['MAIL_USE_TLS'],
+                "username": app.config['MAIL_USERNAME'],
+                "sender": app.config['MAIL_DEFAULT_SENDER']
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "config": {
+                "server": app.config['MAIL_SERVER'],
+                "port": app.config['MAIL_PORT'],
+                "tls": app.config['MAIL_USE_TLS'],
+                "username": app.config['MAIL_USERNAME']
+            }
+        }), 500
 
 @app.route('/properties')
 @login_required
