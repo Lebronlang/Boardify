@@ -149,127 +149,103 @@ MAX_SLOTS = 9
 
 # ========== UTILITY FUNCTIONS ==========
 def send_verification_email(user):
-    """Send verification email to user - ENHANCED FOR RENDER"""
+    """Send verification email using Resend"""
     print(f"📧 Attempting to send verification email to: {user.email}")
-    print(f"📧 Email enabled: {EMAIL_ENABLED}")
     
-    if not EMAIL_ENABLED:
-        print(f"⚠️  Email not configured. Skipping verification email for {user.email}")
-        # Auto-verify in development if email is disabled
-        user.is_verified = True
-        db.session.commit()
-        print(f"✅ Auto-verified {user.email} (email disabled)")
-        return False
-        
     try:
+        # Check if Resend is available
+        try:
+            import resend
+        except ImportError:
+            print("❌ Resend package not installed. Add 'resend==2.1.0' to requirements.txt")
+            # Fallback: auto-verify user
+            user.is_verified = True
+            db.session.commit()
+            print(f"✅ Auto-verified {user.email} (Resend not installed)")
+            return False
+        
+        # Check if API key is set
+        resend.api_key = os.environ.get('RESEND_API_KEY')
+        if not resend.api_key:
+            print("❌ RESEND_API_KEY not set in environment variables")
+            # Fallback: auto-verify user
+            user.is_verified = True
+            db.session.commit()
+            print(f"✅ Auto-verified {user.email} (RESEND_API_KEY not set)")
+            return False
+
         # Generate token
         token = ts.dumps(user.email, salt='email-verify')
         print(f"🔐 Generated token for {user.email}")
         
-        # ENHANCED URL generation for Render
+        # Generate verification URL
         if os.environ.get('RENDER'):
-            # Use Render's external URL directly
-            base_url = os.environ.get('RENDER_EXTERNAL_URL')
-            if not base_url:
-                # Try to construct it from service name
-                service_name = os.environ.get('RENDER_SERVICE_NAME')
-                if service_name:
-                    base_url = f"https://{service_name}.onrender.com"
-                else:
-                    # Fallback - you'll need to set RENDER_EXTERNAL_URL manually
-                    base_url = "https://your-app-name.onrender.com"  # CHANGE THIS TO YOUR ACTUAL URL
-                    print(f"⚠️  Using fallback URL: {base_url}")
-            
+            base_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://boardify-3aop.onrender.com')
             verification_url = f"{base_url}/verify-email/{token}"
-            print(f"🌐 Using Render URL: {verification_url}")
         else:
-            # Local development
             verification_url = url_for('verify_email', token=token, _external=True)
-            print(f"🌐 Using local URL: {verification_url}")
         
-        # Test email configuration
-        print(f"📧 Testing email config: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}")
-        print(f"📧 Using sender: {app.config['MAIL_DEFAULT_SENDER']}")
-        
-        msg = Message(
-    'Verify Your Email - Boardify',  # Subject as first argument
-    recipients=[user.email],
-    sender=app.config['MAIL_DEFAULT_SENDER']
-)
-        
-        msg.html = f'''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                .header {{ background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
-                .content {{ background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }}
-                .button {{ display: inline-block; padding: 12px 30px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
-                .footer {{ margin-top: 20px; font-size: 12px; color: #777; text-align: center; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>Welcome to Boardify!</h1>
+        print(f"🌐 Verification URL: {verification_url}")
+
+        # Send email via Resend
+        params = {
+            "from": "Boardify <onboarding@resend.dev>",
+            "to": [user.email],
+            "subject": "Verify Your Email - Boardify",
+            "html": f'''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                    .content {{ background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }}
+                    .button {{ display: inline-block; padding: 12px 30px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                    .footer {{ margin-top: 20px; font-size: 12px; color: #777; text-align: center; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Welcome to Boardify!</h1>
+                    </div>
+                    <div class="content">
+                        <h2>Hello {user.name},</h2>
+                        <p>Thank you for registering with Boardify. Please verify your email address by clicking the button below:</p>
+                        <center>
+                            <a href="{verification_url}" class="button">Verify Email Address</a>
+                        </center>
+                        <p>Or copy and paste this link into your browser:</p>
+                        <p style="word-break: break-all; color: #007bff; background: #f8f9fa; padding: 10px; border-radius: 5px;">{verification_url}</p>
+                        <p><strong>This link will expire in 24 hours.</strong></p>
+                        <p>If you didn't create an account with Boardify, please ignore this email.</p>
+                    </div>
+                    <div class="footer">
+                        <p>&copy; 2024 Boardify. All rights reserved.</p>
+                    </div>
                 </div>
-                <div class="content">
-                    <h2>Hello {user.name},</h2>
-                    <p>Thank you for registering with Boardify. Please verify your email address by clicking the button below:</p>
-                    <center>
-                        <a href="{verification_url}" class="button">Verify Email Address</a>
-                    </center>
-                    <p>Or copy and paste this link into your browser:</p>
-                    <p style="word-break: break-all; color: #007bff; background: #f8f9fa; padding: 10px; border-radius: 5px;">{verification_url}</p>
-                    <p><strong>This link will expire in 24 hours.</strong></p>
-                    <p>If you didn't create an account with Boardify, please ignore this email.</p>
-                </div>
-                <div class="footer">
-                    <p>&copy; 2024 Boardify. All rights reserved.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        '''
-        
-        # Add plain text version as fallback
-        msg.body = f'''
-        Verify Your Boardify Account
-        
-        Hello {user.name},
-        
-        Please verify your email address by clicking this link:
-        {verification_url}
-        
-        This link will expire in 24 hours.
-        
-        If you didn't create a Boardify account, please ignore this email.
-        
-        Thanks,
-        The Boardify Team
-        '''
-        
-        print(f"📧 Sending email to {user.email}...")
-        mail.send(msg)
+            </body>
+            </html>
+            '''
+        }
+
+        print(f"📧 Sending email via Resend to {user.email}...")
+        email = resend.Emails.send(params)
         print(f"✅ Verification email sent successfully to {user.email}")
+        print(f"📫 Resend Email ID: {email['id']}")
         return True
         
     except Exception as e:
-        print(f"❌ CRITICAL ERROR sending email to {user.email}: {str(e)}")
+        print(f"❌ Error sending email via Resend: {str(e)}")
         print(f"❌ Error type: {type(e).__name__}")
         import traceback
         traceback.print_exc()
         
-        # Log specific email configuration issues
-        if "authentication failed" in str(e).lower():
-            print("🔐 AUTHENTICATION ERROR: Check your MAIL_USERNAME and MAIL_PASSWORD")
-        elif "connection refused" in str(e).lower():
-            print("🔌 CONNECTION ERROR: Check MAIL_SERVER and MAIL_PORT")
-        elif "tls" in str(e).lower():
-            print("🔒 TLS ERROR: Try MAIL_USE_SSL=True with port 465")
-            
+        # Fallback: auto-verify user on error
+        user.is_verified = True
+        db.session.commit()
+        print(f"✅ Auto-verified {user.email} due to email error")
         return False
 
 def verify_token(token, expiration=86400):
@@ -834,6 +810,8 @@ def test_email_fixed():
             "message": f"Route error: {str(e)}"
         }), 500
 
+
+
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
@@ -1008,6 +986,50 @@ def debug_database():
         db_config['connection_test'] = f'FAILED: {str(e)}'
     
     return jsonify(db_config)
+
+
+@app.route('/test-resend-simple')
+def test_resend_simple():
+    """Simple Resend test"""
+    try:
+        # Check if resend is installed
+        try:
+            import resend
+        except ImportError:
+            return jsonify({
+                "status": "error", 
+                "message": "Resend package not installed. Add 'resend==2.1.0' to requirements.txt"
+            }), 500
+        
+        api_key = os.environ.get('RESEND_API_KEY')
+        if not api_key:
+            return jsonify({
+                "status": "error", 
+                "message": "RESEND_API_KEY not set in environment variables"
+            })
+        
+        resend.api_key = api_key
+        
+        # Simple test email
+        params = {
+            "from": "Boardify <onboarding@resend.dev>",
+            "to": ["lebrontan2004@gmail.com"],
+            "subject": "🎉 Resend Test - Boardify",
+            "html": "<strong>Hello from Resend! Your email is working! 🚀</strong>"
+        }
+
+        result = resend.Emails.send(params)
+        return jsonify({
+            "status": "success", 
+            "message": "✅ Test email sent! Check your Gmail inbox.",
+            "email_id": result['id']
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error", 
+            "message": f"Resend error: {str(e)}"
+        }), 500
 
 @app.route('/debug-db-details')
 def debug_db_details():
