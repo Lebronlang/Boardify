@@ -149,24 +149,15 @@ MAX_SLOTS = 9
 
 # ========== UTILITY FUNCTIONS ==========
 def send_verification_email(user):
-    """Send verification email using Resend - FIXED VERSION"""
+    """Send verification email using Gmail SMTP"""
     print(f"📧 Attempting to send verification email to: {user.email}")
     
+    # Check if email is configured
+    if not EMAIL_ENABLED:
+        print("❌ Email not configured (MAIL_USERNAME or MAIL_PASSWORD missing)")
+        return False
+    
     try:
-        # Check if Resend is available
-        try:
-            import resend
-        except ImportError:
-            print("❌ Resend package not installed. Add 'resend==2.1.0' to requirements.txt")
-            # DON'T auto-verify - let user know email is not working
-            return False
-        
-        # Check if API key is set
-        resend.api_key = os.environ.get('RESEND_API_KEY')
-        if not resend.api_key:
-            print("❌ RESEND_API_KEY not set in environment variables")
-            return False
-
         # Generate token
         token = ts.dumps(user.email, salt='email-verify')
         print(f"🔐 Generated token for {user.email}")
@@ -180,62 +171,62 @@ def send_verification_email(user):
         
         print(f"🌐 Verification URL: {verification_url}")
 
-        # Send email via Resend
-        params = {
-            "from": "Boardify <onboarding@resend.dev>",
-            "to": [user.email],
-            "subject": "Verify Your Email - Boardify",
-            "html": f'''
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                    .header {{ background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
-                    .content {{ background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }}
-                    .button {{ display: inline-block; padding: 12px 30px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
-                    .footer {{ margin-top: 20px; font-size: 12px; color: #777; text-align: center; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>Welcome to Boardify!</h1>
-                    </div>
-                    <div class="content">
-                        <h2>Hello {user.name},</h2>
-                        <p>Thank you for registering with Boardify. Please verify your email address by clicking the button below:</p>
-                        <center>
-                            <a href="{verification_url}" class="button">Verify Email Address</a>
-                        </center>
-                        <p>Or copy and paste this link into your browser:</p>
-                        <p style="word-break: break-all; color: #007bff; background: #f8f9fa; padding: 10px; border-radius: 5px;">{verification_url}</p>
-                        <p><strong>This link will expire in 24 hours.</strong></p>
-                        <p>If you didn't create an account with Boardify, please ignore this email.</p>
-                    </div>
-                    <div class="footer">
-                        <p>&copy; 2024 Boardify. All rights reserved.</p>
-                    </div>
+        # Create email message using Flask-Mail
+        msg = Message(
+            subject="Verify Your Email - Boardify",
+            recipients=[user.email],
+            sender=app.config['MAIL_DEFAULT_SENDER']
+        )
+        
+        # HTML email body
+        msg.html = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                .content {{ background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }}
+                .button {{ display: inline-block; padding: 12px 30px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                .footer {{ margin-top: 20px; font-size: 12px; color: #777; text-align: center; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Welcome to Boardify!</h1>
                 </div>
-            </body>
-            </html>
-            '''
-        }
+                <div class="content">
+                    <h2>Hello {user.name},</h2>
+                    <p>Thank you for registering with Boardify. Please verify your email address by clicking the button below:</p>
+                    <center>
+                        <a href="{verification_url}" class="button">Verify Email Address</a>
+                    </center>
+                    <p>Or copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all; color: #007bff; background: #f8f9fa; padding: 10px; border-radius: 5px;">{verification_url}</p>
+                    <p><strong>This link will expire in 24 hours.</strong></p>
+                    <p>If you didn't create an account with Boardify, please ignore this email.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; 2024 Boardify. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        '''
 
-        print(f"📧 Sending email via Resend to {user.email}...")
-        email = resend.Emails.send(params)
+        # Send email via Gmail SMTP
+        print(f"📧 Sending email via Gmail to {user.email}...")
+        mail.send(msg)
         print(f"✅ Verification email sent successfully to {user.email}")
-        print(f"📫 Resend Email ID: {email['id']}")
         return True
         
     except Exception as e:
-        print(f"❌ Error sending email via Resend: {str(e)}")
+        print(f"❌ Error sending email: {str(e)}")
         print(f"❌ Error type: {type(e).__name__}")
         import traceback
         traceback.print_exc()
-        
-        # DON'T auto-verify - return False so user knows email failed
         return False
 
 def verify_token(token, expiration=86400):
