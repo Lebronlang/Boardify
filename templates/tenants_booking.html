@@ -54,6 +54,8 @@
             {% endif %}
         {% endwith %}
 
+        
+
         <!-- Pending Bookings Section -->
         {% if pending_bookings %}
             <div class="bookings-section mb-5">
@@ -94,6 +96,15 @@
                             </div>
                             
                             <div class="card-body-modern">
+                                <!-- Booking Reference Number -->
+                                <div class="booking-reference-section">
+                                    <div class="reference-badge">
+                                        <i class="bi bi-tag-fill me-2"></i>
+                                        <strong>Ref: {{ booking.reference_number }}</strong>
+                                    </div>
+                                    <small class="reference-date">Created: {{ booking.created_at.strftime('%b %d, %Y') }}</small>
+                                </div>
+
                                 <h5 class="property-title-card">
                                     <i class="bi bi-house-door-fill me-2"></i>{{ booking.property.title }}
                                 </h5>
@@ -133,23 +144,25 @@
                                 
                                 <div class="booking-price">
                                     <span class="price-label">Total Amount:</span>
-                                    <span class="price-value">₱{{ "{:,}".format(booking.property.price) }}</span>
+                                    <span class="price-value">₱{{ "{:,.2f}".format(booking.total_bill if booking.total_bill else booking.property.price) }}</span>
                                 </div>
                             </div>
                             
                             <div class="card-footer-modern">
                                 <button class="btn-view-details" 
                                         data-booking-id="{{ booking.id }}"
+                                        data-booking-reference="{{ booking.reference_number }}"
                                         data-property-title="{{ booking.property.title|escape }}"
                                         data-checkin="{{ booking.start_date.strftime('%B %d, %Y') }}"
                                         data-checkout="{% if booking.end_date %}{{ booking.end_date.strftime('%B %d, %Y') }}{% else %}Not specified{% endif %}"
                                         data-status="{{ booking.status }}"
                                         data-location="{{ booking.property.location|escape if booking.property.location else 'Not specified' }}"
-                                        data-price="{{ booking.property.price }}">
+                                        data-price="{{ booking.total_bill if booking.total_bill else booking.property.price }}"
+                                        data-created="{{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') }}">
                                     <i class="bi bi-eye-fill me-2"></i>View Details
                                 </button>
                                 {% if booking.property.owner and booking.property.owner.email %}
-                                <a href="mailto:{{ booking.property.owner.email }}?subject=Inquiry about {{ booking.property.title|urlencode }}" 
+                                <a href="mailto:{{ booking.property.owner.email }}?subject=Inquiry about booking {{ booking.reference_number }} - {{ booking.property.title|urlencode }}" 
                                    class="btn-contact-host" title="Contact Host">
                                     <i class="bi bi-chat-dots-fill"></i>
                                 </a>
@@ -208,6 +221,15 @@
                             </div>
                             
                             <div class="card-body-modern">
+                                <!-- Booking Reference Number -->
+                                <div class="booking-reference-section">
+                                    <div class="reference-badge">
+                                        <i class="bi bi-tag-fill me-2"></i>
+                                        <strong>Ref: {{ booking.reference_number }}</strong>
+                                    </div>
+                                    <small class="reference-date">Created: {{ booking.created_at.strftime('%b %d, %Y') }}</small>
+                                </div>
+
                                 <h5 class="property-title-card">
                                     <i class="bi bi-house-door-fill me-2"></i>{{ booking.property.title }}
                                 </h5>
@@ -247,23 +269,25 @@
                                 
                                 <div class="booking-price">
                                     <span class="price-label">Total Amount:</span>
-                                    <span class="price-value">₱{{ "{:,}".format(booking.property.price) }}</span>
+                                    <span class="price-value">₱{{ "{:,.2f}".format(booking.total_bill if booking.total_bill else booking.property.price) }}</span>
                                 </div>
                             </div>
                             
                             <div class="card-footer-modern">
                                 <button class="btn-view-details"
                                         data-booking-id="{{ booking.id }}"
+                                        data-booking-reference="{{ booking.reference_number }}"
                                         data-property-title="{{ booking.property.title|escape }}"
                                         data-checkin="{{ booking.start_date.strftime('%B %d, %Y') }}"
                                         data-checkout="{% if booking.end_date %}{{ booking.end_date.strftime('%B %d, %Y') }}{% else %}Not specified{% endif %}"
                                         data-status="{{ booking.status }}"
                                         data-location="{{ booking.property.location|escape if booking.property.location else 'Not specified' }}"
-                                        data-price="{{ booking.property.price }}">
+                                        data-price="{{ booking.total_bill if booking.total_bill else booking.property.price }}"
+                                        data-created="{{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') }}">
                                     <i class="bi bi-eye-fill me-2"></i>View Details
                                 </button>
                                 {% if booking.status == 'approved' and booking.property.owner and booking.property.owner.email %}
-                                <a href="mailto:{{ booking.property.owner.email }}?subject=Inquiry about {{ booking.property.title|urlencode }}" 
+                                <a href="mailto:{{ booking.property.owner.email }}?subject=Inquiry about booking {{ booking.reference_number }} - {{ booking.property.title|urlencode }}" 
                                    class="btn-contact-host" title="Contact Host">
                                     <i class="bi bi-chat-dots-fill"></i>
                                 </a>
@@ -307,6 +331,16 @@
                 </button>
             </div>
             <div class="modal-body modal-body-modern">
+                <!-- Booking Reference Display -->
+                <div class="booking-reference-display mb-4">
+                    <div class="reference-main">
+                        <i class="bi bi-tag-fill me-2"></i>
+                        <span class="reference-label">Booking Reference:</span>
+                        <span class="reference-value" id="modal-booking-reference">-</span>
+                    </div>
+                    <small class="reference-created" id="modal-created-date">-</small>
+                </div>
+
                 <div class="booking-detail-grid">
                     <div class="detail-card">
                         <div class="detail-icon bg-primary-subtle">
@@ -400,6 +434,9 @@
                 <button type="button" class="btn-modal-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-x-circle me-2"></i>Close
                 </button>
+                <button type="button" class="btn-copy-reference" id="btnCopyReference">
+                    <i class="bi bi-clipboard me-2"></i>Copy Reference
+                </button>
             </div>
         </div>
     </div>
@@ -489,6 +526,124 @@ body {
     width: 1px;
     height: 40px;
     background: rgba(255, 255, 255, 0.3);
+}
+
+/* Search Booking Section */
+.search-booking-section {
+    margin-bottom: 2rem;
+}
+
+.search-card-modern {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: none;
+}
+
+.search-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 0.5rem;
+}
+
+.search-description {
+    color: var(--gray-600);
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.search-form-wrapper {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.search-input {
+    border: 2px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.search-input:focus {
+    border-color: var(--fb-blue);
+    box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+}
+
+.btn-search-booking {
+    background: var(--fb-blue);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    width: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.btn-search-booking:hover {
+    background: var(--fb-blue-hover);
+    transform: translateX(2px);
+}
+
+/* Booking Reference Styles */
+.booking-reference-section {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border-radius: 8px;
+    border-left: 4px solid var(--fb-blue);
+}
+
+.reference-badge {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--fb-blue);
+    font-weight: 700;
+}
+
+.reference-date {
+    color: var(--gray-600);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.booking-reference-display {
+    background: linear-gradient(135deg, var(--fb-blue-light) 0%, #dbeafe 100%);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 2px solid var(--fb-blue);
+    text-align: center;
+}
+
+.reference-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.reference-label {
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.reference-value {
+    font-weight: 800;
+    font-size: 1.5rem;
+    color: var(--fb-blue);
+    letter-spacing: 1px;
+}
+
+.reference-created {
+    color: var(--gray-600);
+    font-size: 0.9rem;
 }
 
 /* Flash Messages */
@@ -1125,6 +1280,25 @@ body {
     color: var(--gray-800);
 }
 
+.btn-copy-reference {
+    padding: 0.875rem 1.5rem;
+    background: var(--fb-blue);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+.btn-copy-reference:hover {
+    background: var(--fb-blue-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+}
+
 /* Animations */
 @keyframes slideInDown {
     from {
@@ -1195,6 +1369,15 @@ body {
         width: 100%;
         height: 50px;
     }
+    
+    .search-form-wrapper {
+        flex-direction: column;
+    }
+    
+    .btn-search-booking {
+        width: 100%;
+        height: 50px;
+    }
 }
 
 @media (max-width: 576px) {
@@ -1218,7 +1401,7 @@ body {
         flex-direction: column;
     }
     
-    .btn-modal-secondary {
+    .btn-modal-secondary, .btn-copy-reference {
         width: 100%;
         justify-content: center;
     }
@@ -1235,14 +1418,18 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             // Get data from button attributes
             const bookingId = this.getAttribute('data-booking-id');
+            const bookingReference = this.getAttribute('data-booking-reference');
             const propertyTitle = this.getAttribute('data-property-title');
             const checkin = this.getAttribute('data-checkin');
             const checkout = this.getAttribute('data-checkout');
             const status = this.getAttribute('data-status');
             const location = this.getAttribute('data-location');
             const price = parseFloat(this.getAttribute('data-price'));
+            const created = this.getAttribute('data-created');
             
             // Update modal content
+            document.getElementById('modal-booking-reference').textContent = bookingReference;
+            document.getElementById('modal-created-date').textContent = 'Created on: ' + created;
             document.getElementById('modal-property-title').textContent = propertyTitle;
             document.getElementById('modal-location').textContent = location;
             document.getElementById('modal-checkin').textContent = checkin;
@@ -1281,6 +1468,25 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show modal
             const modal = new bootstrap.Modal(document.getElementById('bookingDetailsModal'));
             modal.show();
+        });
+    });
+    
+    // Copy Reference Number functionality
+    document.getElementById('btnCopyReference').addEventListener('click', function() {
+        const reference = document.getElementById('modal-booking-reference').textContent;
+        navigator.clipboard.writeText(reference).then(() => {
+            // Show success feedback
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-check-lg me-2"></i>Copied!';
+            this.style.background = 'var(--success-green)';
+            
+            setTimeout(() => {
+                this.innerHTML = originalText;
+                this.style.background = '';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy reference number');
         });
     });
     

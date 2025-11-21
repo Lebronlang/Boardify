@@ -2229,6 +2229,409 @@ property details:
         isolation: isolate; /* CRITICAL FIX: Creates new stacking context */
     }
 
+    /* ===== MOBILE RESPONSIVE FIXES ===== */
+@media (max-width: 768px) {
+    /* Main layout fixes */
+    .d-flex {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        height: auto;
+        min-height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .sidebar .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .sidebar .nav-link {
+        flex: 1;
+        min-width: 140px;
+        text-align: center;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .main-content {
+        width: 100%;
+    }
+    
+    /* Property header fixes */
+    .property-header-card {
+        padding: 1rem;
+        margin: 0 -0.5rem;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    
+    .property-title {
+        font-size: 1.5rem;
+        line-height: 1.3;
+    }
+    
+    .price-tag-display {
+        justify-content: flex-start;
+        margin-top: 1rem;
+    }
+    
+    .price-amount {
+        font-size: 2rem;
+    }
+    
+    /* Gallery fixes */
+    .main-gallery-container {
+        height: 300px;
+    }
+    
+    .gallery-arrow-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .prev-arrow {
+        left: 10px;
+    }
+    
+    .next-arrow {
+        right: 10px;
+    }
+    
+    .thumbnail-box {
+        width: 80px;
+        height: 60px;
+    }
+    
+    /* Content layout fixes */
+    .container-fluid.p-4 {
+        padding: 1rem !important;
+    }
+    
+    .row.g-4 {
+        margin: 0;
+    }
+    
+    .col-lg-8, .col-lg-4 {
+        padding: 0;
+    }
+    
+    /* Cards and spacing */
+    .gallery-card,
+    .info-tabs-card,
+    .map-card,
+    .reviews-section-card,
+    .booking-info-card,
+    .owner-contact-card {
+        margin: 1rem 0;
+        border-radius: 12px;
+    }
+    
+    /* Tabs fixes */
+    .custom-nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+    }
+    
+    .custom-nav-item {
+        flex-shrink: 0;
+    }
+    
+    .custom-tab-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+    
+    /* Stats grid fixes */
+    .property-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+    
+    .stat-box {
+        padding: 0.75rem;
+    }
+    
+    .stat-icon-wrapper {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .stat-icon-wrapper i {
+        font-size: 1.2rem;
+    }
+    
+    /* Amenities grid fixes */
+    .amenities-showcase-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .amenity-item-card {
+        padding: 1rem;
+    }
+    
+    /* Details list fixes */
+    .detail-info-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 1rem;
+    }
+    
+    .detail-value-text {
+        text-align: left;
+    }
+    
+    /* Map fixes */
+    .map-frame-wrapper {
+        padding-top: 70%;
+    }
+    
+    /* Reviews fixes */
+    .rating-summary-box .row {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .rating-summary-box .col-md-4 {
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Booking card fixes */
+    .booking-info-card {
+        position: relative;
+        top: 0;
+        margin-top: 2rem;
+    }
+    
+    .booking-card-body {
+        max-height: none;
+    }
+    
+    /* Owner card fixes */
+    .owner-contact-card {
+        margin-top: 1rem;
+    }
+    
+    .owner-profile-section {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    /* Modal fixes */
+    .modal-dialog {
+        margin: 1rem;
+    }
+    
+    .confirm-modal-footer {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .btn-cancel-booking,
+    .btn-confirm-booking {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Extra small devices */
+    .property-title {
+        font-size: 1.3rem;
+    }
+    
+    .price-amount {
+        font-size: 1.75rem;
+    }
+    
+    .main-gallery-container {
+        height: 250px;
+    }
+    
+    .gallery-arrow-btn {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .property-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-box {
+        justify-content: flex-start;
+    }
+    
+    .custom-tab-btn {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.8rem;
+    }
+    
+    .content-section-title {
+        font-size: 1.2rem;
+    }
+    
+    /* Back navigation */
+    .back-navigation-bar {
+        padding: 0.75rem 0;
+    }
+    
+    .back-link-btn {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    /* Save property button */
+    .save-property-btn {
+        width: 100%;
+        justify-content: center;
+        margin-top: 1rem;
+    }
+    
+    /* Booking form */
+    .form-input-field {
+        padding: 0.75rem;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    /* Price breakdown */
+    .price-breakdown-row {
+        font-size: 0.9rem;
+    }
+    
+    .total-price-text {
+        font-size: 1.1rem;
+    }
+}
+
+/* ===== TOUCH DEVICE OPTIMIZATIONS ===== */
+@media (hover: none) and (pointer: coarse) {
+    /* Improve touch targets */
+    .gallery-arrow-btn,
+    .fullscreen-btn,
+    .thumbnail-box,
+    .custom-tab-btn,
+    .amenity-item-card,
+    .detail-info-row,
+    .contact-info-link {
+        min-height: 44px;
+    }
+    
+    .gallery-arrow-btn,
+    .fullscreen-btn {
+        width: 44px;
+        height: 44px;
+    }
+    
+    /* Reduce hover effects on touch devices */
+    .gallery-arrow-btn:hover,
+    .fullscreen-btn:hover,
+    .thumbnail-box:hover,
+    .custom-tab-btn:hover,
+    .amenity-item-card:hover,
+    .detail-info-row:hover {
+        transform: none;
+    }
+    
+    /* Improve button touch targets */
+    button, 
+    .btn-book-now,
+    .btn-login-now,
+    .btn-message-owner,
+    .btn-write-review {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* ===== ORIENTATION SPECIFIC FIXES ===== */
+@media (max-width: 768px) and (orientation: landscape) {
+    .main-gallery-container {
+        height: 250px;
+    }
+    
+    .sidebar {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+}
+
+/* ===== PREVENT HORIZONTAL SCROLL ===== */
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.container-fluid {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* ===== IMPROVE READABILITY ON SMALL SCREENS ===== */
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+        line-height: 1.3;
+    }
+    
+    .property-description,
+    .review-comment-text,
+    .map-description {
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+}
+
+/* ===== LOADING OPTIMIZATIONS ===== */
+@media (max-width: 768px) {
+    .gallery-main-image {
+        transition: opacity 0.3s ease;
+    }
+    
+    /* Reduce animations on mobile for performance */
+    .property-header-card,
+    .gallery-card,
+    .info-tabs-card,
+    .booking-info-card {
+        animation-duration: 0.3s;
+    }
+}
+
+/* ===== FIX FOR IOS SAFARI ===== */
+@supports (-webkit-touch-callout: none) {
+    .main-gallery-container {
+        height: 60vh;
+        max-height: 500px;
+    }
+    
+    .booking-info-card {
+        position: -webkit-sticky;
+    }
+}
+
+/* ===== FIX FOR ANDROID CHROME ===== */
+@media (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
+    .form-input-field {
+        font-size: 16px; /* Prevents zoom on focus */
+    }
+}
+
     /* CRITICAL FIX: Force proper image stacking */
     .gallery-main-image {
         position: absolute !important;
@@ -3025,6 +3428,54 @@ function initializeTabs() {
         });
     });
 }
+
+
+// ===== MOBILE-SPECIFIC JAVASCRIPT =====
+document.addEventListener('DOMContentLoaded', function() {
+    // Detect mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+        // Add mobile class to body for CSS targeting
+        document.body.classList.add('mobile-device');
+        
+        // Improve touch scrolling
+        document.documentElement.style.scrollBehavior = 'smooth';
+        
+        // Prevent zoom on double tap (for iOS)
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+        
+        // Fix for iOS viewport height
+        function setVH() {
+            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+        
+        setVH();
+        window.addEventListener('resize', setVH);
+        window.addEventListener('orientationchange', setVH);
+    }
+    
+    // Handle orientation changes
+    window.addEventListener('orientationchange', function() {
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+        }, 100);
+    });
+    
+    // Improve touch interactions
+    const touchElements = document.querySelectorAll('button, a, .thumbnail-box, .custom-tab-btn');
+    touchElements.forEach(el => {
+        el.style.webkitTapHighlightColor = 'transparent';
+    });
+});
 
 // ===== SIMPLE GALLERY FUNCTIONALITY =====
 function initializeGallery() {

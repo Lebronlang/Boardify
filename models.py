@@ -1,8 +1,15 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date, datetime, timedelta
 from flask_login import UserMixin
+import secrets
+import string
 
 db = SQLAlchemy()
+
+def generate_booking_reference():
+    """Generate a unique 8-character booking reference"""
+    characters = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(characters) for _ in range(8))
 
 class User(db.Model, UserMixin):
     __tablename__ = 'user'
@@ -11,44 +18,41 @@ class User(db.Model, UserMixin):
     name = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    role = db.Column(db.String(50), nullable=False, default='user')  # 'admin', 'landlord', 'tenant'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Add this line
+    role = db.Column(db.String(50), nullable=False, default='user')
     
     # Email verification fields
     is_verified = db.Column(db.Boolean, default=False)
     verification_token = db.Column(db.String(100), nullable=True)
     
-    # NEW: Admin approval for landlords
-    is_approved_by_admin = db.Column(db.Boolean, default=False)  # ADD THIS LINE
+    # Admin approval for landlords
+    is_approved_by_admin = db.Column(db.Boolean, default=False)
     
-    # NEW FIELDS: Gender and Birthdate
-    gender = db.Column(db.String(20), nullable=True)  # 'male', 'female', 'other', 'prefer_not_to_say'
+    # Personal information
+    gender = db.Column(db.String(20), nullable=True)
     birthdate = db.Column(db.Date, nullable=True)
     
     # Optional images
     profile_pic = db.Column(db.String(150), default='default.jpg')
     trend_image = db.Column(db.String(150), nullable=True)
-    license_image = db.Column(db.String(150), nullable=True)  # landlord permit/license
+    license_image = db.Column(db.String(150), nullable=True)
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    properties = db.relationship('Property', back_populates='owner', lazy='dynamic')  # landlord's properties
-    bills = db.relationship('Billing', back_populates='tenant', lazy='dynamic')       # tenant's bills
-    bookings = db.relationship('Booking', back_populates='tenant', lazy='dynamic')   # tenant's bookings
+    properties = db.relationship('Property', back_populates='owner', lazy='dynamic')
+    bills = db.relationship('Billing', back_populates='tenant', lazy='dynamic')
+    bookings = db.relationship('Booking', back_populates='tenant', lazy='dynamic')
     
     sent_messages = db.relationship('Message', foreign_keys='Message.sender_id',
                                     back_populates='sender', lazy='dynamic')
     received_messages = db.relationship('Message', foreign_keys='Message.receiver_id',
                                         back_populates='receiver', lazy='dynamic')
 
-    # Flask-Login required properties
     def get_id(self):
         return str(self.id)
     
-    # Convenience method to check roles
     def is_admin(self):
         return self.role == 'admin'
     
@@ -58,19 +62,15 @@ class User(db.Model, UserMixin):
     def is_tenant(self):
         return self.role == 'tenant'
     
-    # FIXED: Check both email verification AND admin approval
     def is_verified_landlord(self):
-        """Landlord must be email verified AND approved by admin"""
         return self.role == 'landlord' and self.is_verified and self.is_approved_by_admin
     
-    # NEW: Calculate age from birthdate
     def get_age(self):
         if not self.birthdate:
             return None
         today = date.today()
         return today.year - self.birthdate.year - ((today.month, today.day) < (self.birthdate.month, self.birthdate.day))
     
-    # NEW: Format gender for display
     def get_gender_display(self):
         gender_map = {
             'male': 'Male',
@@ -80,12 +80,11 @@ class User(db.Model, UserMixin):
         }
         return gender_map.get(self.gender, 'Not specified')
     
-    # NEW: Format birthdate for display
     def get_birthdate_display(self):
         if not self.birthdate:
             return 'Not specified'
-        return self.birthdate.strftime('%B %d, %Y')  # e.g., "January 15, 1990"
-# ---------- Property Model ----------
+        return self.birthdate.strftime('%B %d, %Y')
+
 class Property(db.Model):
     __tablename__ = 'property'
     
@@ -98,16 +97,18 @@ class Property(db.Model):
     property_type = db.Column(db.String(50), nullable=True)
     bedrooms = db.Column(db.Integer, nullable=True)
     bathrooms = db.Column(db.Integer, nullable=True)
-    image = db.Column(db.String(200), nullable=True)  # first/main image
+    image = db.Column(db.String(200), nullable=True)
     status = db.Column(db.String(50), default='available')
     landlord_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    slots = db.Column(db.Integer, default=10)  # total slots available
-    amenities = db.Column(db.Text, nullable=True) 
+    slots = db.Column(db.Integer, default=10)
+    amenities = db.Column(db.Text, nullable=True)
 
-    # Relationships
+    # Relationships - KEEP ORIGINAL NAMES
     owner = db.relationship('User', back_populates='properties')
     bills = db.relationship('Billing', back_populates='property', lazy=True)
     bookings = db.relationship('Booking', back_populates='property', lazy=True)
+    images = db.relationship('PropertyImage', back_populates='property', lazy=True, cascade='all, delete-orphan')
+    reviews = db.relationship('Review', back_populates='property', lazy=True)
 
     @property
     def daily_rate(self):
@@ -116,59 +117,52 @@ class Property(db.Model):
     def __repr__(self):
         return f'<Property {self.title} | Status: {self.status}>'
 
-# ---------- Review Model ----------
 class Review(db.Model):
     __tablename__ = 'review'
     
     id = db.Column(db.Integer, primary_key=True)
     property_id = db.Column(db.Integer, db.ForeignKey('property.id'), nullable=False)
     tenant_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    rating = db.Column(db.Integer, nullable=False)  # 1-5 stars
+    rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relationships
-    property = db.relationship('Property', backref=db.backref('reviews', lazy=True, cascade='all, delete-orphan'))
-    tenant = db.relationship('User', backref=db.backref('reviews', lazy=True))
+    # Relationships - USE UNIQUE BACKREF FOR USER
+    property = db.relationship('Property', back_populates='reviews')
+    tenant = db.relationship('User', backref=db.backref('user_reviews', lazy=True))
     
     def __repr__(self):
         return f'<Review {self.id} - Property {self.property_id} - Rating {self.rating}>'
 
-# ---------- Billing Model ----------
-# ---------- Billing Model ----------
 class Billing(db.Model):
     __tablename__ = 'billing'
 
     id = db.Column(db.Integer, primary_key=True)
     tenant_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     property_id = db.Column(db.Integer, db.ForeignKey('property.id'), nullable=False)
-    amount = db.Column(db.Float, nullable=False)  # ✅ Only one definition
+    amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), default='unpaid')
     payment_method = db.Column(db.String(50), nullable=True)
-    months = db.Column(db.Integer, default=1)     # Number of months booked
-    due_date = db.Column(db.Date, nullable=True)      # Deadline for payment
-    penalty = db.Column(db.Float, default=0.0)        # Late payment fee
-    discount = db.Column(db.Float, default=0.0)       # Discount for early/loyal payments
-    sms_sent = db.Column(db.Boolean, default=False)   # SMS reminder sent?
-    admin_commission = db.Column(db.Float, default=0) # Admin commission
+    months = db.Column(db.Integer, default=1)
+    due_date = db.Column(db.Date, nullable=True)
+    penalty = db.Column(db.Float, default=0.0)
+    discount = db.Column(db.Float, default=0.0)
+    sms_sent = db.Column(db.Boolean, default=False)
+    admin_commission = db.Column(db.Float, default=0)
+    booking_reference = db.Column(db.String(20), nullable=True)
 
+    # Relationships
     tenant = db.relationship('User', back_populates='bills')
     property = db.relationship('Property', back_populates='bills')
 
     def update_penalty_discount(self):
-        """Automatically calculate penalty and discount based on the current date."""
         if not self.due_date:
             return
 
         today = date.today()
-
-        # Penalty: $20 per day past due
         self.penalty = max(0, (today - self.due_date).days * 20) if today > self.due_date else 0
-
-        # Discount: 5% if paying 7+ days early
         self.discount = self.amount * 0.05 if today < self.due_date - timedelta(days=7) else 0
 
-        # Update status automatically
         if today > self.due_date and self.status == 'unpaid':
             self.status = 'overdue'
 
@@ -177,30 +171,34 @@ class PropertyImage(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     property_id = db.Column(db.Integer, db.ForeignKey('property.id'), nullable=False)
-    filename = db.Column(db.String(200), nullable=False)  # saved image filename
+    filename = db.Column(db.String(200), nullable=False)
 
-    property = db.relationship('Property', backref=db.backref('images', lazy=True))
+    # Relationship
+    property = db.relationship('Property', back_populates='images')
 
     def __repr__(self):
         return f"<PropertyImage {self.filename} for Property {self.property_id}>"
 
-# ---------- Booking Model ----------
 class Booking(db.Model):
     __tablename__ = 'booking'
 
     id = db.Column(db.Integer, primary_key=True)
+    reference_number = db.Column(db.String(20), unique=True, default=generate_booking_reference)
     tenant_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     property_id = db.Column(db.Integer, db.ForeignKey('property.id'), nullable=False)
     start_date = db.Column(db.Date, nullable=False, default=date.today)
     end_date = db.Column(db.Date, nullable=True)
-    total_bill = db.Column(db.Float, default=0.0)  # 👈 Add this line
-    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    total_bill = db.Column(db.Float, default=0.0)
+    status = db.Column(db.String(20), default='pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
     tenant = db.relationship('User', back_populates='bookings')
     property = db.relationship('Property', back_populates='bookings')
 
-# ---------- Message Model ----------
+    def __repr__(self):
+        return f'<Booking {self.reference_number} - {self.property.title if self.property else "Unknown"} - {self.status}>'
+
 class Message(db.Model):
     __tablename__ = 'messages'
 
@@ -218,11 +216,10 @@ class Policy(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    applicable_role = db.Column(db.String(50), nullable=False)  # 'tenant', 'landlord', 'all'
+    applicable_role = db.Column(db.String(50), nullable=False)
 
     def __repr__(self):
         return f"<Policy {self.title} | Role: {self.applicable_role}>"
-
 
 class HelpSupport(db.Model):
     __tablename__ = 'help_support'
@@ -231,10 +228,10 @@ class HelpSupport(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     subject = db.Column(db.String(255), nullable=False)
     message = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(20), default='pending')  # 'pending', 'resolved', etc.
+    status = db.Column(db.String(20), default='pending')
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user = db.relationship('User', backref=db.backref('help_tickets', lazy=True))
+    user = db.relationship('User', backref=db.backref('help_support_tickets', lazy=True))
 
     def __repr__(self):
         return f"<HelpSupport(id={self.id}, subject='{self.subject}', user_id={self.user_id}, status='{self.status}')>"

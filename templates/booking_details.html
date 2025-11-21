@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <!-- Booking Header -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="bi bi-bookmark-check-fill me-2"></i>Booking Details
+                        </h4>
+                        <span class="badge bg-light text-dark fs-6">
+                            {{ booking.reference_number }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Main Booking Information -->
+                <div class="col-md-8">
+                    <div class="card shadow mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="bi bi-info-circle-fill me-2"></i>Booking Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td><strong>Reference No:</strong></td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ booking.reference_number }}</span>
+                                                <button class="btn btn-sm btn-outline-primary ms-2" onclick="copyReference('{{ booking.reference_number }}')">
+                                                    <i class="bi bi-clipboard"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Status:</strong></td>
+                                            <td>
+                                                {% if booking.status == 'pending' %}
+                                                    <span class="badge bg-warning">⏳ Pending Approval</span>
+                                                {% elif booking.status == 'approved' %}
+                                                    <span class="badge bg-success">✓ Approved</span>
+                                                {% elif booking.status == 'rejected' %}
+                                                    <span class="badge bg-danger">✕ Rejected</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ booking.status|title }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Check-in:</strong></td>
+                                            <td>{{ booking.start_date.strftime('%B %d, %Y') }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Check-out:</strong></td>
+                                            <td>{{ booking.end_date.strftime('%B %d, %Y') }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Duration:</strong></td>
+                                            <td>{{ (booking.end_date - booking.start_date).days }} nights</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td><strong>Total Amount:</strong></td>
+                                            <td class="fw-bold text-success fs-5">
+                                                ₱{{ "%.2f"|format(booking.total_bill) }}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Booked On:</strong></td>
+                                            <td>{{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Payment Status:</strong></td>
+                                            <td>
+                                                {% set bill = billing|first if billing else None %}
+                                                {% if bill %}
+                                                    <span class="badge bg-{{ 'success' if bill.status == 'paid' else 'warning' if bill.status == 'pending' else 'danger' }}">
+                                                        {{ bill.status|title }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Not Billed</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Property Details -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="bi bi-house-fill me-2"></i>Property Details
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h5>{{ booking.property.title }}</h5>
+                                    <p class="text-muted mb-2">
+                                        <i class="bi bi-geo-alt-fill me-1"></i>{{ booking.property.location }}
+                                    </p>
+                                    <p class="mb-3">{{ booking.property.description }}</p>
+                                    
+                                    <div class="property-features">
+                                        {% if booking.property.bedrooms %}
+                                        <span class="badge bg-light text-dark me-2">
+                                            <i class="bi bi-door-closed me-1"></i>{{ booking.property.bedrooms }} Bedrooms
+                                        </span>
+                                        {% endif %}
+                                        {% if booking.property.bathrooms %}
+                                        <span class="badge bg-light text-dark me-2">
+                                            <i class="bi bi-droplet me-1"></i>{{ booking.property.bathrooms }} Bathrooms
+                                        </span>
+                                        {% endif %}
+                                        {% if booking.property.property_type %}
+                                        <span class="badge bg-light text-dark">
+                                            <i class="bi bi-tag me-1"></i>{{ booking.property.property_type }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    {% if booking.property.image %}
+                                    <img src="{{ url_for('static', filename='uploads/' + booking.property.image) }}" 
+                                         alt="{{ booking.property.title }}" 
+                                         class="img-fluid rounded" 
+                                         style="max-height: 150px; width: 100%; object-fit: cover;">
+                                    {% else %}
+                                    <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                         style="height: 150px;">
+                                        <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-md-4">
+                    <!-- Contact Information -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="bi bi-person-fill me-2"></i>Contact Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if user.role == 'tenant' %}
+                            <h6>Landlord</h6>
+                            <p class="mb-1"><strong>{{ booking.property.owner.name }}</strong></p>
+                            <p class="text-muted small mb-2">{{ booking.property.owner.email }}</p>
+                            <a href="mailto:{{ booking.property.owner.email }}?subject=Inquiry about booking {{ booking.reference_number }}" 
+                               class="btn btn-outline-primary btn-sm w-100">
+                                <i class="bi bi-envelope me-1"></i>Send Message
+                            </a>
+                            {% else %}
+                            <h6>Tenant</h6>
+                            <p class="mb-1"><strong>{{ booking.tenant.name }}</strong></p>
+                            <p class="text-muted small mb-2">{{ booking.tenant.email }}</p>
+                            {% if booking.tenant.is_verified %}
+                            <span class="badge bg-success mb-2">
+                                <i class="bi bi-check-circle me-1"></i>Verified
+                            </span>
+                            {% endif %}
+                            <a href="mailto:{{ booking.tenant.email }}?subject=Regarding your booking {{ booking.reference_number }}" 
+                               class="btn btn-outline-primary btn-sm w-100">
+                                <i class="bi bi-envelope me-1"></i>Contact Tenant
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card shadow">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="bi bi-lightning-fill me-2"></i>Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('my_bookings_tenant') if user.role == 'tenant' else url_for('booked_properties') }}" 
+                                   class="btn btn-outline-primary">
+                                    <i class="bi bi-list-ul me-1"></i>All Bookings
+                                </a>
+                                <a href="{{ url_for('property_detail', property_id=booking.property.id) }}" 
+                                   class="btn btn-outline-success">
+                                    <i class="bi bi-house me-1"></i>View Property
+                                </a>
+                                {% if user.role == 'landlord' and booking.status == 'pending' %}
+                                <form action="{{ url_for('booking_action', booking_id=booking.id, action='approve') }}" method="POST" class="d-grid">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-check-circle me-1"></i>Approve Booking
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('booking_action', booking_id=booking.id, action='reject') }}" method="POST" class="d-grid">
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="bi bi-x-circle me-1"></i>Reject Booking
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booking Timeline -->
+            <div class="card shadow mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i>Booking Timeline
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item completed">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>Booking Submitted</strong>
+                                <small class="text-muted">{{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') }}</small>
+                                <p class="mb-0">Your booking request was successfully submitted</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item {{ 'completed' if booking.status != 'pending' else 'active' }}">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>Under Review</strong>
+                                <small class="text-muted">
+                                    {% if booking.status != 'pending' %}
+                                        Completed on {{ booking.created_at.strftime('%B %d') }}
+                                    {% else %}
+                                        Waiting for landlord approval
+                                    {% endif %}
+                                </small>
+                                <p class="mb-0">Landlord is reviewing your booking request</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item {{ 'completed' if booking.status in ['approved', 'rejected'] else '' }}">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>Decision Made</strong>
+                                <small class="text-muted">
+                                    {% if booking.status in ['approved', 'rejected'] %}
+                                        {{ booking.status|title }}
+                                    {% else %}
+                                        Pending decision
+                                    {% endif %}
+                                </small>
+                                <p class="mb-0">
+                                    {% if booking.status == 'approved' %}
+                                        Your booking has been approved!
+                                    {% elif booking.status == 'rejected' %}
+                                        Your booking was not approved
+                                    {% else %}
+                                        Waiting for final decision
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 2rem;
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -2rem;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #dee2e6;
+    border: 4px solid white;
+    box-shadow: 0 0 0 3px #dee2e6;
+}
+
+.timeline-item.completed .timeline-marker {
+    background: #28a745;
+    box-shadow: 0 0 0 3px #28a745;
+}
+
+.timeline-item.active .timeline-marker {
+    background: #ffc107;
+    box-shadow: 0 0 0 3px #ffc107;
+    animation: pulse 2s infinite;
+}
+
+.timeline-content {
+    padding-left: 1rem;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: -1.7rem;
+    top: 20px;
+    bottom: -2rem;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item.completed:not(:last-child)::before {
+    background: #28a745;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(255, 193, 7, 0.2);
+    }
+}
+
+.property-features .badge {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.7rem;
+}
+
+.table td {
+    padding: 0.75rem 0.5rem;
+    border: none;
+}
+</style>
+
+<script>
+function copyReference(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        // Show success message
+        const button = event.target;
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="bi bi-check"></i>';
+        button.classList.remove('btn-outline-primary');
+        button.classList.add('btn-success');
+        
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-primary');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+        alert('Failed to copy reference number');
+    });
+}
+</script>
+{% endblock %}

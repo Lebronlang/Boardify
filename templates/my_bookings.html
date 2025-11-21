@@ -114,6 +114,20 @@
         flex-shrink: 0;
     }
 
+    .booking-reference {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: linear-gradient(135deg, #8b5cf6, #a855f7);
+        color: white;
+        padding: 0.4rem 0.9rem;
+        border-radius: 20px;
+        font-size: 0.813rem;
+        font-weight: 600;
+        margin-left: auto;
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+    }
+
     .booking-details {
         display: flex;
         flex-direction: column;
@@ -211,6 +225,49 @@
         height: 12px;
     }
 
+    .booking-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .btn-action {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-approve {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+    }
+
+    .btn-reject {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+    }
+
+    .btn-view {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;
@@ -271,6 +328,10 @@
             min-width: 70px;
             font-size: 0.875rem;
         }
+
+        .booking-actions {
+            flex-direction: column;
+        }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -293,9 +354,39 @@
                 <polyline points="9 22 9 12 15 12 15 22"></polyline>
             </svg>
             {{ booking.property.title }}
+            {% if booking.reference_number %}
+            <span class="booking-reference">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                </svg>
+                {{ booking.reference_number }}
+            </span>
+            {% endif %}
         </h3>
 
         <div class="booking-details">
+            <!-- Booking Reference -->
+            {% if booking.reference_number %}
+            <div class="detail-row">
+                <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                </svg>
+                <span class="detail-label">Reference:</span>
+                <span class="detail-value">
+                    <strong>{{ booking.reference_number }}</strong>
+                    <button class="btn-copy-reference" onclick="copyToClipboard('{{ booking.reference_number }}')" 
+                            title="Copy reference number">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
+                </span>
+            </div>
+            {% endif %}
+
             <div class="detail-row">
                 <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -369,7 +460,53 @@
                 </span>
             </div>
             {% endif %}
+
+            <!-- Created Date -->
+            {% if booking.created_at %}
+            <div class="detail-row">
+                <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <span class="detail-label">Booked On:</span>
+                <span class="detail-value">
+                    {{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') if booking.created_at is not string else booking.created_at }}
+                </span>
+            </div>
+            {% endif %}
         </div>
+
+        <!-- Action Buttons for Landlords -->
+        {% if user.role == 'landlord' and booking.status == 'pending' %}
+        <div class="booking-actions">
+            <form action="{{ url_for('booking_action', booking_id=booking.id, action='approve') }}" method="POST" style="display: inline;">
+                <button type="submit" class="btn-action btn-approve">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 6L9 17l-5-5"></path>
+                    </svg>
+                    Approve
+                </button>
+            </form>
+            <form action="{{ url_for('booking_action', booking_id=booking.id, action='reject') }}" method="POST" style="display: inline;">
+                <button type="submit" class="btn-action btn-reject">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"></path>
+                    </svg>
+                    Reject
+                </button>
+            </form>
+            <button class="btn-action btn-view" onclick="viewBookingDetails('{{ booking.reference_number }}')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                View Details
+            </button>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% else %}
@@ -382,3 +519,50 @@
     <p class="empty-text">You don't have any bookings at the moment. Start exploring properties!</p>
 </div>
 {% endfor %}
+
+<script>
+// Copy reference number to clipboard
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        // Show success feedback
+        const button = event.target.closest('.btn-copy-reference');
+        const originalHTML = button.innerHTML;
+        button.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6L9 17l-5-5"></path>
+            </svg>
+        `;
+        button.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.style.background = '';
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+        alert('Failed to copy reference number');
+    });
+}
+
+// View booking details
+function viewBookingDetails(referenceNumber) {
+    // Redirect to booking details page or show modal
+    window.location.href = `/booking/details/${referenceNumber}`;
+}
+
+// Add hover effects for copy buttons
+document.addEventListener('DOMContentLoaded', function() {
+    const copyButtons = document.querySelectorAll('.btn-copy-reference');
+    copyButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.1)';
+            this.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+            this.style.background = '';
+        });
+    });
+});
+</script>

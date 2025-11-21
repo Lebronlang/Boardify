@@ -12,6 +12,7 @@ from math import ceil
 from sqlalchemy import or_
 from flask_migrate import Migrate
 from flask import jsonify
+from flask import make_response
 import os
 import uuid
 
@@ -226,6 +227,9 @@ def send_monthly_sms():
             bill.sms_sent = True
     db.session.commit()
     print("📆 Monthly reminders sent.")
+
+
+    
 
 
 
@@ -554,6 +558,9 @@ def upload_trend():
 
     return redirect(url_for('dashboard'))
 
+
+
+
 # Add this route to check
 @app.route('/check-user/<email>')
 def check_user(email):
@@ -597,14 +604,13 @@ def pending_bookings():
     properties = Property.query.filter_by(landlord_id=user.id).all()
     property_ids = [p.id for p in properties]
     
-    # Fetch pending bookings for landlord's properties
+    # Fetch pending bookings for landlord's properties, ordered by newest first
     bookings = Booking.query.filter(
         Booking.property_id.in_(property_ids),
         Booking.status == 'pending'
-    ).all()
+    ).order_by(Booking.created_at.desc()).all()
     
     return render_template('pending_bookings.html', bookings=bookings, user=user)
-
 
 @app.route('/delete-user/<email>')
 def delete_user(email):
@@ -810,64 +816,7 @@ def edit_property(property_id):
 
 
 
-# REPLACE your existing delete_property route with this updated version
-@app.route('/delete-property/<int:property_id>', methods=['POST'])
-@login_required
-def delete_property(property_id):
-    """Delete property - landlords can only delete their own properties"""
-    user_id = session.get('user_id')
-    user = User.query.get(user_id)
-    
-    # Get the property
-    property_obj = Property.query.get_or_404(property_id)
-    
-    # Check if user is the owner
-    if user.role != 'landlord' or property_obj.landlord_id != user_id:
-        return jsonify({'success': False, 'message': 'You do not have permission to delete this property.'}), 403
-    
-    try:
-        # Delete all associated images (both files and database records)
-        property_images = PropertyImage.query.filter_by(property_id=property_id).all()
-        for img in property_images:
-            # Delete physical file
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
-            if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
-                except Exception as e:
-                    print(f"Error deleting image file {img.filename}: {e}")
-            
-            # Delete database record
-            db.session.delete(img)
-        
-        # Delete main property image if exists
-        if property_obj.image:
-            main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], property_obj.image)
-            if os.path.exists(main_image_path):
-                try:
-                    os.remove(main_image_path)
-                except Exception as e:
-                    print(f"Error deleting main image: {e}")
-        
-        # Delete associated bookings
-        Booking.query.filter_by(property_id=property_id).delete()
-        
-        # Delete associated bills
-        Billing.query.filter_by(property_id=property_id).delete()
-        
-        # Delete associated reviews
-        Review.query.filter_by(property_id=property_id).delete()
-        
-        # Delete the property
-        db.session.delete(property_obj)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Property deleted successfully'})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error deleting property: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error deleting property: {str(e)}'}), 500
+
 
 
 @app.route('/delete-image', methods=['POST'])
@@ -1359,8 +1308,8 @@ def my_bookings_tenant():
         flash("Access denied. You must be a tenant to view this page.", "danger")
         return redirect(url_for('dashboard'))
 
-    # Fetch all bookings for this tenant
-    bookings = Booking.query.filter_by(tenant_id=user.id).all()
+    # Fetch all bookings for this tenant, ordered by newest first
+    bookings = Booking.query.filter_by(tenant_id=user.id).order_by(Booking.created_at.desc()).all()
 
     return render_template('my_bookings_tenant.html', bookings=bookings, user=user)
 
@@ -1864,7 +1813,7 @@ def dashboard():
         recent_tickets = HelpSupport.query.order_by(HelpSupport.timestamp.desc()).limit(5).all()
         recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
         
-        return render_template(
+        response = make_response(render_template(
             'admin_dashboard.html',
             user=user,
             # Stats
@@ -1879,7 +1828,13 @@ def dashboard():
             # Recent activities
             recent_tickets=recent_tickets,
             recent_users=recent_users
-        )
+        ))
+        
+        # Add cache control headers
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
 
     # --- LANDLORD DASHBOARD ---
     elif user.role == 'landlord':
@@ -1919,7 +1874,7 @@ def dashboard():
             (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
         ).all()
 
-        return render_template(
+        response = make_response(render_template(
             'dashboard.html',
             user=user,
             properties=properties,
@@ -1927,7 +1882,13 @@ def dashboard():
             tenant_bills=tenant_bills,
             chart_image=chart_image,
             policies=relevant_policies
-        )
+        ))
+        
+        # Add cache control headers
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
 
     # --- TENANT DASHBOARD ---
     elif user.role == 'tenant':
@@ -1952,7 +1913,7 @@ def dashboard():
             (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
         ).all()
 
-        return render_template(
+        response = make_response(render_template(
             'dashboard.html',
             user=user,
             properties=bookings,  # For tenants, show their bookings as "properties"
@@ -1960,7 +1921,13 @@ def dashboard():
             tenant_bills=tenant_bills,
             chart_image=chart_image,
             policies=relevant_policies
-        )
+        ))
+        
+        # Add cache control headers
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
 
     # --- FALLBACK: If user role is not recognized ---
     else:
@@ -2382,7 +2349,143 @@ def add_admin_approval_column():
         return "✅ Added is_approved_by_admin column and approved existing landlords!"
     except Exception as e:
         return f"Column might already exist: {str(e)}"
+    
+    # Add this after your existing routes, before the scheduler setup
 
+@app.route('/booking/confirmation/<reference_number>')
+@login_required
+def booking_confirmation(reference_number):
+    """Show booking confirmation with reference number"""
+    booking = Booking.query.filter_by(reference_number=reference_number).first_or_404()
+    
+    # Ensure the current user owns this booking
+    if booking.tenant_id != current_user.id and current_user.role != 'admin':
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
+    
+    return render_template('booking_confirmation.html', 
+                         booking=booking, 
+                         user=current_user)
+
+@app.route('/search_booking', methods=['GET'])
+@login_required
+def search_booking():
+    """Search for booking by reference number"""
+    reference_number = request.args.get('reference', '').strip().upper()
+    
+    if reference_number:
+        booking = Booking.query.filter_by(reference_number=reference_number).first()
+        
+        if booking:
+            # Check if user has permission to view this booking
+            if booking.tenant_id == current_user.id or current_user.role in ['admin', 'landlord']:
+                return redirect(url_for('booking_details', reference_number=reference_number))
+            else:
+                flash("Access denied to this booking.", "danger")
+        else:
+            flash("Booking reference not found.", "danger")
+    
+    # Get recent bookings for the current user
+    recent_bookings = []
+    if current_user.role == 'tenant':
+        recent_bookings = Booking.query.filter_by(tenant_id=current_user.id)\
+            .order_by(Booking.created_at.desc())\
+            .limit(5)\
+            .all()
+    
+    return render_template('search_booking.html', 
+                         user=current_user, 
+                         recent_bookings=recent_bookings)
+@app.route('/booking/details/<reference_number>')
+@login_required
+def booking_details(reference_number):
+    """Show detailed booking information"""
+    booking = Booking.query.filter_by(reference_number=reference_number).first_or_404()
+    
+    # Check permissions
+    if not (booking.tenant_id == current_user.id or 
+            current_user.role == 'admin' or 
+            (current_user.role == 'landlord' and booking.property.landlord_id == current_user.id)):
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
+    
+    # Get billing information
+    billing = Billing.query.filter_by(booking_reference=reference_number).all()
+    
+    return render_template('booking_details.html', 
+                         booking=booking, 
+                         billing=billing,
+                         user=current_user)
+
+@app.route('/delete-property/<int:property_id>', methods=['POST'])
+@login_required
+def delete_property(property_id):
+    user_id = session.get('user_id')
+    user = User.query.get(user_id)
+    
+    property_obj = Property.query.get_or_404(property_id)
+    
+    # DEBUG: Log before deletion
+    count_before = Property.query.filter_by(landlord_id=user.id).count()
+    print(f"=== DELETING PROPERTY DEBUG ===")
+    print(f"User: {user.name} (ID: {user.id})")
+    print(f"Property to delete: {property_obj.title} (ID: {property_obj.id})")
+    print(f"Properties count BEFORE deletion: {count_before}")
+    
+    # Check if user is the owner
+    if user.role != 'landlord' or property_obj.landlord_id != user_id:
+        return jsonify({'success': False, 'message': 'You do not have permission to delete this property.'}), 403
+    
+    try:
+        # Your existing deletion code...
+        property_images = PropertyImage.query.filter_by(property_id=property_id).all()
+        for img in property_images:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    print(f"Error deleting image file {img.filename}: {e}")
+            db.session.delete(img)
+        
+        # Delete main property image if exists
+        if property_obj.image:
+            main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], property_obj.image)
+            if os.path.exists(main_image_path):
+                try:
+                    os.remove(main_image_path)
+                except Exception as e:
+                    print(f"Error deleting main image: {e}")
+        
+        # Delete associated bookings
+        Booking.query.filter_by(property_id=property_id).delete()
+        
+        # Delete associated bills
+        Billing.query.filter_by(property_id=property_id).delete()
+        
+        # Delete associated reviews
+        Review.query.filter_by(property_id=property_id).delete()
+        
+        # Delete the property
+        db.session.delete(property_obj)
+        db.session.commit()
+        
+        # DEBUG: Log after deletion
+        count_after = Property.query.filter_by(landlord_id=user.id).count()
+        print(f"Properties count AFTER deletion: {count_after}")
+        print(f"Successfully deleted property {property_id}")
+        print(f"Count changed from {count_before} to {count_after}")
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Property deleted successfully',
+            'new_count': count_after  # Return the new count to frontend
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting property: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error deleting property: {str(e)}'}), 500
     
 @app.route('/book_property/<int:property_id>', methods=['POST'])
 @login_required
@@ -2446,7 +2549,7 @@ def book_property(property_id):
     print(f"Daily rate: {daily_rate:.2f}")
     print(f"Total bill: {total_bill:.2f}")
     
-    # Create booking and billing
+    # Create booking (reference_number will be auto-generated by the model)
     booking = Booking(
         property_id=property.id,
         tenant_id=current_user.id,
@@ -2456,24 +2559,30 @@ def book_property(property_id):
         total_bill=total_bill
     )
     db.session.add(booking)
+    db.session.flush()  # This generates the ID and reference number without committing
     
+    print(f"Generated booking reference: {booking.reference_number}")
+    
+    # Create billing with reference to booking
     billing = Billing(
         tenant_id=current_user.id,
         property_id=property.id,
         amount=total_bill,
         status='unpaid',
-        due_date=end_date_obj
+        due_date=end_date_obj,
+        booking_reference=booking.reference_number  # Link billing to booking
     )
     db.session.add(billing)
     db.session.commit()
     
     flash(
-        f"Booking requested! {total_days} days × ₱{daily_rate:.2f}/day = ₱{total_bill:,.2f}. Waiting for approval.", 
+        f"Booking requested successfully! Your booking reference is: <strong>{booking.reference_number}</strong><br>"
+        f"{total_days} days × ₱{daily_rate:.2f}/day = ₱{total_bill:,.2f}. Waiting for approval.", 
         "success"
     )
     
-    return redirect(url_for('property_detail', property_id=property.id))
-
+    # Redirect to confirmation page instead of property detail
+    return redirect(url_for('booking_confirmation', reference_number=booking.reference_number))
 
 @app.route('/add-amenities-column')
 def add_amenities_column():
@@ -2494,7 +2603,150 @@ def add_amenities_column():
     except Exception as e:
         return f"Error: {str(e)}"
     
+@app.route('/debug-property-count')
+@login_required
+def debug_property_count():
+    user_id = session.get('user_id')
+    user = User.query.get(user_id)
+    
+    # Count all properties for this landlord
+    all_properties = Property.query.filter_by(landlord_id=user.id).all()
+    total_count = Property.query.filter_by(landlord_id=user.id).count()
+    
+    debug_info = {
+        'user_id': user.id,
+        'user_name': user.name,
+        'all_properties_count': total_count,
+        'properties_list': []
+    }
+    
+    for prop in all_properties:
+        debug_info['properties_list'].append({
+            'id': prop.id,
+            'title': prop.title,
+            'status': prop.status
+        })
+    
+    return jsonify(debug_info)
+    
+@app.route('/reset-db-final-fix')
+def reset_db_final_fix():
+    """Final database reset with all relationship fixes"""
+    try:
+        print("=== FINAL DATABASE RESET ===")
+        
+        # Drop all tables
+        db.drop_all()
+        print("✅ Dropped all tables")
+        
+        # Create all tables with corrected schema
+        db.create_all()
+        print("✅ Created all tables with fixed relationships")
+        
+        # Recreate admin user
+        from werkzeug.security import generate_password_hash
+        admin = User(
+            name="Admin",
+            email="admin@example.com",
+            password_hash=generate_password_hash("admin123", method="pbkdf2:sha256"),
+            role="admin",
+            is_verified=True,
+            is_approved_by_admin=True,
+            gender="Prefer not to say",
+            birthdate=date(1990, 1, 1)
+        )
+        db.session.add(admin)
+        db.session.commit()
+        print("✅ Created admin user")
+        
+        return """
+        <h2>✅ Database Successfully Reset with Fixed Relationships!</h2>
+        <p>All relationship conflicts have been resolved.</p>
+        <p><strong>Fixed relationships:</strong></p>
+        <ul>
+            <li>Property.images → property_images</li>
+            <li>Property.reviews → property_reviews</li>
+            <li>User.reviews → user_reviews</li>
+            <li>User.help_tickets → help_support_tickets</li>
+        </ul>
+        <p><a href="/" class="btn btn-primary">Go to Homepage</a></p>
+        """
+            
+    except Exception as e:
+        import traceback
+        return f"""
+        <h2>❌ Error during reset</h2>
+        <p><strong>Error:</strong> {str(e)}</p>
+        <pre>{traceback.format_exc()}</pre>
+        """
+    
+@app.route('/reset-db-keep-names')
+def reset_db_keep_names():
+    """Reset database while keeping original relationship names"""
+    try:
+        print("=== RESETTING DATABASE WITH ORIGINAL NAMES ===")
+        
+        # Drop all tables
+        db.drop_all()
+        print("✅ Dropped all tables")
+        
+        # Create all tables with corrected schema
+        db.create_all()
+        print("✅ Created all tables with original relationship names")
+        
+        # Recreate admin user
+        from werkzeug.security import generate_password_hash
+        admin = User(
+            name="Admin",
+            email="admin@example.com",
+            password_hash=generate_password_hash("admin123", method="pbkdf2:sha256"),
+            role="admin",
+            is_verified=True,
+            is_approved_by_admin=True,
+            gender="Prefer not to say",
+            birthdate=date(1990, 1, 1)
+        )
+        db.session.add(admin)
+        db.session.commit()
+        print("✅ Created admin user")
+        
+        return """
+        <h2>✅ Database Successfully Reset!</h2>
+        <p>All relationships now use original names that match your templates.</p>
+        <p><strong>Relationship names preserved:</strong></p>
+        <ul>
+            <li>Property.images</li>
+            <li>Property.reviews</li>
+            <li>User.reviews → user_reviews (only this one changed to avoid conflict)</li>
+        </ul>
+        <p><a href="/" class="btn btn-primary">Go to Homepage</a></p>
+        """
+            
+    except Exception as e:
+        import traceback
+        return f"""
+        <h2>❌ Error during reset</h2>
+        <p><strong>Error:</strong> {str(e)}</p>
+        <pre>{traceback.format_exc()}</pre>
+        """
 
+@app.route('/migrate-booking-references')
+def migrate_booking_references():
+    """Add reference numbers to existing bookings"""
+    try:
+        bookings_without_ref = Booking.query.filter(Booking.reference_number == None).all()
+        
+        for booking in bookings_without_ref:
+            # Generate reference for existing bookings
+            from models import generate_booking_reference
+            booking.reference_number = generate_booking_reference()
+            print(f"Added reference {booking.reference_number} to booking {booking.id}")
+        
+        db.session.commit()
+        return f"✅ Added reference numbers to {len(bookings_without_ref)} existing bookings!"
+    except Exception as e:
+        return f"Error: {str(e)}"
+    
 @app.route('/check-property-schema')
 def check_property_schema():
     """Check current property table columns"""

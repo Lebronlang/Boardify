@@ -20,7 +20,7 @@
                                 <i class="bi bi-search search-icon"></i>
                                 <input type="text" class="search-input" placeholder="Search by location, title, or price..." id="searchInput">
                                 <button class="search-btn" id="advancedFilterBtn">
-                                    <i class="bi bi-sliders me-2"></i>Filters
+                                    <i class="bi bi-sliders me-2"></i>Advanced Filters
                                 </button>
                                 <button class="clear-search-btn" id="clearSearchBtn" style="display: none;">
                                     <i class="bi bi-x-lg"></i>
@@ -47,35 +47,180 @@
                 </div>
                 
                 <div class="col-lg-5">
-                    <div class="filter-panel">
-                        <h5 class="filter-panel-title">
-                            <i class="bi bi-funnel-fill me-2"></i>Quick Filters
-                        </h5>
-                        <div class="filter-chips">
-                            <button class="filter-chip active" data-filter="all">
-                                <i class="bi bi-grid-3x3-gap"></i>
-                                All Properties
+                    <!-- Multi-Faceted Filter Panel -->
+                    <div class="multi-facet-filter-panel" id="filterPanel">
+                        <div class="filter-panel-header">
+                            <h5 class="filter-panel-title">
+                                <i class="bi bi-funnel-fill me-2"></i>Multi-Facet Filters
+                            </h5>
+                            <button class="filter-toggle-btn" id="filterToggleBtn">
+                                <i class="bi bi-chevron-down"></i>
                             </button>
-                            <button class="filter-chip" data-filter="available">
-                                <i class="bi bi-check-circle"></i>
-                                Available Now
-                            </button>
-                            <button class="filter-chip" data-filter="budget">
-                                <i class="bi bi-wallet2"></i>
-                                Budget Friendly (₱3000 below)
-                            </button>
-                            <button class="filter-chip" data-filter="girls-only">
-                                <i class="bi bi-gender-female"></i>
-                                Girls Only
-                            </button>
-                            <button class="filter-chip" data-filter="boys-only">
-                                <i class="bi bi-gender-male"></i>
-                                Boys Only
-                            </button>
-                            <button class="filter-chip" data-filter="high-rating">
-                                <i class="bi bi-star-fill"></i>
-                                Top Rated
-                            </button>
+                        </div>
+
+                        <!-- Active Filters Display -->
+                        <div class="active-filters-display" id="activeFiltersDisplay" style="display: none;">
+                            <div class="active-filters-header">
+                                <span class="active-filters-label">Active Filters:</span>
+                                <button class="clear-all-filters" id="clearAllFilters">
+                                    <i class="bi bi-x-circle me-1"></i>Clear All
+                                </button>
+                            </div>
+                            <div class="active-filters-list" id="activeFiltersList"></div>
+                        </div>
+
+                        <!-- Filter Categories -->
+                        <div class="filter-categories" id="filterCategories">
+                            <!-- Status Filter -->
+                            <div class="filter-category">
+                                <div class="filter-category-header" data-category="status">
+                                    <h6 class="filter-category-title">
+                                        <i class="bi bi-check-circle me-2"></i>Status
+                                        <i class="bi bi-chevron-down category-chevron ms-auto"></i>
+                                    </h6>
+                                </div>
+                                <div class="filter-options" data-category-content="status">
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="status" data-filter-value="available">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                            Available Now
+                                        </span>
+                                    </label>
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="status" data-filter-value="full">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                            Fully Booked
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Price Range Filter -->
+                            <div class="filter-category">
+                                <div class="filter-category-header" data-category="price">
+                                    <h6 class="filter-category-title">
+                                        <i class="bi bi-currency-dollar me-2"></i>Price Range
+                                        <i class="bi bi-chevron-down category-chevron ms-auto"></i>
+                                    </h6>
+                                </div>
+                                <div class="filter-options" data-category-content="price">
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="price" data-filter-value="budget">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-wallet2 me-2"></i>
+                                            Budget (₱0 - ₱3,000)
+                                        </span>
+                                    </label>
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="price" data-filter-value="mid-range">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-cash-stack me-2"></i>
+                                            Mid-Range (₱3,001 - ₱6,000)
+                                        </span>
+                                    </label>
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="price" data-filter-value="premium">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-gem me-2"></i>
+                                            Premium (₱6,001+)
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Gender Preference Filter -->
+                            <div class="filter-category">
+                                <div class="filter-category-header" data-category="gender">
+                                    <h6 class="filter-category-title">
+                                        <i class="bi bi-gender-ambiguous me-2"></i>Gender Preference
+                                        <i class="bi bi-chevron-down category-chevron ms-auto"></i>
+                                    </h6>
+                                </div>
+                                <div class="filter-options" data-category-content="gender">
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="gender" data-filter-value="female">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-gender-female text-pink me-2"></i>
+                                            Girls Only
+                                        </span>
+                                    </label>
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="gender" data-filter-value="male">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-gender-male text-blue me-2"></i>
+                                            Boys Only
+                                        </span>
+                                    </label>
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="gender" data-filter-value="both">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-people-fill text-purple me-2"></i>
+                                            Mixed/Gender Neutral
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Amenities Filter -->
+                            <div class="filter-category">
+                                <div class="filter-category-header" data-category="amenity">
+                                    <h6 class="filter-category-title">
+                                        <i class="bi bi-list-check me-2"></i>Amenities
+                                        <i class="bi bi-chevron-down category-chevron ms-auto"></i>
+                                    </h6>
+                                </div>
+                                <div class="filter-options" data-category-content="amenity">
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="amenity" data-filter-value="wifi">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-wifi me-2"></i>
+                                            Free WiFi
+                                        </span>
+                                    </label>
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="amenity" data-filter-value="ac">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-snow me-2"></i>
+                                            Air Conditioning
+                                        </span>
+                                    </label>
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="amenity" data-filter-value="furnished">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-house-door me-2"></i>
+                                            Fully Furnished
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Rating Filter -->
+                            <div class="filter-category">
+                                <div class="filter-category-header" data-category="rating">
+                                    <h6 class="filter-category-title">
+                                        <i class="bi bi-star-fill me-2"></i>Rating
+                                        <i class="bi bi-chevron-down category-chevron ms-auto"></i>
+                                    </h6>
+                                </div>
+                                <div class="filter-options" data-category-content="rating">
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="rating" data-filter-value="high">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-star-fill text-warning me-2"></i>
+                                            4.5+ Stars
+                                        </span>
+                                    </label>
+                                    <label class="filter-option">
+                                        <input type="checkbox" class="filter-checkbox" data-filter-type="rating" data-filter-value="good">
+                                        <span class="filter-option-text">
+                                            <i class="bi bi-star-half text-warning me-2"></i>
+                                            4.0+ Stars
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -132,7 +277,9 @@
                      data-status="{{ item.property.status|lower }}"
                      data-gender="{{ item.property.gender_preference|default('both') }}"
                      data-property-id="{{ item.property.id }}"
-                     data-available-slots="{{ item.slots_left }}">
+                     data-available-slots="{{ item.slots_left }}"
+                     data-amenities="wifi,ac,furnished"
+                     data-rating="4.{{ loop.index % 9 }}">
                     
                     <!-- Property Image Section -->
                     <div class="property-image-wrapper">
@@ -667,63 +814,266 @@
         font-size: 1.1rem;
     }
 
-    /* Filter Panel */
-    .filter-panel {
+    /* Multi-Faceted Filter Panel - REDESIGNED FOR MOBILE */
+    .multi-facet-filter-panel {
         background: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(20px);
-        border-radius: 20px;
-        padding: 1.75rem;
+        border-radius: 16px;
+        padding: 1.25rem;
         border: 1px solid rgba(255, 255, 255, 0.2);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        max-height: 600px;
+        overflow-y: auto;
     }
 
-    body.dark-theme .filter-panel {
+    /* Custom Scrollbar for Filter Panel */
+    .multi-facet-filter-panel::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .multi-facet-filter-panel::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+    }
+
+    .multi-facet-filter-panel::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+    }
+
+    .multi-facet-filter-panel::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    body.dark-theme .multi-facet-filter-panel {
         background: rgba(0, 0, 0, 0.2);
+    }
+
+    .filter-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .filter-panel-title {
         color: white;
-        margin-bottom: 1.25rem;
         font-weight: 700;
         display: flex;
         align-items: center;
-        font-size: 1.1rem;
+        font-size: 1rem;
+        margin: 0;
     }
 
-    .filter-chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-    }
-
-    .filter-chip {
-        background: rgba(255, 255, 255, 0.25);
-        backdrop-filter: blur(10px);
-        color: white;
+    .filter-toggle-btn {
+        background: rgba(255, 255, 255, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.3);
-        padding: 0.7rem 1.25rem;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .filter-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .filter-toggle-btn i {
+        transition: transform 0.3s ease;
+    }
+
+    .filter-toggle-btn.active i {
+        transform: rotate(180deg);
+    }
+
+    /* Active Filters Display */
+    .active-filters-display {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        padding: 0.75rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .active-filters-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .active-filters-label {
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .clear-all-filters {
+        background: rgba(231, 76, 60, 0.9);
+        color: white;
+        border: none;
+        padding: 0.3rem 0.7rem;
         border-radius: 50px;
-        font-size: 0.9rem;
+        font-size: 0.75rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        white-space: nowrap;
+        gap: 0.25rem;
     }
 
-    .filter-chip:hover {
-        background: rgba(255, 255, 255, 0.35);
-        transform: translateY(-2px);
+    .clear-all-filters:hover {
+        background: rgba(192, 57, 43, 0.9);
+        transform: translateY(-1px);
     }
 
-    .filter-chip.active {
+    .active-filters-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .active-filter-tag {
         background: white;
         color: var(--fb-primary);
-        border-color: white;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 0.3rem 0.6rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        animation: slideIn 0.3s ease;
     }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .active-filter-tag i {
+        cursor: pointer;
+        transition: transform 0.2s ease;
+        font-size: 0.85rem;
+    }
+
+    .active-filter-tag i:hover {
+        transform: scale(1.2);
+    }
+
+    /* Filter Categories - COMPACT VERSION */
+    .filter-categories {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .filter-category {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+
+    .filter-category-header {
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .filter-category-title {
+        color: white;
+        font-size: 0.85rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        margin: 0;
+        transition: all 0.3s ease;
+    }
+
+    .category-chevron {
+        font-size: 0.8rem;
+        transition: transform 0.3s ease;
+    }
+
+    .filter-category-header.collapsed + .filter-options {
+        max-height: 0;
+        overflow: hidden;
+        padding: 0;
+        margin: 0;
+    }
+
+    .filter-category-header.collapsed .category-chevron {
+        transform: rotate(-90deg);
+    }
+
+    .filter-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        max-height: 500px;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+
+    .filter-option {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        padding: 0.4rem 0.5rem;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+
+    .filter-option:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .filter-checkbox {
+        margin-right: 0.6rem;
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+    }
+
+    .filter-option-text {
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .filter-option-text i {
+        font-size: 0.9rem;
+    }
+
+    .text-pink { color: #e91e63; }
+    .text-blue { color: #2196f3; }
+    .text-purple { color: #9c27b0; }
+    .text-warning { color: #ff9800; }
+    .text-success { color: #4caf50; }
+    .text-danger { color: #f44336; }
 
     /* Properties Header */
     .properties-header {
@@ -1711,20 +2061,20 @@
         right: 2rem;
         background: var(--fb-primary);
         color: white;
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
         border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-        box-shadow: var(--shadow-lg);
-        z-index: 999;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        opacity: 0;
+        visibility: hidden;
+        z-index: 1000;
+        box-shadow: var(--shadow-lg);
     }
 
     .back-to-top.visible {
@@ -1734,14 +2084,14 @@
 
     .back-to-top:hover {
         background: var(--fb-primary-hover);
-        transform: translateY(-4px);
+        transform: translateY(-3px);
         box-shadow: var(--shadow-xl);
     }
 
     /* Responsive Design */
     @media (max-width: 1200px) {
         .properties-grid {
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
         }
     }
 
@@ -1749,102 +2099,276 @@
         .hero-title {
             font-size: 2.25rem;
         }
-
-        .properties-grid {
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .properties-grid.list-view .property-card {
+        
+        .properties-header {
             flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .header-controls {
+            width: 100%;
+            justify-content: space-between;
         }
 
-        .properties-grid.list-view .property-image-wrapper {
-            width: 100%;
-            min-width: unset;
+        .multi-facet-filter-panel {
+            max-height: 450px;
+            padding: 1rem;
+        }
+
+        .filter-panel-title {
+            font-size: 0.9rem;
         }
     }
 
     @media (max-width: 768px) {
+        .hero-section {
+            padding: 2rem 0;
+        }
+        
         .hero-title {
             font-size: 1.75rem;
         }
 
-        .hero-title i {
-            display: none;
+        .hero-subtitle {
+            font-size: 1rem;
+        }
+        
+        .search-bar {
+            flex-direction: column;
+            border-radius: 16px;
+            padding: 1rem;
+            gap: 0.75rem;
+        }
+        
+        .search-input {
+            width: 100%;
         }
 
-        .search-bar {
+        .search-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+        }
+
+        .search-btn span {
+            display: inline;
+        }
+        
+        .properties-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        
+        .properties-grid.list-view .property-card {
+            flex-direction: column;
+        }
+        
+        .properties-grid.list-view .property-image-wrapper {
+            width: 100%;
+            min-width: auto;
+        }
+        
+        .quick-stats {
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        
+        .stat-badge {
+            flex: 1;
+            min-width: 100px;
+            justify-content: center;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.8rem;
+        }
+
+        /* Mobile Filter Panel Adjustments */
+        .multi-facet-filter-panel {
+            max-height: 400px;
+            padding: 0.9rem;
+        }
+
+        .filter-categories {
+            gap: 0.6rem;
+        }
+
+        .filter-category {
+            padding: 0.6rem;
+        }
+
+        .filter-category-title {
+            font-size: 0.8rem;
+        }
+
+        .filter-option {
+            padding: 0.35rem 0.4rem;
+        }
+
+        .filter-option-text {
+            font-size: 0.75rem;
+        }
+
+        .active-filters-display {
+            padding: 0.6rem;
+        }
+
+        .active-filter-tag {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        /* Collapsible filters by default on mobile */
+        .filter-categories {
+            display: block;
+        }
+
+        .filter-category-header:not(.expanded) + .filter-options {
+            max-height: 0;
+            padding: 0;
+            margin: 0;
+        }
+
+        .filter-category-header:not(.expanded) .category-chevron {
+            transform: rotate(-90deg);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+        }
+
+        .property-count {
+            font-size: 0.85rem;
+            padding: 0.35rem 0.85rem;
+        }
+
+        .property-image-wrapper {
+            height: 240px;
+        }
+
+        .property-stats {
+            gap: 1rem;
             flex-wrap: wrap;
         }
 
-        .search-input {
-            min-width: 200px;
+        .stat {
+            font-size: 0.85rem;
         }
 
-        .quick-stats {
-            flex-direction: column;
-            gap: 0.75rem;
+        .pagination-numbers {
+            gap: 0.35rem;
         }
 
-        .stat-badge {
-            width: 100%;
-            justify-content: center;
+        .page-number {
+            width: 36px;
+            height: 36px;
+            font-size: 0.9rem;
         }
 
-        .filter-chips {
-            justify-content: center;
+        .pagination-btn {
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
         }
+    }
 
-        .properties-header {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .header-left {
+    @media (max-width: 576px) {
+        .hero-title {
+            font-size: 1.5rem;
             flex-direction: column;
             align-items: flex-start;
         }
 
-        .header-controls {
+        .hero-title i {
+            margin-bottom: 0.5rem;
+        }
+
+        .hero-subtitle {
+            font-size: 0.95rem;
+        }
+
+        .search-bar {
+            padding: 0.85rem;
+        }
+
+        .search-btn {
+            padding: 0.65rem 1.25rem;
+            font-size: 0.9rem;
+        }
+
+        .quick-stats {
             flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .stat-badge {
             width: 100%;
+            min-width: auto;
         }
 
-        .sort-select,
-        .view-toggle {
-            width: 100%;
+        /* Ultra compact filter panel for small phones */
+        .multi-facet-filter-panel {
+            max-height: 350px;
+            padding: 0.75rem;
         }
 
-        .properties-grid {
-            grid-template-columns: 1fr;
+        .filter-panel-header {
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.6rem;
         }
 
+        .filter-panel-title {
+            font-size: 0.85rem;
+        }
+
+        .filter-toggle-btn {
+            width: 28px;
+            height: 28px;
+        }
+
+        .filter-category {
+            padding: 0.5rem;
+        }
+
+        .filter-option {
+            padding: 0.3rem 0.35rem;
+        }
+
+        .filter-checkbox {
+            width: 12px;
+            height: 12px;
+            margin-right: 0.5rem;
+        }
+
+        .filter-option-text {
+            font-size: 0.7rem;
+        }
+
+        .filter-option-text i {
+            font-size: 0.8rem;
+        }
+
+        .active-filters-label {
+            font-size: 0.7rem;
+        }
+
+        .clear-all-filters {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.6rem;
+        }
+        
         .property-footer {
             flex-direction: column;
-            align-items: stretch;
+            align-items: flex-start;
+            gap: 1rem;
         }
-
+        
+        .action-section {
+            width: 100%;
+        }
+        
         .btn-action {
             width: 100%;
             justify-content: center;
         }
-
-        .property-stats {
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .pagination-wrapper {
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .pagination-numbers {
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
+        
         .delete-modal {
             padding: 1.5rem;
         }
@@ -1856,7 +2380,7 @@
         }
 
         .delete-modal-title {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
         }
 
         .delete-modal-actions {
@@ -1864,463 +2388,617 @@
         }
 
         .delete-modal-btn {
+            padding: 0.85rem 1.25rem;
+        }
+
+        .header-controls {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .sort-dropdown,
+        .view-toggle {
             width: 100%;
         }
-    }
 
-    @media (max-width: 576px) {
-        .container {
-            padding-left: 1rem;
-            padding-right: 1rem;
+        .sort-select {
+            width: 100%;
         }
 
-        .hero-section {
-            padding: 2rem 0;
-        }
-
-        .property-content {
-            padding: 1.25rem;
-        }
-
-        .property-features {
-            gap: 0.5rem;
-        }
-
-        .feature-item {
-            padding: 0.4rem 0.75rem;
-            font-size: 0.8rem;
+        .view-toggle {
+            justify-content: center;
         }
 
         .back-to-top {
             bottom: 1rem;
             right: 1rem;
-            width: 48px;
-            height: 48px;
+            width: 45px;
+            height: 45px;
         }
     }
 
-    /* Loading Animation */
-    .loading-spinner {
-        display: none;
-        text-align: center;
-        padding: 2rem;
-    }
+    @media (max-width: 400px) {
+        .hero-title {
+            font-size: 1.35rem;
+        }
 
-    .loading-spinner.active {
-        display: block;
-    }
+        .multi-facet-filter-panel {
+            max-height: 300px;
+        }
 
-    .spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid var(--fb-light-blue);
-        border-top: 4px solid var(--fb-primary);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 1rem;
-    }
+        .filter-panel-title i {
+            display: none;
+        }
 
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        .property-title {
+            font-size: 1.15rem;
+        }
+
+        .price-amount {
+            font-size: 1.5rem;
+        }
     }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // DOM Elements
-    const propertiesContainer = document.getElementById('propertiesContainer');
-    const propertyCards = document.querySelectorAll('.property-card');
-    const filterChips = document.querySelectorAll('.filter-chip');
-    const searchInput = document.getElementById('searchInput');
-    const clearSearchBtn = document.getElementById('clearSearchBtn');
-    const sortSelect = document.getElementById('sortSelect');
-    const viewToggle = document.querySelectorAll('.view-btn');
-    const backToTopBtn = document.getElementById('backToTop');
-    const propertyCount = document.getElementById('propertyCount');
-    const totalPropertiesCount = document.getElementById('totalPropertiesCount');
-    
-    // Delete Modal Elements
-    const deleteModal = document.getElementById('deleteModal');
-    const deletePropertyName = document.getElementById('deletePropertyName');
-    const cancelDeleteBtn = document.getElementById('cancelDelete');
-    const confirmDeleteBtn = document.getElementById('confirmDelete');
-    
-    // Current filter state
-    let currentFilter = 'all';
-    let currentSearch = '';
-    let currentSort = 'default';
-    let currentView = 'grid';
-
-    // Initialize
-    initializeEventListeners();
-    updateSlotsProgressBars();
-
-    function initializeEventListeners() {
-        // Filter chips
-        filterChips.forEach(chip => {
-            chip.addEventListener('click', () => {
-                filterChips.forEach(c => c.classList.remove('active'));
-                chip.classList.add('active');
-                currentFilter = chip.dataset.filter;
-                filterProperties();
-            });
-        });
-
-        // Search input
-        searchInput.addEventListener('input', (e) => {
-            currentSearch = e.target.value.toLowerCase().trim();
-            clearSearchBtn.style.display = currentSearch ? 'flex' : 'none';
-            filterProperties();
-        });
-
-        // Clear search
-        clearSearchBtn.addEventListener('click', () => {
-            searchInput.value = '';
-            currentSearch = '';
-            clearSearchBtn.style.display = 'none';
-            filterProperties();
-        });
-
-        // Sort select
-        sortSelect.addEventListener('change', (e) => {
-            currentSort = e.target.value;
-            sortProperties();
-        });
-
-        // View toggle
-        viewToggle.forEach(btn => {
-            btn.addEventListener('click', () => {
-                viewToggle.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentView = btn.dataset.view;
-                propertiesContainer.className = `properties-grid ${currentView}-view`;
-            });
-        });
-
-        // Back to top
-        backToTopBtn.addEventListener('click', scrollToTop);
-        window.addEventListener('scroll', toggleBackToTop);
-
-        // Delete property buttons
-        document.querySelectorAll('.delete-icon').forEach(btn => {
-            btn.addEventListener('click', openDeleteModal);
-        });
-
-        // Delete modal actions
-        cancelDeleteBtn.addEventListener('click', closeDeleteModal);
-        confirmDeleteBtn.addEventListener('click', confirmDelete);
-
-        // Favorite buttons
-        document.querySelectorAll('.favorite-btn').forEach(btn => {
-            btn.addEventListener('click', toggleFavorite);
-        });
-    }
-
-    function filterProperties() {
-        let visibleCount = 0;
-        
-        propertyCards.forEach(card => {
-            const slots = parseInt(card.dataset.slots);
-            const price = parseFloat(card.dataset.price);
-            const gender = card.dataset.gender;
-            const title = card.querySelector('.property-title').textContent.toLowerCase();
-            const location = card.querySelector('.property-location span').textContent.toLowerCase();
-            const description = card.querySelector('.property-description').textContent.toLowerCase();
-            
-            let matchesFilter = true;
-            let matchesSearch = true;
-            
-            // Apply filter
-            switch (currentFilter) {
-                case 'available':
-                    matchesFilter = slots > 0;
-                    break;
-                case 'budget':
-                    matchesFilter = price <= 3000;
-                    break;
-                case 'girls-only':
-                    matchesFilter = gender === 'female';
-                    break;
-                case 'boys-only':
-                    matchesFilter = gender === 'male';
-                    break;
-                case 'high-rating':
-                    // For demo purposes, assume properties with ID ending with even numbers are high-rated
-                    matchesFilter = parseInt(card.dataset.propertyId) % 2 === 0;
-                    break;
-                case 'all':
-                default:
-                    matchesFilter = true;
+    document.addEventListener('DOMContentLoaded', function() {
+        // Multi-Faceted Filter System
+        class MultiFacetFilter {
+            constructor() {
+                this.activeFilters = new Map();
+                this.properties = Array.from(document.querySelectorAll('.property-card'));
+                this.searchInput = document.getElementById('searchInput');
+                this.sortSelect = document.getElementById('sortSelect');
+                this.clearSearchBtn = document.getElementById('clearSearchBtn');
+                this.clearAllFiltersBtn = document.getElementById('clearAllFilters');
+                this.activeFiltersDisplay = document.getElementById('activeFiltersDisplay');
+                this.activeFiltersList = document.getElementById('activeFiltersList');
+                this.propertyCount = document.getElementById('propertyCount');
+                this.totalPropertiesCount = document.getElementById('totalPropertiesCount');
+                
+                this.init();
             }
-            
-            // Apply search
-            if (currentSearch) {
-                matchesSearch = title.includes(currentSearch) || 
-                              location.includes(currentSearch) || 
-                              description.includes(currentSearch);
+
+            init() {
+                this.bindEvents();
+                this.updatePropertyCount();
+                this.initializeCollapsibleCategories();
             }
-            
-            // Show/hide card
-            if (matchesFilter && matchesSearch) {
-                card.style.display = 'flex';
-                visibleCount++;
-            } else {
-                card.style.display = 'none';
+
+            initializeCollapsibleCategories() {
+                // Collapse all categories by default on mobile
+                const isMobile = window.innerWidth <= 768;
+                
+                document.querySelectorAll('.filter-category-header').forEach(header => {
+                    header.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        header.classList.toggle('expanded');
+                        header.classList.toggle('collapsed');
+                    });
+
+                    // Set initial state
+                    if (isMobile) {
+                        header.classList.add('collapsed');
+                    } else {
+                        header.classList.add('expanded');
+                    }
+                });
             }
-        });
-        
-        // Update counters
-        propertyCount.textContent = `${visibleCount} properties found`;
-        totalPropertiesCount.textContent = visibleCount;
-        
-        // Show empty state if no properties
-        const emptyState = document.querySelector('.empty-state');
-        if (visibleCount === 0) {
-            if (!emptyState) {
-                showEmptyState();
+
+            bindEvents() {
+                // Filter checkbox events
+                document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => this.handleFilterChange(e));
+                });
+
+                // Search input events
+                this.searchInput.addEventListener('input', (e) => this.handleSearch(e));
+                this.clearSearchBtn.addEventListener('click', () => this.clearSearch());
+
+                // Sort events
+                this.sortSelect.addEventListener('change', (e) => this.handleSort(e));
+
+                // Clear all filters
+                this.clearAllFiltersBtn.addEventListener('click', () => this.clearAllFilters());
+
+                // Filter toggle for mobile
+                const filterToggleBtn = document.getElementById('filterToggleBtn');
+                const filterCategories = document.getElementById('filterCategories');
+                
+                if (filterToggleBtn) {
+                    filterToggleBtn.addEventListener('click', () => {
+                        if (filterCategories.style.display === 'none') {
+                            filterCategories.style.display = 'flex';
+                            filterToggleBtn.classList.add('active');
+                        } else {
+                            filterCategories.style.display = 'none';
+                            filterToggleBtn.classList.remove('active');
+                        }
+                    });
+
+                    // Start with filters visible on desktop, hidden on mobile
+                    if (window.innerWidth <= 768) {
+                        filterCategories.style.display = 'none';
+                    }
+                }
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    const filterCategories = document.getElementById('filterCategories');
+                    if (window.innerWidth > 768 && filterCategories) {
+                        filterCategories.style.display = 'flex';
+                    }
+                });
             }
-        } else if (emptyState) {
-            emptyState.remove();
+
+            handleFilterChange(event) {
+                const checkbox = event.target;
+                const filterType = checkbox.dataset.filterType;
+                const filterValue = checkbox.dataset.filterValue;
+                const isChecked = checkbox.checked;
+
+                if (isChecked) {
+                    this.addFilter(filterType, filterValue);
+                } else {
+                    this.removeFilter(filterType, filterValue);
+                }
+
+                this.applyFilters();
+            }
+
+            addFilter(type, value) {
+                if (!this.activeFilters.has(type)) {
+                    this.activeFilters.set(type, new Set());
+                }
+                this.activeFilters.get(type).add(value);
+                this.updateActiveFiltersDisplay();
+            }
+
+            removeFilter(type, value) {
+                if (this.activeFilters.has(type)) {
+                    this.activeFilters.get(type).delete(value);
+                    if (this.activeFilters.get(type).size === 0) {
+                        this.activeFilters.delete(type);
+                    }
+                }
+                this.updateActiveFiltersDisplay();
+            }
+
+            updateActiveFiltersDisplay() {
+                // Clear current display
+                this.activeFiltersList.innerHTML = '';
+
+                if (this.activeFilters.size === 0) {
+                    this.activeFiltersDisplay.style.display = 'none';
+                    return;
+                }
+
+                this.activeFiltersDisplay.style.display = 'block';
+
+                // Add active filter tags
+                for (const [type, values] of this.activeFilters) {
+                    for (const value of values) {
+                        const filterTag = this.createFilterTag(type, value);
+                        this.activeFiltersList.appendChild(filterTag);
+                    }
+                }
+            }
+
+            createFilterTag(type, value) {
+                const tag = document.createElement('div');
+                tag.className = 'active-filter-tag';
+                
+                const displayText = this.getFilterDisplayText(type, value);
+                tag.innerHTML = `
+                    ${displayText}
+                    <i class="bi bi-x" data-filter-type="${type}" data-filter-value="${value}"></i>
+                `;
+
+                // Add remove event
+                tag.querySelector('i').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.removeFilter(type, value);
+                    this.uncheckCorrespondingCheckbox(type, value);
+                    this.applyFilters();
+                });
+
+                return tag;
+            }
+
+            getFilterDisplayText(type, value) {
+                const displayTexts = {
+                    status: {
+                        available: 'Available Now',
+                        full: 'Fully Booked'
+                    },
+                    price: {
+                        budget: 'Budget (₱0-₱3,000)',
+                        'mid-range': 'Mid-Range (₱3,001-₱6,000)',
+                        premium: 'Premium (₱6,001+)'
+                    },
+                    gender: {
+                        female: 'Girls Only',
+                        male: 'Boys Only',
+                        both: 'Mixed/Gender Neutral'
+                    },
+                    amenity: {
+                        wifi: 'Free WiFi',
+                        ac: 'Air Conditioning',
+                        furnished: 'Fully Furnished'
+                    },
+                    rating: {
+                        high: '4.5+ Stars',
+                        good: '4.0+ Stars'
+                    }
+                };
+
+                return displayTexts[type]?.[value] || value;
+            }
+
+            uncheckCorrespondingCheckbox(type, value) {
+                const checkbox = document.querySelector(
+                    `.filter-checkbox[data-filter-type="${type}"][data-filter-value="${value}"]`
+                );
+                if (checkbox) {
+                    checkbox.checked = false;
+                }
+            }
+
+            handleSearch(event) {
+                const searchTerm = event.target.value.toLowerCase().trim();
+                
+                if (searchTerm) {
+                    this.clearSearchBtn.style.display = 'flex';
+                } else {
+                    this.clearSearchBtn.style.display = 'none';
+                }
+
+                this.applyFilters();
+            }
+
+            clearSearch() {
+                this.searchInput.value = '';
+                this.clearSearchBtn.style.display = 'none';
+                this.applyFilters();
+            }
+
+            handleSort(event) {
+                this.applyFilters();
+            }
+
+            clearAllFilters() {
+                // Clear active filters
+                this.activeFilters.clear();
+                
+                // Uncheck all checkboxes
+                document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                
+                // Clear search
+                this.clearSearch();
+                
+                // Update display
+                this.updateActiveFiltersDisplay();
+                this.applyFilters();
+            }
+
+            applyFilters() {
+                const searchTerm = this.searchInput.value.toLowerCase().trim();
+                const sortValue = this.sortSelect.value;
+                
+                let visibleCount = 0;
+
+                this.properties.forEach(property => {
+                    let matchesSearch = true;
+                    let matchesFilters = true;
+
+                    // Apply search filter
+                    if (searchTerm) {
+                        const title = property.querySelector('.property-title').textContent.toLowerCase();
+                        const location = property.querySelector('.property-location span').textContent.toLowerCase();
+                        const price = property.querySelector('.price-amount').textContent.toLowerCase();
+                        
+                        matchesSearch = title.includes(searchTerm) || 
+                                       location.includes(searchTerm) || 
+                                       price.includes(searchTerm);
+                    }
+
+                    // Apply multi-facet filters
+                    if (this.activeFilters.size > 0) {
+                        matchesFilters = this.matchesAllFilters(property);
+                    }
+
+                    // Show/hide property based on filters
+                    if (matchesSearch && matchesFilters) {
+                        property.style.display = 'flex';
+                        visibleCount++;
+                    } else {
+                        property.style.display = 'none';
+                    }
+                });
+
+                // Apply sorting
+                this.sortProperties(sortValue);
+
+                // Update counters
+                this.updatePropertyCount(visibleCount);
+            }
+
+            matchesAllFilters(property) {
+                for (const [type, values] of this.activeFilters) {
+                    let matchesThisType = false;
+
+                    for (const value of values) {
+                        if (this.matchesFilter(property, type, value)) {
+                            matchesThisType = true;
+                            break;
+                        }
+                    }
+
+                    if (!matchesThisType) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            matchesFilter(property, type, value) {
+                const propertyData = {
+                    slots: parseInt(property.dataset.slots),
+                    price: parseInt(property.dataset.price),
+                    status: property.dataset.status,
+                    gender: property.dataset.gender,
+                    amenities: property.dataset.amenities?.split(','),
+                    rating: parseFloat(property.dataset.rating)
+                };
+
+                switch (type) {
+                    case 'status':
+                        if (value === 'available') {
+                            return propertyData.slots > 0;
+                        } else if (value === 'full') {
+                            return propertyData.slots === 0;
+                        }
+                        break;
+
+                    case 'price':
+                        if (value === 'budget') {
+                            return propertyData.price <= 3000;
+                        } else if (value === 'mid-range') {
+                            return propertyData.price > 3000 && propertyData.price <= 6000;
+                        } else if (value === 'premium') {
+                            return propertyData.price > 6000;
+                        }
+                        break;
+
+                    case 'gender':
+                        return propertyData.gender === value;
+
+                    case 'amenity':
+                        return propertyData.amenities?.includes(value);
+
+                    case 'rating':
+                        if (value === 'high') {
+                            return propertyData.rating >= 4.5;
+                        } else if (value === 'good') {
+                            return propertyData.rating >= 4.0;
+                        }
+                        break;
+                }
+
+                return false;
+            }
+
+            sortProperties(sortValue) {
+                const container = document.getElementById('propertiesContainer');
+                const visibleProperties = Array.from(this.properties).filter(p => p.style.display !== 'none');
+
+                visibleProperties.sort((a, b) => {
+                    const aData = {
+                        price: parseInt(a.dataset.price),
+                        slots: parseInt(a.dataset.slots),
+                        id: parseInt(a.dataset.propertyId)
+                    };
+                    const bData = {
+                        price: parseInt(b.dataset.price),
+                        slots: parseInt(b.dataset.slots),
+                        id: parseInt(b.dataset.propertyId)
+                    };
+
+                    switch (sortValue) {
+                        case 'price-low':
+                            return aData.price - bData.price;
+                        case 'price-high':
+                            return bData.price - aData.price;
+                        case 'newest':
+                            return bData.id - aData.id;
+                        case 'slots':
+                            return bData.slots - aData.slots;
+                        default:
+                            return 0;
+                    }
+                });
+
+                // Reorder properties in DOM
+                visibleProperties.forEach(property => {
+                    container.appendChild(property);
+                });
+            }
+
+            updatePropertyCount(visibleCount = null) {
+                const totalCount = this.properties.length;
+                const currentCount = visibleCount !== null ? visibleCount : totalCount;
+                
+                // Update the main property count below the header
+                this.propertyCount.textContent = `${currentCount} ${currentCount === 1 ? 'property' : 'properties'} found`;
+                
+                // Update the total properties count in the hero section (stat badge)
+                this.totalPropertiesCount.textContent = currentCount;
+            }
         }
-    }
 
-    function sortProperties() {
-        const container = propertiesContainer;
-        const cards = Array.from(container.querySelectorAll('.property-card[style*="display: flex"]'));
-        
-        cards.sort((a, b) => {
-            const priceA = parseFloat(a.dataset.price);
-            const priceB = parseFloat(b.dataset.price);
-            const slotsA = parseInt(a.dataset.slots);
-            const slotsB = parseInt(b.dataset.slots);
-            const idA = parseInt(a.dataset.propertyId);
-            const idB = parseInt(b.dataset.propertyId);
-            
-            switch (currentSort) {
-                case 'price-low':
-                    return priceA - priceB;
-                case 'price-high':
-                    return priceB - priceA;
-                case 'newest':
-                    return idB - idA;
-                case 'slots':
-                    return slotsB - slotsA;
-                case 'default':
-                default:
-                    return 0;
+        // Initialize the multi-facet filter system
+        const filterSystem = new MultiFacetFilter();
+
+        // View Toggle Functionality
+        const viewButtons = document.querySelectorAll('.view-btn');
+        const propertiesContainer = document.getElementById('propertiesContainer');
+
+        viewButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const view = button.dataset.view;
+                
+                // Update active button
+                viewButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Update view
+                propertiesContainer.className = 'properties-grid';
+                if (view === 'list') {
+                    propertiesContainer.classList.add('list-view');
+                }
+            });
+        });
+
+        // Back to Top Functionality
+        const backToTopBtn = document.getElementById('backToTop');
+
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopBtn.classList.add('visible');
+            } else {
+                backToTopBtn.classList.remove('visible');
             }
         });
-        
-        // Reorder cards
-        cards.forEach(card => container.appendChild(card));
-    }
 
-    function updateSlotsProgressBars() {
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Delete Property Functionality
+        const deleteModal = document.getElementById('deleteModal');
+        const cancelDeleteBtn = document.getElementById('cancelDelete');
+        const confirmDeleteBtn = document.getElementById('confirmDelete');
+        const deletePropertyName = document.getElementById('deletePropertyName');
+
+        let currentDeleteProperty = null;
+
+        document.querySelectorAll('.delete-icon').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentDeleteProperty = {
+                    id: button.dataset.propertyId,
+                    title: button.dataset.propertyTitle
+                };
+                
+                deletePropertyName.textContent = currentDeleteProperty.title;
+                deleteModal.classList.add('active');
+                confirmDeleteBtn.disabled = true;
+                
+                // Enable delete button after 2 seconds
+                setTimeout(() => {
+                    confirmDeleteBtn.disabled = false;
+                }, 2000);
+            });
+        });
+
+        cancelDeleteBtn.addEventListener('click', () => {
+            deleteModal.classList.remove('active');
+            currentDeleteProperty = null;
+        });
+
+        confirmDeleteBtn.addEventListener('click', () => {
+            if (currentDeleteProperty) {
+                // Find and animate the property card
+                const propertyCard = document.querySelector(`[data-property-id="${currentDeleteProperty.id}"]`);
+                if (propertyCard) {
+                    propertyCard.classList.add('deleting');
+                    
+                    // Show loading state on button
+                    confirmDeleteBtn.disabled = true;
+                    confirmDeleteBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Deleting...';
+                    
+                    // Call the actual delete function
+                    deleteProperty(currentDeleteProperty.id);
+                    
+                    // Close modal after a short delay
+                    setTimeout(() => {
+                        deleteModal.classList.remove('active');
+                        // Reset button state
+                        confirmDeleteBtn.disabled = false;
+                        confirmDeleteBtn.innerHTML = '<i class="bi bi-trash-fill me-2"></i>Delete Property';
+                    }, 1000);
+                }
+            }
+        });
+
+        // Function to delete property with page refresh
+        function deleteProperty(propertyId) {
+            fetch(`/delete-property/${propertyId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    alert('Property deleted successfully!');
+                    
+                    // Force refresh the page to update all counts
+                    window.location.href = '/dashboard'; // Redirect to dashboard
+                } else {
+                    alert('Error: ' + data.message);
+                    // If error, show the property card again
+                    const propertyCard = document.querySelector(`[data-property-id="${propertyId}"]`);
+                    if (propertyCard) {
+                        propertyCard.classList.remove('deleting');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting property. Please try again.');
+                // If error, show the property card again
+                const propertyCard = document.querySelector(`[data-property-id="${propertyId}"]`);
+                if (propertyCard) {
+                    propertyCard.classList.remove('deleting');
+                }
+            });
+        }
+
+        // Initialize progress bars
         document.querySelectorAll('.slots-progress-bar').forEach(bar => {
             const width = bar.dataset.width;
             bar.style.width = `${width}%`;
         });
-    }
 
-    function toggleFavorite(e) {
-        const btn = e.currentTarget;
-        btn.classList.toggle('active');
-        
-        // Here you would typically make an API call to update favorites
-        const propertyId = btn.dataset.propertyId;
-        console.log('Toggled favorite for property:', propertyId);
-        
-        // Show feedback
-        showNotification(btn.classList.contains('active') ? 
-            'Added to favorites' : 'Removed from favorites');
-    }
-
-    function openDeleteModal(e) {
-        const btn = e.currentTarget;
-        const propertyId = btn.dataset.propertyId;
-        const propertyTitle = btn.dataset.propertyTitle;
-        
-        deletePropertyName.textContent = propertyTitle;
-        deleteModal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        
-        // Store property ID for deletion
-        deleteModal.dataset.propertyId = propertyId;
-        
-        // Enable confirm button after a short delay (safety measure)
-        setTimeout(() => {
-            confirmDeleteBtn.disabled = false;
-        }, 1000);
-    }
-
-    function closeDeleteModal() {
-        deleteModal.classList.remove('active');
-        document.body.style.overflow = '';
-        confirmDeleteBtn.disabled = true;
-    }
-
-    function confirmDelete() {
-        const propertyId = deleteModal.dataset.propertyId;
-        const propertyCard = document.querySelector(`.property-card[data-property-id="${propertyId}"]`);
-        
-        if (propertyCard) {
-            // Add deleting animation
-            propertyCard.classList.add('deleting');
-            
-            // Simulate API call
-            setTimeout(() => {
-                propertyCard.remove();
-                updatePropertyCount();
-                showNotification('Property deleted successfully');
-                closeDeleteModal();
-            }, 500);
-        }
-    }
-
-    function updatePropertyCount() {
-        const visibleCards = document.querySelectorAll('.property-card[style*="display: flex"]').length;
-        propertyCount.textContent = `${visibleCards} properties found`;
-        totalPropertiesCount.textContent = visibleCards;
-    }
-
-    function showEmptyState() {
-        const emptyState = document.createElement('div');
-        emptyState.className = 'empty-state';
-        emptyState.innerHTML = `
-            <div class="empty-icon">
-                <i class="bi bi-inbox"></i>
-            </div>
-            <h3>No Properties Found</h3>
-            <p>Try adjusting your filters or check back later for new listings.</p>
-        `;
-        propertiesContainer.appendChild(emptyState);
-    }
-
-    function showNotification(message) {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = 'notification';
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--fb-primary);
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 10px;
-            box-shadow: var(--shadow-lg);
-            z-index: 10001;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Animate in
-        setTimeout(() => {
-            notification.style.transform = 'translateX(0)';
-        }, 100);
-        
-        // Remove after 3 seconds
-        setTimeout(() => {
-            notification.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                notification.remove();
-            }, 300);
-        }, 3000);
-    }
-
-    function toggleBackToTop() {
-        if (window.pageYOffset > 300) {
-            backToTopBtn.classList.add('visible');
-        } else {
-            backToTopBtn.classList.remove('visible');
-        }
-    }
-
-    function scrollToTop() {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
-    }
-
-    // Enhanced filter function that fixes the available slots issue
-    function enhancedFilterProperties() {
-        let visibleCount = 0;
-        
-        propertyCards.forEach(card => {
-            const availableSlots = parseInt(card.dataset.availableSlots);
-            const price = parseFloat(card.dataset.price);
-            const gender = card.dataset.gender;
-            const title = card.querySelector('.property-title').textContent.toLowerCase();
-            const location = card.querySelector('.property-location span').textContent.toLowerCase();
-            const description = card.querySelector('.property-description').textContent.toLowerCase();
-            
-            let matchesFilter = true;
-            let matchesSearch = true;
-            
-            // Apply filter with proper slot checking
-            switch (currentFilter) {
-                case 'available':
-                    // FIX: Only show properties with available slots
-                    matchesFilter = availableSlots > 0;
-                    break;
-                case 'budget':
-                    // FIX: Budget friendly filter for ₱3000 and below
-                    matchesFilter = price <= 3000;
-                    break;
-                case 'girls-only':
-                    matchesFilter = gender === 'female';
-                    break;
-                case 'boys-only':
-                    matchesFilter = gender === 'male';
-                    break;
-                case 'high-rating':
-                    matchesFilter = parseInt(card.dataset.propertyId) % 2 === 0;
-                    break;
-                case 'all':
-                default:
-                    matchesFilter = true;
-            }
-            
-            // Apply search
-            if (currentSearch) {
-                matchesSearch = title.includes(currentSearch) || 
-                              location.includes(currentSearch) || 
-                              description.includes(currentSearch);
-            }
-            
-            // Show/hide card
-            if (matchesFilter && matchesSearch) {
-                card.style.display = 'flex';
-                visibleCount++;
-            } else {
-                card.style.display = 'none';
+        // Close modal when clicking outside
+        deleteModal.addEventListener('click', (e) => {
+            if (e.target === deleteModal) {
+                deleteModal.classList.remove('active');
+                currentDeleteProperty = null;
             }
         });
-        
-        // Update counters
-        updatePropertyDisplay(visibleCount);
-    }
 
-    function updatePropertyDisplay(visibleCount) {
-        propertyCount.textContent = `${visibleCount} properties found`;
-        totalPropertiesCount.textContent = visibleCount;
-        
-        // Handle empty state
-        const emptyState = document.querySelector('.empty-state');
-        if (visibleCount === 0 && !emptyState) {
-            showEmptyState();
-        } else if (visibleCount > 0 && emptyState) {
-            emptyState.remove();
-        }
-    }
-
-    // Override the original filter function with the enhanced one
-    window.filterProperties = enhancedFilterProperties;
-});
+        // Favorite functionality (if user is tenant)
+        document.querySelectorAll('.favorite-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                btn.classList.toggle('active');
+            });
+        });
+    });
 </script>
 {% endblock %}
