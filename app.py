@@ -863,47 +863,90 @@ def profile():
 
 @app.route('/test-email')
 def test_email():
-    """Test email configuration"""
-    if not EMAIL_ENABLED:
-        return jsonify({"error": "Email not configured"}), 400
-    
+    """Test email configuration - SIMPLIFIED VERSION"""
     try:
-        # Test connection
-        with mail.connect() as conn:
-            pass
+        print("🔧 Starting email test...")
         
-        # Try to send a test email
-        test_email = os.environ.get('MAIL_USERNAME')
-        msg = Message(
-            subject='Boardify Test Email',
-            recipients=[test_email],
-            body='This is a test email from Boardify. If you receive this, email is working!'
-        )
-        mail.send(msg)
+        # Check basic email config
+        config_status = {
+            'MAIL_SERVER': app.config.get('MAIL_SERVER'),
+            'MAIL_PORT': app.config.get('MAIL_PORT'),
+            'MAIL_USERNAME': app.config.get('MAIL_USERNAME'),
+            'MAIL_PASSWORD_SET': bool(app.config.get('MAIL_PASSWORD')),
+            'EMAIL_ENABLED': EMAIL_ENABLED
+        }
+        
+        if not EMAIL_ENABLED:
+            return jsonify({
+                "status": "email_disabled", 
+                "message": "Email is not enabled",
+                "config": config_status
+            })
+        
+        # Test SMTP connection
+        try:
+            with mail.connect() as conn:
+                smtp_status = "connected"
+        except Exception as e:
+            smtp_status = f"connection_failed: {str(e)}"
+        
+        # Try to send test email
+        test_recipient = app.config['MAIL_USERNAME']
+        try:
+            msg = Message(
+                subject='Boardify Test Email',
+                recipients=[test_recipient],
+                body=f'Test email sent at {datetime.utcnow().isoformat()}'
+            )
+            mail.send(msg)
+            email_sent = True
+            message = f"Test email sent to {test_recipient}"
+        except Exception as e:
+            email_sent = False
+            message = f"Failed to send email: {str(e)}"
         
         return jsonify({
-            "status": "success",
-            "message": f"Test email sent to {test_email}",
-            "config": {
-                "server": app.config['MAIL_SERVER'],
-                "port": app.config['MAIL_PORT'],
-                "tls": app.config['MAIL_USE_TLS'],
-                "username": app.config['MAIL_USERNAME'],
-                "sender": app.config['MAIL_DEFAULT_SENDER']
-            }
+            "status": "success" if email_sent else "partial",
+            "message": message,
+            "smtp_connection": smtp_status,
+            "email_sent": email_sent,
+            "config": config_status
         })
         
     except Exception as e:
         return jsonify({
             "status": "error",
-            "message": str(e),
+            "message": f"Route error: {str(e)}",
             "config": {
-                "server": app.config['MAIL_SERVER'],
-                "port": app.config['MAIL_PORT'],
-                "tls": app.config['MAIL_USE_TLS'],
-                "username": app.config['MAIL_USERNAME']
+                'EMAIL_ENABLED': EMAIL_ENABLED,
+                'MAIL_SERVER': app.config.get('MAIL_SERVER')
             }
         }), 500
+    
+@app.route('/')
+def home_debug():
+    return jsonify({
+        "message": "Boardify is running",
+        "endpoints": {
+            "health": "/health",
+            "test_email": "/test-email",
+            "debug_config": "/debug-config"
+        }
+    })
+
+@app.route('/debug-config')
+def debug_config():
+    """Debug configuration without sensitive info"""
+    return jsonify({
+        "database_url": "SET" if app.config.get('SQLALCHEMY_DATABASE_URI') else "MISSING",
+        "secret_key": "SET" if app.config.get('SECRET_KEY') else "MISSING",
+        "email_enabled": EMAIL_ENABLED,
+        "mail_server": app.config.get('MAIL_SERVER'),
+        "mail_port": app.config.get('MAIL_PORT'),
+        "mail_username": app.config.get('MAIL_USERNAME'),
+        "mail_password_set": bool(app.config.get('MAIL_PASSWORD')),
+        "render_external_url": os.environ.get('RENDER_EXTERNAL_URL')
+    })
 
 @app.route('/properties')
 @login_required
