@@ -500,6 +500,61 @@ def register():
 
     return render_template('register.html')
 
+@app.route('/test-resend-api-key')
+def test_resend_api_key():
+    """Test if Resend API key is valid"""
+    try:
+        import resend
+        
+        api_key = os.environ.get('RESEND_API_KEY')
+        if not api_key:
+            return jsonify({"status": "error", "message": "API key not set"})
+        
+        resend.api_key = api_key
+        
+        # Try a simple API call to validate the key
+        try:
+            # This will fail if API key is invalid
+            params = {
+                "from": "Boardify <onboarding@resend.dev>",
+                "to": ["lebrontan2004@gmail.com"],
+                "subject": "API Key Test",
+                "html": "<p>Testing API key validity</p>"
+            }
+            result = resend.Emails.send(params)
+            
+            return jsonify({
+                "status": "success",
+                "message": "✅ API key is VALID and working!",
+                "email_id": result['id']
+            })
+            
+        except Exception as api_error:
+            error_msg = str(api_error)
+            if "unauthorized" in error_msg.lower():
+                return jsonify({
+                    "status": "invalid_key",
+                    "message": "❌ API key is INVALID or deactivated"
+                })
+            elif "forbidden" in error_msg.lower():
+                return jsonify({
+                    "status": "no_permission", 
+                    "message": "❌ API key doesn't have sending permissions"
+                })
+            else:
+                return jsonify({
+                    "status": "api_error",
+                    "message": f"❌ Resend API error: {error_msg}"
+                })
+                
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Test failed: {str(e)}"
+        }), 500
+    
+    
+
 @app.route('/debug-email-setup')
 def debug_email_setup():
     """Comprehensive email debugging for Render"""
@@ -754,6 +809,77 @@ def dashboard():
     else:
         flash("Unknown user role. Please contact support.", "danger")
         return redirect(url_for('logout'))
+    
+@app.route('/check-resend-config')
+def check_resend_config():
+    """Check Resend configuration"""
+    try:
+        config = {
+            'resend_api_key_set': bool(os.environ.get('RESEND_API_KEY')),
+            'resend_api_key_preview': os.environ.get('RESEND_API_KEY', '')[:10] + '...' if os.environ.get('RESEND_API_KEY') else 'NOT_SET',
+            'requirements_file_exists': os.path.exists('requirements.txt')
+        }
+        
+        # Check if resend is in requirements.txt
+        if config['requirements_file_exists']:
+            with open('requirements.txt', 'r') as f:
+                requirements_content = f.read()
+                config['resend_in_requirements'] = 'resend' in requirements_content
+        else:
+            config['resend_in_requirements'] = False
+        
+        # Test Resend import
+        try:
+            import resend
+            config['resend_import'] = 'SUCCESS'
+        except ImportError as e:
+            config['resend_import'] = f'FAILED: {str(e)}'
+        
+        return jsonify(config)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/test-resend-api-key')
+def test_resend_api_key():
+    """Test if Resend API key is valid"""
+    try:
+        import resend
+        
+        api_key = os.environ.get('RESEND_API_KEY')
+        if not api_key:
+            return jsonify({"status": "error", "message": "API key not set"})
+        
+        resend.api_key = api_key
+        
+        # Try a simple API call
+        try:
+            params = {
+                "from": "Boardify <onboarding@resend.dev>",
+                "to": ["lebrontan2004@gmail.com"],
+                "subject": "API Key Test - Boardify",
+                "html": "<p>Testing if your Resend API key works!</p>"
+            }
+            result = resend.Emails.send(params)
+            
+            return jsonify({
+                "status": "success",
+                "message": "✅ API key is VALID and working!",
+                "email_id": result['id']
+            })
+            
+        except Exception as api_error:
+            error_msg = str(api_error)
+            return jsonify({
+                "status": "api_error",
+                "message": f"❌ Resend API error: {error_msg}"
+            })
+                
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Test failed: {str(e)}"
+        }), 500
     
 @app.route('/test-email-fixed')
 def test_email_fixed():
