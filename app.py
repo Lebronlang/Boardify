@@ -192,11 +192,10 @@ def send_verification_email(user):
         print(f"📧 Using sender: {app.config['MAIL_DEFAULT_SENDER']}")
         
         msg = Message(
-            subject='Verify Your Email - Boardify',
-            recipients=[user.email],
-            sender=app.config['MAIL_DEFAULT_SENDER'],
-            reply_to=app.config['MAIL_DEFAULT_SENDER']  # Add reply-to
-        )
+    'Verify Your Email - Boardify',  # Subject as first argument
+    recipients=[user.email],
+    sender=app.config['MAIL_DEFAULT_SENDER']
+)
         
         msg.html = f'''
         <!DOCTYPE html>
@@ -779,6 +778,61 @@ def dashboard():
     else:
         flash("Unknown user role. Please contact support.", "danger")
         return redirect(url_for('logout'))
+    
+@app.route('/test-email-fixed')
+def test_email_fixed():
+    """Fixed email test"""
+    try:
+        print("🔧 Testing fixed email configuration...")
+        
+        # Test SMTP connection
+        try:
+            with mail.connect() as conn:
+                smtp_status = "connected"
+                print("✅ SMTP connection successful")
+        except Exception as e:
+            smtp_status = f"connection_failed: {str(e)}"
+            print(f"❌ SMTP connection failed: {e}")
+            return jsonify({
+                "status": "smtp_failed",
+                "message": f"Cannot connect to Gmail: {str(e)}",
+                "smtp_status": smtp_status,
+                "solution": "Render may block outgoing SMTP on free tier"
+            })
+        
+        # Try to send test email with correct syntax
+        test_recipient = app.config['MAIL_USERNAME']
+        try:
+            # CORRECT Flask-Mail syntax
+            msg = Message(
+                'Boardify Test Email - Fixed',  # Subject as first argument
+                recipients=[test_recipient],
+                sender=app.config['MAIL_DEFAULT_SENDER']
+            )
+            msg.body = f'Test email sent at {datetime.utcnow().isoformat()}'
+            
+            print(f"📧 Attempting to send email to {test_recipient}...")
+            mail.send(msg)
+            email_sent = True
+            message = f"Test email sent to {test_recipient}"
+            print("✅ Email sent successfully")
+        except Exception as e:
+            email_sent = False
+            message = f"Failed to send email: {str(e)}"
+            print(f"❌ Email sending failed: {e}")
+        
+        return jsonify({
+            "status": "success" if email_sent else "partial",
+            "message": message,
+            "smtp_connection": smtp_status,
+            "email_sent": email_sent
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Route error: {str(e)}"
+        }), 500
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
