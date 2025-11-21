@@ -242,10 +242,7 @@ def send_verification_email(user):
         import traceback
         traceback.print_exc()
         
-        # Fallback: auto-verify user on error
-        user.is_verified = True
-        db.session.commit()
-        print(f"✅ Auto-verified {user.email} due to email error")
+        print(f"❌ Email verification failed for {user.email}")
         return False
 
 def verify_token(token, expiration=86400):
