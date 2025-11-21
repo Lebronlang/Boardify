@@ -1,88 +1,219 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
-from apscheduler.schedulers.background import BackgroundScheduler
-from werkzeug.utils import secure_filename
-from datetime import date, datetime, timedelta
-from dateutil.relativedelta import relativedelta
-from flask_mail import Mail, Message
-from itsdangerous import URLSafeTimedSerializer
-from math import ceil
-from sqlalchemy import or_
-from flask_migrate import Migrate
-from flask import jsonify
-from flask import make_response
 import os
 import uuid
+from datetime import date, datetime, timedelta
+from math import ceil
+from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, make_response
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_mail import Mail, Message
+from flask_migrate import Migrate
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+from sqlalchemy import or_
+from dotenv import load_dotenv
+from functools import wraps
 
-# Models
-from models import db, User, Property, Booking, Billing, Message as MessageModel, Policy, HelpSupport, PropertyImage, Review
+# Load environment variables
+load_dotenv()
 
 # Flask setup
 app = Flask(__name__)
-app.secret_key = "supersecretkey"
 
-# Database setup
+# ========== PRODUCTION SECURITY CONFIGURATION ==========
+app.secret_key = os.environ.get('SECRET_KEY')
+if not app.secret_key:
+    if os.environ.get('FLASK_ENV') == 'development':
+        app.secret_key = 'dev-secret-key-change-in-production'
+        print("⚠️  Using development secret key - CHANGE FOR PRODUCTION")
+    else:
+        raise ValueError("SECRET_KEY environment variable is required for production")
+
+# Database setup with PostgreSQL support for Render
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'boardify.db')}"
+database_url = os.environ.get('DATABASE_URL')
+
+if not database_url:
+    # FIXED: Use absolute path with proper Windows formatting
+    db_path = os.path.join(BASE_DIR, 'boardify.db')
+    database_url = f"sqlite:///{db_path}"
+    print(f"📊 Using SQLite database at: {db_path}")  # Optional: see where it's created
+# Fix PostgreSQL URL for Render (postgres:// to postgresql://)
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
+
+# File upload configuration
 app.config['MAX_IMAGE_COUNT'] = 10
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
-# Email configuration - FIXED
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USE_SSL'] = False
-app.config['MAIL_USERNAME'] = 'lebrontan2004@gmail.com'
-app.config['MAIL_PASSWORD'] = 'ujwcaixyxjgdkixd'  # ← NEW PASSWORD (no spaces)
-app.config['MAIL_DEFAULT_SENDER'] = 'lebrontan2004@gmail.com'
-app.config['SECURITY_PASSWORD_SALT'] = 'boardify-secret-2024'
+# Email configuration (secure) - FIXED
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME'))
+app.config['SECURITY_PASSWORD_SALT'] = os.environ.get('SECURITY_PASSWORD_SALT', app.secret_key)
 
+
+# Fix for URL generation in Render
+if os.environ.get('RENDER'):
+    # Get the Render external URL
+    render_external_url = os.environ.get('RENDER_EXTERNAL_URL')
+    if render_external_url:
+        app.config['SERVER_NAME'] = render_external_url.replace('https://', '')
+    else:
+        # Fallback - Render provides this automatically
+        app.config['PREFERRED_URL_SCHEME'] = 'https'
+# Production settings for Render
+if os.environ.get('RENDER'):
+    app.config['DEBUG'] = False
+    app.config['TESTING'] = False
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['REMEMBER_COOKIE_SECURE'] = True
+    app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+    app.config['PREFERRED_URL_SCHEME'] = 'https'
+
+# Enhanced email availability check
+EMAIL_ENABLED = bool(
+    app.config['MAIL_USERNAME'] and 
+    app.config['MAIL_PASSWORD'] and 
+    app.config['MAIL_SERVER']
+)
+
+# Initialize extensions
 mail = Mail(app)
 ts = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
+# Import models AFTER app configuration
+try:
+    from models import db, User, Property, Booking, Billing, Message as MessageModel, Policy, HelpSupport, PropertyImage, Review
+except ImportError as e:
+    print(f"❌ Error importing models: {e}")
+    raise
+
+# Initialize database and migrations
+db.init_app(app)
+migrate = Migrate(app, db)
+
+# Login manager setup
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_message_category = 'warning'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# Constants
+MAX_SLOTS = 9
+
+# ========== UTILITY FUNCTIONS ==========
 def send_verification_email(user):
-    """Send verification email to user"""
+    """Send verification email to user - FIXED FOR RENDER"""
+    if not EMAIL_ENABLED:
+        print(f"⚠️  Email not configured. Skipping verification email for {user.email}")
+        # Auto-verify in development if email is disabled
+        user.is_verified = True
+        db.session.commit()
+        print(f"✅ Auto-verified {user.email} (email disabled)")
+        return False
+        
     try:
         token = ts.dumps(user.email, salt='email-verify')
-        verification_url = url_for('verify_email', token=token, _external=True)
+        
+        # URL generation fix for Render
+        if os.environ.get('RENDER'):
+            # Use Render's external URL directly
+            base_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://your-app.onrender.com')
+            verification_url = f"{base_url}/verify-email/{token}"
+        else:
+            # Local development
+            verification_url = url_for('verify_email', token=token, _external=True)
         
         msg = Message(
-            'Verify Your Email - Boardify',
+            subject='Verify Your Email - Boardify',
             recipients=[user.email],
-            sender=app.config['MAIL_DEFAULT_SENDER'],
-            html=f'''
-            <h2>Welcome to Boardify!</h2>
-            <p>Please verify your email address by clicking the link below:</p>
-            <a href="{verification_url}" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a>
-            <p>This link will expire in 24 hours.</p>
-            <p>If you didn't create an account, please ignore this email.</p>
-            '''
+            sender=app.config['MAIL_DEFAULT_SENDER']
         )
         
+        msg.html = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                .content {{ background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }}
+                .button {{ display: inline-block; padding: 12px 30px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                .footer {{ margin-top: 20px; font-size: 12px; color: #777; text-align: center; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Welcome to Boardify!</h1>
+                </div>
+                <div class="content">
+                    <h2>Hello {user.name},</h2>
+                    <p>Thank you for registering with Boardify. Please verify your email address by clicking the button below:</p>
+                    <center>
+                        <a href="{verification_url}" class="button">Verify Email Address</a>
+                    </center>
+                    <p>Or copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all; color: #007bff;">{verification_url}</p>
+                    <p><strong>This link will expire in 24 hours.</strong></p>
+                    <p>If you didn't create an account with Boardify, please ignore this email.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; 2024 Boardify. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        '''
+        
         mail.send(msg)
-        user.verification_token = token
-        db.session.commit()
-        print(f"✅ Verification email sent to {user.email}")
+        print(f"✅ Verification email sent successfully to {user.email}")
         return True
+        
     except Exception as e:
         print(f"❌ Error sending email to {user.email}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
-    
-def verify_token(token, expiration=86400):  # 24 hours
-    """Verify the token and return email if valid"""
+
+def verify_token(token, expiration=86400):
+    """Verify the token and return email if valid - FIXED"""
     try:
         email = ts.loads(token, salt='email-verify', max_age=expiration)
         return email
-    except:
+    except SignatureExpired:
+        print("Token expired")
+        return None
+    except BadSignature:
+        print("Invalid token")
+        return None
+    except Exception as e:
+        print(f"Token verification error: {e}")
         return None
 
-# File check
 def allowed_file(file):
+    """Check if file is allowed"""
     if not hasattr(file, 'filename'):
         return False
     filename = file.filename
@@ -91,7 +222,6 @@ def allowed_file(file):
     ext = filename.rsplit('.', 1)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         return False
-    # Check file size
     file.seek(0, os.SEEK_END)
     size = file.tell()
     file.seek(0)
@@ -99,22 +229,20 @@ def allowed_file(file):
         return False
     return True
 
-
 def calculate_total_bill(property, start_date, end_date):
-    from datetime import datetime
-
+    """Calculate total bill for booking"""
     start = datetime.strptime(start_date, "%Y-%m-%d")
     end = datetime.strptime(end_date, "%Y-%m-%d")
-    total_days = (end - start).days + 1  # include last day
+    total_days = (end - start).days + 1
 
     if total_days <= 0:
         raise ValueError("End date must be after start date.")
 
-    total_bill = property.price * total_days  # use property.price instead of monthly_rate
+    total_bill = property.price * total_days
     return total_bill, total_days
 
-
 def calculate_final_amount(amount, status, due_date, payment_date=None):
+    """Calculate final amount with discount/penalty"""
     today = date.today()
     discount = 0
     penalty = 0
@@ -124,228 +252,254 @@ def calculate_final_amount(amount, status, due_date, payment_date=None):
         penalty = amount * 0.1
     return amount - discount + penalty, discount, penalty
 
-MAX_SLOTS = 9  # maximum tenants per property
-
-
-# Init DB
-db.init_app(app)
-migrate = Migrate(app, db)
-
-# Login setup
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-# Ensure upload folder exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-# UNCOMMENT THIS AND ADD THE MISSING FIELD:
-with app.app_context():
-    from werkzeug.security import generate_password_hash
-    admin_email = "admin@example.com"
-    admin_password = "admin123"
-    admin = User.query.filter_by(email=admin_email).first()
-    if not admin:
-        admin = User(
-            name="Admin",
-            email=admin_email,
-            password_hash=generate_password_hash(admin_password, method="pbkdf2:sha256"),
-            role="admin",
-            is_verified=True,
-            is_approved_by_admin=True,  # ← ADD THIS LINE
-            gender="Prefer not to say",
-            birthdate=date(1990, 1, 1)
-        )
-        db.session.add(admin)
-        db.session.commit()
-        print("Admin account created successfully!")
-
-
-    
 def get_recent_messages(user_id, limit=3):
+    """Get recent messages for user"""
     return (
-        MessageModel.query  # Change Message to MessageModel
+        MessageModel.query
         .filter((MessageModel.sender_id == user_id) | (MessageModel.receiver_id == user_id))
         .order_by(MessageModel.timestamp.desc())
         .limit(limit)
         .all()
     )
 
-
-# Decorator to require verified landlord status
 def verified_landlord_required(f):
-    from functools import wraps
+    """Decorator to require verified landlord status"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             flash("Please login first.", "warning")
             return redirect(url_for('login'))
         
-        # Check if user is a landlord
         if current_user.role != 'landlord':
-            return f(*args, **kwargs)  # Not a landlord, proceed normally
+            return f(*args, **kwargs)
         
-        # Check if landlord is verified by admin
         if not getattr(current_user, 'is_approved_by_admin', False):
             flash('⚠️ Your account is pending admin verification. You cannot access this feature until an admin approves your license document.', 'warning')
             return redirect(url_for('dashboard'))
         
         return f(*args, **kwargs)
     return decorated_function
-# --- Check & Apply Penalties for Late Payments ---
+
 def apply_penalties():
+    """Apply penalties for late payments"""
     today = date.today()
     unpaid_bills = Billing.query.filter_by(status='unpaid').all()
-
     for bill in unpaid_bills:
         if bill.due_date and today > bill.due_date:
             days_late = (today - bill.due_date).days
-            bill.penalty = days_late * 20  # ₱20 per day late
+            bill.penalty = days_late * 20
     db.session.commit()
     print("✅ Penalties updated.")
 
-# --- Apply Discounts for Early Payments ---
 def apply_discounts():
+    """Apply discounts for early payments"""
     paid_bills = Billing.query.filter_by(status='paid').all()
-
     for bill in paid_bills:
         if bill.due_date and bill.payment_method and bill.discount == 0:
-            bill.discount = bill.amount * 0.05  # 5% discount
+            bill.discount = bill.amount * 0.05
     db.session.commit()
     print("💰 Discounts applied.")
 
-# --- Send Monthly SMS Reminders ---
-def send_monthly_sms():
-    # (We'll connect Twilio later if you want SMS for real)
-    unpaid_bills = Billing.query.filter_by(status='unpaid').all()
-    for bill in unpaid_bills:
-        if not bill.sms_sent:
-            print(f"📱 Sending reminder to Tenant {bill.tenant_id}: Please pay your bill for Property {bill.property_id}.")
-            bill.sms_sent = True
-    db.session.commit()
-    print("📆 Monthly reminders sent.")
+# ========== REQUEST HANDLERS ==========
 
+@app.before_request
+def handle_free_tier():
+    """Optimize for Render's free tier"""
+    pass
 
+@app.after_request
+def add_security_headers(response):
+    """Add security and cache headers"""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
     
+    if request.path in ['/dashboard', '/profile', '/billing', '/admin']:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    else:
+        response.headers['Cache-Control'] = 'public, max-age=300'
+    
+    return response
+
+# ========== ERROR HANDLERS ==========
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return render_template('500.html'), 500
+
+@app.errorhandler(403)
+def forbidden_error(error):
+    return render_template('403.html'), 403
+
+# ========== ROUTES ==========
 
 
 
-# ----------------- Helpers -----------------
-# A decorator to require login for certain routes
-def login_required(f):
-    from functools import wraps
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash("Please login first.", "warning")
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
+@app.route('/test-email-setup')
+def test_email_setup():
+    """Test email configuration with detailed output"""
+    if not EMAIL_ENABLED:
+        return """
+        <h1>Email Configuration Status</h1>
+        <p style='color: red;'>❌ Email is NOT configured</p>
+        <p>Required environment variables:</p>
+        <ul>
+            <li>MAIL_USERNAME: {'✅ Set' if app.config['MAIL_USERNAME'] else '❌ Missing'}</li>
+            <li>MAIL_PASSWORD: {'✅ Set' if app.config['MAIL_PASSWORD'] else '❌ Missing'}</li>
+            <li>MAIL_SERVER: {app.config['MAIL_SERVER']}</li>
+            <li>MAIL_PORT: {app.config['MAIL_PORT']}</li>
+        </ul>
+        <p>For Gmail, make sure to:</p>
+        <ol>
+            <li>Enable 2-factor authentication</li>
+            <li>Generate an App Password (16 characters)</li>
+            <li>Use the App Password, NOT your regular password</li>
+        </ol>
+        """
+    
+    try:
+        # Test connection
+        with mail.connect() as conn:
+            pass
+        return "<h1>✅ Email configuration is working!</h1><p>Connection test successful.</p>"
+    except Exception as e:
+        return f"""
+        <h1>❌ Email Configuration Error</h1>
+        <p>Error: {str(e)}</p>
+        <p>Check your Gmail settings:</p>
+        <ol>
+            <li>2-factor authentication must be enabled</li>
+            <li>Use App Password (16 characters), not regular password</li>
+            <li>Allow less secure apps: OFF (App Passwords don't need this)</li>
+        </ol>
+        """
+    
+@app.route('/health')
+def health_check():
+    """Health check endpoint for monitoring"""
+    try:
+        # Test database connection
+        db.session.execute('SELECT 1')
+        db_status = "healthy"
+    except:
+        db_status = "unhealthy"
+    
+    return jsonify({
+        "status": "healthy" if db_status == "healthy" else "degraded",
+        "service": "boardify.app",
+        "database": db_status,
+        "email": "enabled" if EMAIL_ENABLED else "disabled",
+        "timestamp": datetime.utcnow().isoformat()
+    })
 
-# ----------------- Routes -----------------
-# Home route, redirects to dashboard if logged in, else to login page
-# Home page route
 @app.route('/')
 def home():
+    """Home page - redirect based on login status"""
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
-@app.route('/debug-email')
-def debug_email():
-    """Test email sending"""
-    try:
-        msg = Message(
-            subject='Test Email from Boardify',
-            recipients=['your-actual-email@gmail.com'],  # Use your REAL email here
-            body='This is a test email from your Flask app!'
-        )
-        mail.send(msg)
-        return "✅ Email sent successfully! Check your inbox and spam folder."
-    except Exception as e:
-        return f"❌ Email failed: {str(e)}"
-# ---------- Register Route ----------
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    """User registration - FIXED"""
     if request.method == 'POST':
-        # Check if terms checkbox is checked
-        if not request.form.get('terms'):
-            flash("You must agree to the terms and conditions to register.", "danger")
-            return redirect(url_for('register'))
-
-        name = request.form['name']
-        email = request.form['email']
-        password = request.form['password']
-        role = request.form['role']
-        gender = request.form['gender']
-        birthdate_str = request.form['birthdate']
-
-        
-            
-
-        # Check if email already exists
-        if User.query.filter_by(email=email).first():
-            flash("Email already registered.", "danger")
-            return redirect(url_for('register'))
-
-        # Convert birthdate string to Date object and validate age
         try:
-            birthdate = datetime.strptime(birthdate_str, '%Y-%m-%d').date()
-            
-            # Age validation (at least 18 years old)
-            today = date.today()
-            age = today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
-            if age < 18:
-                flash("You must be at least 18 years old to register.", "danger")
+            if not request.form.get('terms'):
+                flash("You must agree to the terms and conditions to register.", "danger")
                 return redirect(url_for('register'))
-                
-        except ValueError:
-            flash("Invalid birthdate format.", "danger")
+
+            name = request.form['name'].strip()
+            email = request.form['email'].strip().lower()
+            password = request.form['password']
+            role = request.form['role']
+            gender = request.form['gender']
+            birthdate_str = request.form['birthdate']
+
+            # Validation
+            if not all([name, email, password, role, gender, birthdate_str]):
+                flash("All fields are required.", "danger")
+                return redirect(url_for('register'))
+
+            if User.query.filter_by(email=email).first():
+                flash("Email already registered.", "danger")
+                return redirect(url_for('register'))
+
+            try:
+                birthdate = datetime.strptime(birthdate_str, '%Y-%m-%d').date()
+                today = date.today()
+                age = today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
+                if age < 18:
+                    flash("You must be at least 18 years old to register.", "danger")
+                    return redirect(url_for('register'))
+            except ValueError:
+                flash("Invalid birthdate format.", "danger")
+                return redirect(url_for('register'))
+
+            # Handle license file for landlords
+            filename = None
+            if role == 'landlord':
+                license_file = request.files.get('permit')
+                if license_file and license_file.filename:
+                    if allowed_file(license_file):
+                        original_filename = secure_filename(license_file.filename)
+                        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{original_filename}"
+                        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        license_file.save(save_path)
+                    else:
+                        flash("Invalid license file. Please upload PNG, JPG, or JPEG under 5MB.", "danger")
+                        return redirect(url_for('register'))
+
+            # Create new user
+            new_user = User(
+                name=name,
+                email=email,
+                password_hash=generate_password_hash(password, method="pbkdf2:sha256"),
+                role=role,
+                gender=gender,
+                birthdate=birthdate,
+                license_image=filename,
+                is_verified=False if EMAIL_ENABLED else True,  # Auto-verify if email disabled
+                is_approved_by_admin=False if role == 'landlord' else True
+            )
+            
+            db.session.add(new_user)
+            db.session.commit()
+
+            # Send verification email
+            if EMAIL_ENABLED:
+                if send_verification_email(new_user):
+                    flash("Registration successful! Please check your email to verify your account before logging in.", "success")
+                else:
+                    flash("Registration successful but verification email failed to send. Please contact support or try resending from the login page.", "warning")
+            else:
+                flash("Registration successful! You can now login.", "success")
+
+            return redirect(url_for('login'))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Registration error: {e}")
+            import traceback
+            traceback.print_exc()
+            flash(f"Registration failed: {str(e)}", "danger")
             return redirect(url_for('register'))
-
-        # Handle file upload for landlords
-        license_file = request.files.get('permit')
-        filename = None
-        if license_file and role == 'landlord':
-            # secure and unique filename
-            original_filename = secure_filename(license_file.filename)
-            filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{original_filename}"
-            save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            license_file.save(save_path)
-
-        # Create user with new fields
-        new_user = User(
-            name=name,
-            email=email,
-            password_hash=generate_password_hash(password),
-            role=role,
-            gender=gender,
-            birthdate=birthdate,
-            license_image=filename,  # only for landlords
-            is_verified=False  # Start as unverified
-        )
-        db.session.add(new_user)
-        db.session.commit()
-
-        
-        # Send verification email
-        if send_verification_email(new_user):
-            flash("Registration successful! Please check your email to verify your account before logging in.", "success")
-        else:
-            flash("Registration successful but we couldn't send verification email. Please contact support.", "warning")
-
-        return redirect(url_for('login'))
 
     return render_template('register.html')
 
 @app.route('/verify-email/<token>')
 def verify_email(token):
+    """Verify user email - FIXED"""
     email = verify_token(token)
     
     if email is None:
-        flash("The verification link is invalid or has expired.", "danger")
+        flash("The verification link is invalid or has expired. Please request a new verification email.", "danger")
         return redirect(url_for('login'))
     
     user = User.query.filter_by(email=email).first()
@@ -355,99 +509,337 @@ def verify_email(token):
         return redirect(url_for('login'))
     
     if user.is_verified:
-        flash("Account already verified. Please login.", "info")
+        flash("Your email is already verified. Please login.", "info")
         return redirect(url_for('login'))
     
-    # Mark user as verified and clear token
     user.is_verified = True
-    user.verification_token = None
+    if hasattr(user, 'verification_token'):
+        user.verification_token = None
     db.session.commit()
     
-    flash("Email verified successfully! You can now login to your account.", "success")
+    flash("✅ Email verified successfully! You can now login to your account.", "success")
     return redirect(url_for('login'))
 
-@app.route('/test-email-exact')
-def test_email_exact():
-    """Test email with exact configuration"""
-    try:
-        print("=== Testing Email Configuration ===")
-        print(f"Username: {app.config['MAIL_USERNAME']}")
-        print(f"Password length: {len(app.config['MAIL_PASSWORD'])}")
-        print(f"Server: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}")
+@app.route('/resend-verification', methods=['POST'])
+def resend_verification():
+    """Resend verification email - FIXED"""
+    email = request.form.get('email', '').strip().lower()
+    
+    if not email:
+        flash("Please provide your email address.", "warning")
+        return redirect(url_for('login'))
+    
+    user = User.query.filter_by(email=email).first()
+    
+    if user:
+        if user.is_verified:
+            flash("Your email is already verified. You can login now.", "info")
+            return redirect(url_for('login'))
         
-        msg = Message(
-            subject='EXACT TEST - Boardify',
-            recipients=[app.config['MAIL_USERNAME']],  # Send to yourself
-            body='This is an exact test of your email configuration.'
-        )
-        mail.send(msg)
-        return "✅ Email sent! Check your inbox."
-    except Exception as e:
-        return f"❌ Exact error: {str(e)}"
+        if not EMAIL_ENABLED:
+            flash("Email service is not configured. Please contact support.", "danger")
+            return redirect(url_for('login'))
+        
+        if send_verification_email(user):
+            flash("✅ Verification email sent! Please check your inbox and spam folder.", "success")
+        else:
+            flash("Failed to send verification email. Please try again later or contact support.", "danger")
+    else:
+        # Don't reveal if email exists or not for security
+        flash("If this email is registered, a verification link will be sent.", "info")
     
-    
+    return redirect(url_for('login'))
 
-@app.route('/debug-email-exact')
-def debug_email_exact():
-    """See the exact email error with full details"""
-    try:
-        print("=== EMAIL DEBUG INFO ===")
-        print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
-        print(f"MAIL_PASSWORD: {app.config['MAIL_PASSWORD'][:4]}...")  # Show first 4 chars only
-        print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
-        print(f"MAIL_PORT: {app.config['MAIL_PORT']}")
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """User login - FIXED"""
+    if request.method == 'POST':
+        email = request.form['email'].strip().lower()
+        password = request.form['password']
         
-        # Test with a simple email
-        msg = Message(
-            subject='TEST - Boardify Email',
-            recipients=[app.config['MAIL_USERNAME']],  # Send to yourself
-            body='This is a test email from your Flask app.'
-        )
-        mail.send(msg)
-        return "✅ Email sent successfully! Check your inbox."
-        
-    except Exception as e:
-        error_msg = f"""
-        ❌ EMAIL FAILED WITH DETAILS:
-        
-        Error: {str(e)}
-        
-        Your Configuration:
-        - Email: {app.config['MAIL_USERNAME']}
-        - Password: {app.config['MAIL_PASSWORD'][:4]}... (showing first 4 chars)
-        - Server: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}
-        
-        Common Issues:
-        1. Wrong App Password (not 16 characters)
-        2. 2FA not enabled
-        3. Email doesn't match App Password account
-        4. App Password has spaces in wrong places
-        """
-        return error_msg
+        user = User.query.filter_by(email=email).first()
 
-@app.route('/debug_property/<int:property_id>')
-def debug_property(property_id):
-    property = Property.query.get_or_404(property_id)
-    
-    # Show all attributes of the property
-    attributes = [attr for attr in dir(property) if not attr.startswith('_')]
-    
-    return f"""
-    <h1>Property Debug Info</h1>
-    <p>Property: {property.title}</p>
-    <p>All attributes: {attributes}</p>
-    <p>Has slots_available: {hasattr(property, 'slots_available')}</p>
-    <p>Has total_slots: {hasattr(property, 'total_slots')}</p>
-    <p>Has max_tenants: {hasattr(property, 'max_tenants')}</p>
-    <p>Has capacity: {hasattr(property, 'capacity')}</p>
-    """
+        if user and check_password_hash(user.password_hash, password):
+            if not user.is_verified and EMAIL_ENABLED:
+                flash("⚠️ Please verify your email before logging in. Check your inbox for the verification link.", "warning")
+                return render_template('login.html', show_resend=True, user_email=email)
+                
+            login_user(user)
+            session['user_id'] = user.id
+            session['user_role'] = user.role
+            session['user_name'] = user.name
+            session['user_verified'] = user.is_verified
+            
+            flash(f"Welcome back, {user.name}!", "success")
+            
+            # Redirect to intended page or dashboard
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
+            return redirect(url_for('dashboard'))
 
-# ADD THE MISSING ROUTE HERE:
+        flash("Invalid email or password.", "danger")
+        return redirect(url_for('login'))
+
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    """User logout"""
+    session.pop('user_id', None)
+    session.pop('user_role', None)
+    session.pop('user_name', None)
+    session.pop('user_verified', None)
+    logout_user()
+    flash("You have been logged out successfully.", "info")
+    return redirect(url_for('login'))
+
+@app.route('/dashboard', methods=['GET', 'POST'])
+@login_required
+def dashboard():
+    """User dashboard"""
+    user_id = session.get('user_id')
+    user = User.query.get(user_id)
+
+    if not user:
+        flash("User not found. Please log in again.", "danger")
+        return redirect(url_for('login'))
+
+    if user.role == 'admin':
+        total_users = User.query.count()
+        total_landlords = User.query.filter_by(role='landlord').count()
+        total_tenants = User.query.filter_by(role='tenant').count()
+        total_properties = Property.query.count()
+        pending_verifications = User.query.filter_by(role='landlord', is_approved_by_admin=False).count()
+        pending_tickets = HelpSupport.query.filter_by(status='pending').count()
+        
+        paid_bills = Billing.query.filter_by(status='paid').all()
+        total_commission = sum(bill.admin_commission or 0 for bill in paid_bills)
+        unpaid_bills = Billing.query.filter_by(status='unpaid').all()
+        pending_commission = sum(bill.amount * 0.05 for bill in unpaid_bills)
+        
+        recent_tickets = HelpSupport.query.order_by(HelpSupport.timestamp.desc()).limit(5).all()
+        recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
+        
+        response = make_response(render_template(
+            'admin_dashboard.html',
+            user=user,
+            total_users=total_users,
+            total_landlords=total_landlords,
+            total_tenants=total_tenants,
+            total_properties=total_properties,
+            pending_verifications=pending_verifications,
+            pending_tickets=pending_tickets,
+            total_commission=total_commission,
+            pending_commission=pending_commission,
+            recent_tickets=recent_tickets,
+            recent_users=recent_users
+        ))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        return response
+
+    elif user.role == 'landlord':
+        if request.method == 'POST':
+            file = request.files.get('trend_image')
+            if file and file.filename != "":
+                import time
+                filename = f"{int(time.time())}_{secure_filename(file.filename)}"
+                upload_path = os.path.join('static/uploads', filename)
+                file.save(upload_path)
+                user.trend_image = filename
+                db.session.commit()
+                flash("Trend image uploaded successfully!", "success")
+            return redirect(url_for('dashboard'))
+
+        chart_image = getattr(user, 'trend_image', None)
+        properties = Property.query.filter_by(landlord_id=user.id).all()
+        property_ids = [p.id for p in properties]
+        pending_bookings = Booking.query.filter(
+            Booking.property_id.in_(property_ids),
+            Booking.status == 'pending'
+        ).all()
+        
+        tenant_bills = []
+        for prop in properties:
+            tenant_bills.extend(getattr(prop, 'bills', []))
+
+        relevant_policies = Policy.query.filter(
+            (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
+        ).all()
+
+        response = make_response(render_template(
+            'dashboard.html',
+            user=user,
+            properties=properties,
+            pending_bookings=pending_bookings,
+            tenant_bills=tenant_bills,
+            chart_image=chart_image,
+            policies=relevant_policies
+        ))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        return response
+
+    elif user.role == 'tenant':
+        bookings = Booking.query.filter_by(tenant_id=user.id).all()
+        pending_bookings = [b for b in bookings if b.status == 'pending']
+        tenant_bills = Billing.query.filter_by(tenant_id=user.id).all()
+        
+        chart_image = None
+        approved_booking = Booking.query.filter_by(tenant_id=user.id, status='approved').first()
+        if approved_booking and approved_booking.property and approved_booking.property.owner:
+            chart_image = getattr(approved_booking.property.owner, 'trend_image', None)
+
+        relevant_policies = Policy.query.filter(
+            (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
+        ).all()
+
+        response = make_response(render_template(
+            'dashboard.html',
+            user=user,
+            properties=bookings,
+            pending_bookings=pending_bookings,
+            tenant_bills=tenant_bills,
+            chart_image=chart_image,
+            policies=relevant_policies
+        ))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        return response
+
+    else:
+        flash("Unknown user role. Please contact support.", "danger")
+        return redirect(url_for('logout'))
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    """User profile"""
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        new_name = request.form.get('name')
+        if new_name:
+            user.name = new_name
+            session['user_name'] = new_name
+
+        user.gender = request.form.get('gender')
+        birthdate_str = request.form.get('birthdate')
+        if birthdate_str:
+            try:
+                user.birthdate = datetime.strptime(birthdate_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash("Invalid birthdate format.", "danger")
+
+        new_email = request.form.get('email')
+        if new_email and new_email != user.email:
+            existing_user = User.query.filter_by(email=new_email).first()
+            if existing_user and existing_user.id != user.id:
+                flash("Email already registered to another account.", "danger")
+            else:
+                user.email = new_email
+                if EMAIL_ENABLED:
+                    user.is_verified = False
+                    if send_verification_email(user):
+                        flash("Email updated! Please verify your new email address.", "warning")
+                    else:
+                        flash("Email updated but verification email failed to send. Please contact support.", "warning")
+                else:
+                    flash("Email updated successfully!", "success")
+
+        if hasattr(user, 'phone'):
+            user.phone = request.form.get('phone')
+        if hasattr(user, 'bio'):
+            user.bio = request.form.get('bio')
+
+        file = request.files.get('profile_pic')
+        if file and file.filename != '':
+            if allowed_file(file):
+                filename = secure_filename(file.filename)
+                unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                file.save(file_path)
+                user.profile_pic = unique_filename
+            else:
+                flash("Invalid file type or file too large. Please use PNG, JPG, or JPEG files under 5MB.", "danger")
+
+        if request.form.get('resend_verification'):
+            if not user.is_verified and EMAIL_ENABLED:
+                if send_verification_email(user):
+                    flash("Verification email sent! Please check your inbox.", "success")
+                else:
+                    flash("Failed to send verification email. Please try again later.", "danger")
+            else:
+                flash("Your email is already verified.", "info")
+
+        db.session.commit()
+        flash("Profile updated successfully!", "success")
+        return redirect(url_for('profile'))
+
+    if user.role == 'landlord':
+        properties = Property.query.filter_by(landlord_id=user.id).all()
+        bookings = Booking.query.join(Property).filter(Property.landlord_id == user.id).all()
+        bills = Billing.query.join(Property).filter(Property.landlord_id == user.id).all()
+    else:
+        properties = []
+        bookings = Booking.query.filter_by(tenant_id=user.id).all()
+        bills = Billing.query.filter_by(tenant_id=user.id).all()
+
+    session['user_verified'] = user.is_verified
+
+    age = None
+    if user.birthdate:
+        today = date.today()
+        age = today.year - user.birthdate.year - ((today.month, today.day) < (user.birthdate.month, user.birthdate.day))
+
+    return render_template(
+        'profile.html',
+        user=user,
+        properties=properties,
+        bookings=bookings,
+        bills=bills,
+        today=date.today(),
+        age=age,
+        verified=user.is_verified
+    )
+
+@app.route('/properties')
+@login_required
+def viewproperties():
+    """View all properties"""
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for('login'))
+
+    if user.role == 'landlord':
+        properties = Property.query.filter_by(landlord_id=user.id).all()
+    else:
+        properties = Property.query.all()
+
+    property_data = []
+    for prop in properties:
+        total_slots = prop.slots if prop.slots is not None else 10
+        approved_bookings_count = sum(1 for booking in prop.bookings if booking.status == 'approved')
+        slots_left = max(0, total_slots - approved_bookings_count)
+        user_has_booked = any(b.tenant_id == user.id for b in prop.bookings)
+        
+        property_data.append({
+            'property': prop,
+            'slots_left': slots_left,
+            'total_slots': total_slots,
+            'user_has_booked': user_has_booked
+        })
+
+    return render_template('viewproperties.html', properties=property_data, user=user)
+
 @app.route('/property_detail/<int:property_id>', methods=['GET'])
 def property_detail(property_id):
+    """Property detail page"""
     property = Property.query.get_or_404(property_id)
 
-    # Tenant's booking, if logged in
     user_booking = None
     user_review = None
     can_review = False
@@ -459,33 +851,27 @@ def property_detail(property_id):
             tenant_id=user_id
         ).all()
         
-        # Check if user has reviewed this property
         user_review = Review.query.filter_by(
             property_id=property_id,
             tenant_id=user_id
         ).first()
         
-        # User can review if they have an APPROVED booking (during or after stay)
         can_review = Booking.query.filter(
             Booking.property_id == property_id,
             Booking.tenant_id == user_id,
             Booking.status == 'approved'
         ).first() is not None and not user_review
 
-    # FIXED: Calculate actual available slots based on approved bookings
     total_slots = property.slots if property.slots is not None else 10
     approved_bookings_count = sum(1 for booking in property.bookings if booking.status == 'approved')
     slots_left = max(0, total_slots - approved_bookings_count)
 
-    # Get all reviews for this property with tenant info
     reviews = Review.query.filter_by(property_id=property_id).join(User).order_by(Review.created_at.desc()).all()
     
-    # Calculate average rating
     avg_rating = 0
     if reviews:
         avg_rating = sum(review.rating for review in reviews) / len(reviews)
 
-    # Prepare image URLs for slider
     image_urls = [
         url_for('static', filename='uploads/' + img.filename) for img in property.images
     ] if property.images else [
@@ -505,274 +891,153 @@ def property_detail(property_id):
         avg_rating=round(avg_rating, 1) if avg_rating > 0 else 0,
         review_count=len(reviews)
     )
-@app.route('/landlord/approved_bookings')
-@login_required
-@verified_landlord_required 
-def approved_bookings():
-    user = User.query.get(session.get('user_id'))
 
-    if not user or user.role != 'landlord':
-        flash("Access denied. You must be a landlord to view this page.", "danger")
-        return redirect(url_for('dashboard'))
-
-    # Get all properties owned by this landlord
-    properties = Property.query.filter_by(landlord_id=user.id).all()
-    property_ids = [p.id for p in properties]
-
-    # Fetch all pending bookings for landlord’s properties
-    bookings = Booking.query.filter(
-        Booking.property_id.in_(property_ids),
-        Booking.status == 'pending'
-    ).all()
-
-    # Render the correct template
-    return render_template('approved_bookings.html', bookings=bookings, user=user)
-
-@app.route('/upload_trend', methods=['POST'])
-@login_required
-def upload_trend():
-    if 'file' not in request.files:
-        flash("No file part", "danger")
-        return redirect(url_for('dashboard'))
-
-    file = request.files['file']
-    if file.filename == '':
-        flash("No selected file", "danger")
-        return redirect(url_for('dashboard'))
-
-    # Check allowed file type and size
-    if not allowed_file(file):
-        flash("Invalid file type or size exceeds 5MB!", "danger")
-        return redirect(url_for('dashboard'))
-
-    # Check existing trend images for the user (optional, if you want a max limit)
-    user_trend_count = len(os.listdir(app.config['UPLOAD_FOLDER']))
-    if user_trend_count >= app.config['MAX_IMAGE_COUNT']:
-        flash(f"Maximum {app.config['MAX_IMAGE_COUNT']} images allowed!", "danger")
-        return redirect(url_for('dashboard'))
-
-    # Save the file securely
-    filename = secure_filename(file.filename)
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    flash("Trend image uploaded successfully!", "success")
-
-    return redirect(url_for('dashboard'))
-
-
-
-
-# Add this route to check
-@app.route('/check-user/<email>')
-def check_user(email):
-    user = User.query.filter_by(email=email).first()
-    if user:
-        return f"""
-        User: {user.name}<br>
-        Email: {user.email}<br>
-        Verified: {user.is_verified}<br>
-        Token: {user.verification_token}
-        """
-    return "User not found"
-@app.route('/reject_booking/<int:booking_id>', methods=['POST'])
-@login_required
-def reject_booking(booking_id):
-    user = User.query.get(session['user_id'])
-    if user.role != 'landlord':
-        flash("Access denied.", "danger")
-        return redirect(url_for('dashboard'))
-
-    booking = Booking.query.get_or_404(booking_id)
-
-    if booking.property.landlord_id != user.id:
-        flash("You cannot reject this booking.", "danger")
-        return redirect(url_for('booked_properties'))
-
-    booking.status = 'rejected'
-    db.session.commit()
-    flash(f"Booking for {booking.property.title} has been rejected.", "danger")
-    return redirect(url_for('booked_properties'))
-@app.route('/pending_bookings')
+@app.route('/add_property', methods=['GET', 'POST'])
 @login_required
 @verified_landlord_required
-def pending_bookings():
-    user = User.query.get(session['user_id'])
-    if user.role != 'landlord':
-        flash("Access denied.", "danger")
+def add_property():
+    """Add new property"""
+    user = User.query.get(session.get('user_id'))
+    
+    if not user or user.role != 'landlord':
+        flash("Only landlords can add properties.", "danger")
         return redirect(url_for('dashboard'))
     
-    # Get all properties owned by this landlord
-    properties = Property.query.filter_by(landlord_id=user.id).all()
-    property_ids = [p.id for p in properties]
-    
-    # Fetch pending bookings for landlord's properties, ordered by newest first
-    bookings = Booking.query.filter(
-        Booking.property_id.in_(property_ids),
-        Booking.status == 'pending'
-    ).order_by(Booking.created_at.desc()).all()
-    
-    return render_template('pending_bookings.html', bookings=bookings, user=user)
+    if request.method == 'POST':
+        try:
+            title = request.form.get('title', '').strip()
+            description = request.form.get('description', '').strip()
+            price = request.form.get('price', '0')
+            location = request.form.get('location', '').strip()
+            gender_preference = request.form.get('gender_preference')
+            property_type = request.form.get('property_type')
+            bedrooms = request.form.get('bedrooms', '0')
+            bathrooms = request.form.get('bathrooms', '0')
+            slots = request.form.get('slots', '10')
+            amenities = request.form.getlist('amenities')
 
-@app.route('/delete-user/<email>')
-def delete_user(email):
-    """Delete a user by email - Enhanced to handle all related data"""
-    user = User.query.filter_by(email=email).first()
-    
-    if not user:
-        return f"❌ User '{email}' not found."
-    
-    try:
-        # Store info before deletion
-        user_name = user.name
-        user_role = user.role
-        user_id = user.id
-        
-        print(f"=== DELETING USER: {user_name} ({user_role}) ===")
-        
-        # === DELETE LANDLORD DATA ===
-        if user_role == 'landlord':
-            properties = Property.query.filter_by(landlord_id=user_id).all()
-            print(f"Found {len(properties)} properties to delete")
+            required_fields = {
+                'title': title,
+                'description': description, 
+                'price': price,
+                'property_type': property_type,
+                'slots': slots,
+                'gender_preference': gender_preference
+            }
             
-            for prop in properties:
-                print(f"Deleting property: {prop.title}")
-                
-                # Delete property images (database records)
-                property_images = PropertyImage.query.filter_by(property_id=prop.id).all()
-                for img in property_images:
-                    # Delete physical file
-                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
-                    if os.path.exists(file_path):
-                        try:
-                            os.remove(file_path)
-                            print(f"  Deleted image file: {img.filename}")
-                        except Exception as e:
-                            print(f"  Error deleting image file: {e}")
-                    db.session.delete(img)
-                
-                # Delete main property image file
-                if prop.image:
-                    main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], prop.image)
-                    if os.path.exists(main_image_path):
-                        try:
-                            os.remove(main_image_path)
-                            print(f"  Deleted main image: {prop.image}")
-                        except Exception as e:
-                            print(f"  Error deleting main image: {e}")
-                
-                # Delete associated data for this property
-                bookings_deleted = Booking.query.filter_by(property_id=prop.id).delete()
-                bills_deleted = Billing.query.filter_by(property_id=prop.id).delete()
-                reviews_deleted = Review.query.filter_by(property_id=prop.id).delete()
-                
-                print(f"  Deleted {bookings_deleted} bookings, {bills_deleted} bills, {reviews_deleted} reviews")
-                
-                # Delete the property itself
-                db.session.delete(prop)
-        
-        # === DELETE TENANT DATA ===
-        if user_role == 'tenant':
-            bookings_deleted = Booking.query.filter_by(tenant_id=user_id).delete()
-            bills_deleted = Billing.query.filter_by(tenant_id=user_id).delete()
-            reviews_deleted = Review.query.filter_by(tenant_id=user_id).delete()
-            print(f"Deleted {bookings_deleted} bookings, {bills_deleted} bills, {reviews_deleted} reviews")
-        
-        # === DELETE COMMON DATA (for all users) ===
-        # Delete messages
-        messages_deleted = MessageModel.query.filter(
-            (MessageModel.sender_id == user_id) | (MessageModel.receiver_id == user_id)
-        ).delete()
-        print(f"Deleted {messages_deleted} messages")
-        
-        # Delete help tickets
-        tickets_deleted = HelpSupport.query.filter_by(user_id=user_id).delete()
-        print(f"Deleted {tickets_deleted} help tickets")
-        
-        # Delete profile picture file
-        if hasattr(user, 'profile_pic') and user.profile_pic:
-            profile_pic_path = os.path.join(app.config['UPLOAD_FOLDER'], user.profile_pic)
-            if os.path.exists(profile_pic_path):
-                try:
-                    os.remove(profile_pic_path)
-                    print(f"Deleted profile picture: {user.profile_pic}")
-                except Exception as e:
-                    print(f"Error deleting profile pic: {e}")
-        
-        # Delete license image file (for landlords)
-        if user.license_image:
-            license_path = os.path.join(app.config['UPLOAD_FOLDER'], user.license_image)
-            if os.path.exists(license_path):
-                try:
-                    os.remove(license_path)
-                    print(f"Deleted license image: {user.license_image}")
-                except Exception as e:
-                    print(f"Error deleting license: {e}")
-        
-        # Finally, delete the user
-        db.session.delete(user)
-        db.session.commit()
-        
-        print(f"=== USER {user_name} DELETED SUCCESSFULLY ===")
-        
-        return f"""
-        <h2>✅ User Deleted Successfully!</h2>
-        <p><strong>Name:</strong> {user_name}</p>
-        <p><strong>Email:</strong> {email}</p>
-        <p><strong>Role:</strong> {user_role}</p>
-        <br>
-        <a href="/register" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">Register Again</a>
-        <a href="/login" style="padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-left: 10px;">Login</a>
-        """
-        
-    except Exception as e:
-        db.session.rollback()
-        import traceback
-        error_trace = traceback.format_exc()
-        print(f"=== ERROR DELETING USER ===")
-        print(error_trace)
-        return f"""
-        <h2>❌ Error Deleting User</h2>
-        <p><strong>Error:</strong> {str(e)}</p>
-        <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">{error_trace}</pre>
-        <br>
-        <a href="javascript:history.back()" style="padding: 10px 20px; background: #dc3545; color: white; text-decoration: none; border-radius: 5px;">Go Back</a>
-        """
+            missing_fields = [field for field, value in required_fields.items() if not value]
+            if missing_fields:
+                flash(f"Missing required fields: {', '.join(missing_fields)}", "danger")
+                return redirect(request.url)
 
+            try:
+                price = float(price)
+                slots = int(slots)
+                bedrooms = int(bedrooms) if bedrooms and bedrooms != '0' else None
+                bathrooms = float(bathrooms) if bathrooms and bathrooms != '0' else None
+            except ValueError as e:
+                flash(f"Invalid number format: {str(e)}", "danger")
+                return redirect(request.url)
+
+            if price <= 0:
+                flash("Price must be greater than 0.", "danger")
+                return redirect(request.url)
+                
+            if slots <= 0:
+                flash("Slots must be greater than 0.", "danger")
+                return redirect(request.url)
+
+            files = request.files.getlist('images')
+            
+            if len(files) > app.config['MAX_IMAGE_COUNT']:
+                flash(f"Maximum {app.config['MAX_IMAGE_COUNT']} images allowed.", "danger")
+                return redirect(request.url)
+
+            main_image = None
+            image_filenames = []
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+            for idx, file in enumerate(files):
+                if file and file.filename != '':
+                    if not allowed_file(file):
+                        flash(f"File not allowed or too large: {file.filename}. Please use PNG, JPG, or JPEG files under 5MB.", "danger")
+                        continue
+
+                    original_filename = secure_filename(file.filename)
+                    unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{original_filename}"
+                    upload_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+
+                    try:
+                        file.save(upload_path)
+                        image_filenames.append(unique_filename)
+                        if idx == 0:
+                            main_image = unique_filename
+                    except Exception as e:
+                        flash(f"Error saving file {file.filename}", "danger")
+
+            new_property = Property(
+                title=title,
+                description=description,
+                price=price,
+                location=location,
+                gender_preference=gender_preference,
+                property_type=property_type,
+                bedrooms=bedrooms,
+                bathrooms=bathrooms,
+                slots=slots,
+                image=main_image,
+                landlord_id=user.id,
+                amenities=','.join(amenities) if amenities else None
+            )
+
+            db.session.add(new_property)
+            db.session.flush()
+
+            for fname in image_filenames:
+                if fname != main_image:
+                    prop_image = PropertyImage(property_id=new_property.id, filename=fname)
+                    db.session.add(prop_image)
+
+            db.session.commit()
+            flash("Property added successfully!", "success")
+            return redirect(url_for('viewproperties'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error adding property: {str(e)}", "danger")
+            return redirect(request.url)
+
+    return render_template('add_property.html', user=user)
 
 @app.route('/edit-property/<int:property_id>', methods=['GET', 'POST'])
 @login_required
 def edit_property(property_id):
-    """Edit property - landlords can only edit their own properties"""
+    """Edit property"""
     user_id = session.get('user_id')
     user = User.query.get(user_id)
     
-    # Get the property
     property_obj = Property.query.get_or_404(property_id)
     
-    # Check if user is the owner
     if user.role != 'landlord' or property_obj.landlord_id != user_id:
         flash('You do not have permission to edit this property.', 'danger')
         return redirect(url_for('viewproperties'))
     
     if request.method == 'POST':
-        # Check if this is an AJAX image deletion request
         if request.form.get('action') == 'delete_image':
             return delete_image()
         
         try:
-            # Update property details
             property_obj.title = request.form.get('title')
             property_obj.description = request.form.get('description')
             property_obj.location = request.form.get('location')
             property_obj.price = float(request.form.get('price'))
-            property_obj.total_slots = int(request.form.get('total_slots'))
+            property_obj.slots = int(request.form.get('total_slots', request.form.get('slots', 10)))
             property_obj.gender_preference = request.form.get('gender_preference')
             property_obj.status = request.form.get('status', 'available')
             
-            # Handle multiple new image uploads
             if 'images' in request.files:
                 files = request.files.getlist('images')
                 
-                # Check total image count (existing + new)
                 existing_count = PropertyImage.query.filter_by(property_id=property_id).count()
                 if existing_count + len(files) > app.config['MAX_IMAGE_COUNT']:
                     flash(f"Maximum {app.config['MAX_IMAGE_COUNT']} images allowed per property.", "danger")
@@ -780,17 +1045,14 @@ def edit_property(property_id):
                 
                 for idx, file in enumerate(files):
                     if file and file.filename != '' and allowed_file(file):
-                        # Save new image
                         filename = secure_filename(file.filename)
                         unique_filename = f"{uuid.uuid4()}_{filename}"
                         file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
                         file.save(file_path)
                         
-                        # If this is the first image and property has no main image, set it
                         if idx == 0 and not property_obj.image:
                             property_obj.image = unique_filename
                         
-                        # Add to PropertyImage table
                         new_image = PropertyImage(
                             property_id=property_id,
                             filename=unique_filename
@@ -804,25 +1066,18 @@ def edit_property(property_id):
         except Exception as e:
             db.session.rollback()
             flash(f'Error updating property: {str(e)}', 'danger')
-            print(f"Error in edit_property: {str(e)}")
     
-    # GET request - fetch property images
     property_images = PropertyImage.query.filter_by(property_id=property_id).all()
     
     return render_template('edit_property.html', 
-                         property=property_obj, 
-                         user=user,
-                         images=property_images)
-
-
-
-
-
+                        property=property_obj, 
+                        user=user,
+                        images=property_images)
 
 @app.route('/delete-image', methods=['POST'])
 @login_required
 def delete_image():
-    """Delete a property image via AJAX"""
+    """Delete property image"""
     user_id = session.get('user_id')
     user = User.query.get(user_id)
     
@@ -836,18 +1091,15 @@ def delete_image():
         if action != 'delete_image' or not image_id:
             return jsonify({'success': False, 'message': 'Invalid request'}), 400
         
-        # Get the image
         image = PropertyImage.query.get(image_id)
         
         if not image:
             return jsonify({'success': False, 'message': 'Image not found'}), 404
         
-        # Check if user owns this property
         property_obj = Property.query.get(image.property_id)
         if not property_obj or property_obj.landlord_id != user_id:
             return jsonify({'success': False, 'message': 'Unauthorized'}), 403
         
-        # Delete the physical file
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], image.filename)
         if os.path.exists(file_path):
             try:
@@ -855,9 +1107,7 @@ def delete_image():
             except Exception as e:
                 print(f"Error deleting file: {e}")
         
-        # If this is the main property image, update it
         if property_obj.image == image.filename:
-            # Set the main image to the next available image or None
             remaining_images = PropertyImage.query.filter(
                 PropertyImage.property_id == property_obj.id,
                 PropertyImage.id != image.id
@@ -868,7 +1118,6 @@ def delete_image():
             else:
                 property_obj.image = None
         
-        # Delete from database
         db.session.delete(image)
         db.session.commit()
         
@@ -876,12 +1125,215 @@ def delete_image():
         
     except Exception as e:
         db.session.rollback()
-        print(f"Error deleting image: {str(e)}")
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+@app.route('/delete-property/<int:property_id>', methods=['POST'])
+@login_required
+def delete_property(property_id):
+    """Delete property"""
+    user_id = session.get('user_id')
+    user = User.query.get(user_id)
+    
+    property_obj = Property.query.get_or_404(property_id)
+    
+    if user.role != 'landlord' or property_obj.landlord_id != user_id:
+        return jsonify({'success': False, 'message': 'You do not have permission to delete this property.'}), 403
+    
+    try:
+        property_images = PropertyImage.query.filter_by(property_id=property_id).all()
+        for img in property_images:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    print(f"Error deleting image file {img.filename}: {e}")
+            db.session.delete(img)
+        
+        if property_obj.image:
+            main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], property_obj.image)
+            if os.path.exists(main_image_path):
+                try:
+                    os.remove(main_image_path)
+                except Exception as e:
+                    print(f"Error deleting main image: {e}")
+        
+        Booking.query.filter_by(property_id=property_id).delete()
+        Billing.query.filter_by(property_id=property_id).delete()
+        Review.query.filter_by(property_id=property_id).delete()
+        
+        db.session.delete(property_obj)
+        db.session.commit()
+        
+        count_after = Property.query.filter_by(landlord_id=user.id).count()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Property deleted successfully',
+            'new_count': count_after
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error deleting property: {str(e)}'}), 500
+
+@app.route('/book_property/<int:property_id>', methods=['POST'])
+@login_required
+def book_property(property_id):
+    """Book a property"""
+    property = Property.query.get_or_404(property_id)
+    
+    start_date = request.form.get('start_date')
+    end_date = request.form.get('end_date')
+    
+    if not start_date or not end_date:
+        flash("Please provide both start and end dates.", "danger")
+        return redirect(url_for('property_detail', property_id=property.id))
+    
+    try:
+        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
+        
+        if end_date_obj <= start_date_obj:
+            flash("End date must be after start date.", "danger")
+            return redirect(url_for('property_detail', property_id=property.id))
+            
+    except ValueError as e:
+        flash("Invalid date format. Please use YYYY-MM-DD.", "danger")
+        return redirect(url_for('property_detail', property_id=property.id))
+    
+    active_bookings = Booking.query.filter(
+        Booking.property_id == property.id,
+        Booking.status.in_(["pending", "approved"]),
+        Booking.start_date <= end_date_obj,
+        Booking.end_date >= start_date_obj
+    ).count()
+    
+    available_slots = MAX_SLOTS - active_bookings
+    if available_slots <= 0:
+        flash("Sorry, this property is fully booked for the selected dates.", "danger")
+        return redirect(url_for('property_detail', property_id=property.id))
+    
+    total_days = (end_date_obj - start_date_obj).days
+    monthly_rate = property.price
+    daily_rate = monthly_rate / 30
+    total_bill = total_days * daily_rate
+    
+    booking = Booking(
+        property_id=property.id,
+        tenant_id=current_user.id,
+        start_date=start_date_obj,
+        end_date=end_date_obj,
+        status='pending',
+        total_bill=total_bill
+    )
+    db.session.add(booking)
+    db.session.flush()
+    
+    billing = Billing(
+        tenant_id=current_user.id,
+        property_id=property.id,
+        amount=total_bill,
+        status='unpaid',
+        due_date=end_date_obj,
+        booking_reference=booking.reference_number
+    )
+    db.session.add(billing)
+    db.session.commit()
+    
+    flash(
+        f"Booking requested successfully! Your booking reference is: <strong>{booking.reference_number}</strong><br>"
+        f"{total_days} days × ₱{daily_rate:.2f}/day = ₱{total_bill:,.2f}. Waiting for approval.", 
+        "success"
+    )
+    
+    return redirect(url_for('booking_confirmation', reference_number=booking.reference_number))
+
+@app.route('/booking/confirmation/<reference_number>')
+@login_required
+def booking_confirmation(reference_number):
+    """Booking confirmation page"""
+    booking = Booking.query.filter_by(reference_number=reference_number).first_or_404()
+    
+    if booking.tenant_id != current_user.id and current_user.role != 'admin':
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
+    
+    return render_template('booking_confirmation.html', 
+                        booking=booking, 
+                        user=current_user)
+
+@app.route('/search_booking', methods=['GET'])
+@login_required
+def search_booking():
+    """Search booking by reference"""
+    reference_number = request.args.get('reference', '').strip().upper()
+    
+    if reference_number:
+        booking = Booking.query.filter_by(reference_number=reference_number).first()
+        
+        if booking:
+            if booking.tenant_id == current_user.id or current_user.role in ['admin', 'landlord']:
+                return redirect(url_for('booking_details', reference_number=reference_number))
+            else:
+                flash("Access denied to this booking.", "danger")
+        else:
+            flash("Booking reference not found.", "danger")
+    
+    recent_bookings = []
+    if current_user.role == 'tenant':
+        recent_bookings = Booking.query.filter_by(tenant_id=current_user.id)\
+            .order_by(Booking.created_at.desc())\
+            .limit(5)\
+            .all()
+    
+    return render_template('search_booking.html', 
+                        user=current_user, 
+                        recent_bookings=recent_bookings)
+
+@app.route('/booking/details/<reference_number>')
+@login_required
+def booking_details(reference_number):
+    """Booking details page"""
+    booking = Booking.query.filter_by(reference_number=reference_number).first_or_404()
+    
+    if not (booking.tenant_id == current_user.id or 
+            current_user.role == 'admin' or 
+            (current_user.role == 'landlord' and booking.property.landlord_id == current_user.id)):
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
+    
+    billing = Billing.query.filter_by(booking_reference=reference_number).all()
+    
+    return render_template('booking_details.html', 
+                        booking=booking, 
+                        billing=billing,
+                        user=current_user)
+
+@app.route('/pending_bookings')
+@login_required
+@verified_landlord_required
+def pending_bookings():
+    """View pending bookings (landlord)"""
+    user = User.query.get(session['user_id'])
+    if user.role != 'landlord':
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
+    
+    properties = Property.query.filter_by(landlord_id=user.id).all()
+    property_ids = [p.id for p in properties]
+    
+    bookings = Booking.query.filter(
+        Booking.property_id.in_(property_ids),
+        Booking.status == 'pending'
+    ).order_by(Booking.created_at.desc()).all()
+    
+    return render_template('pending_bookings.html', bookings=bookings, user=user)
 
 @app.route('/landlord/booking_action/<int:booking_id>/<action>', methods=['POST'])
 @login_required
 def booking_action(booking_id, action):
+    """Approve or reject booking"""
     user = User.query.get(session['user_id'])
     
     if user.role != 'landlord':
@@ -890,7 +1342,6 @@ def booking_action(booking_id, action):
 
     booking = Booking.query.get_or_404(booking_id)
 
-    # Ensure this landlord owns the property
     if booking.property.landlord_id != user.id:
         flash("You cannot modify this booking.", "danger")
         return redirect(url_for('pending_bookings'))
@@ -899,7 +1350,6 @@ def booking_action(booking_id, action):
         booking.status = 'approved'
         booking.property.status = 'booked'
 
-        # Create billing if none exists
         existing_bill = Billing.query.filter_by(
             tenant_id=booking.tenant_id,
             property_id=booking.property_id
@@ -927,44 +1377,329 @@ def booking_action(booking_id, action):
     db.session.commit()
     return redirect(url_for('pending_bookings'))
 
-
-
-@app.route("/inbox")
+@app.route('/landlord/approved_bookings')
 @login_required
-def inbox():
-    my_id = session["user_id"]
+@verified_landlord_required 
+def approved_bookings():
+    """View approved bookings"""
+    user = User.query.get(session.get('user_id'))
 
-    chat_partners = (
-        db.session.query(User)
-        .join(MessageModel, or_(MessageModel.sender_id == User.id, MessageModel.receiver_id == User.id))  # Change here
-        .filter(or_(MessageModel.sender_id == my_id, MessageModel.receiver_id == my_id))  # Change here
-        .filter(User.id != my_id)
-        .distinct()
-        .all()
+    if not user or user.role != 'landlord':
+        flash("Access denied. You must be a landlord to view this page.", "danger")
+        return redirect(url_for('dashboard'))
+
+    properties = Property.query.filter_by(landlord_id=user.id).all()
+    property_ids = [p.id for p in properties]
+
+    bookings = Booking.query.filter(
+        Booking.property_id.in_(property_ids),
+        Booking.status == 'approved'
+    ).all()
+
+    return render_template('approved_bookings.html', bookings=bookings, user=user)
+
+@app.route('/landlord/booked_properties')
+@login_required
+@verified_landlord_required
+def booked_properties():
+    """View all booked properties"""
+    user = User.query.get(session.get('user_id'))
+
+    if not user or user.role != 'landlord':
+        flash("Access denied. You must be a landlord to view this page.", "danger")
+        return redirect(url_for('home'))
+
+    properties = Property.query.filter_by(landlord_id=user.id).all()
+
+    booked_properties = []
+
+    for prop in properties:
+        for booking in prop.bookings:
+            booked_properties.append({
+                'id': booking.id,
+                'property': prop,
+                'tenant': booking.tenant,
+                'start_date': booking.start_date,
+                'end_date': booking.end_date,
+                'status': booking.status
+            })
+
+    return render_template('booked_properties.html', booked_properties=booked_properties, user=user)
+
+@app.route('/reject_booking/<int:booking_id>', methods=['POST'])
+@login_required
+def reject_booking(booking_id):
+    """Reject a booking"""
+    user = User.query.get(session['user_id'])
+    if user.role != 'landlord':
+        flash("Access denied.", "danger")
+        return redirect(url_for('dashboard'))
+
+    booking = Booking.query.get_or_404(booking_id)
+
+    if booking.property.landlord_id != user.id:
+        flash("You cannot reject this booking.", "danger")
+        return redirect(url_for('booked_properties'))
+
+    booking.status = 'rejected'
+    db.session.commit()
+    flash(f"Booking for {booking.property.title} has been rejected.", "danger")
+    return redirect(url_for('booked_properties'))
+
+@app.route('/my_bookings')
+@login_required
+def my_bookings_tenant():
+    """Tenant's bookings"""
+    user = User.query.get(session['user_id'])
+
+    if not user or user.role != 'tenant':
+        flash("Access denied. You must be a tenant to view this page.", "danger")
+        return redirect(url_for('dashboard'))
+
+    bookings = Booking.query.filter_by(tenant_id=user.id).order_by(Booking.created_at.desc()).all()
+
+    return render_template('my_bookings_tenant.html', bookings=bookings, user=user)
+
+@app.route('/my_bookings_tenant')
+@login_required
+def my_bookings_tenant_page():
+    """Tenant bookings page"""
+    user = User.query.get(session.get('user_id'))
+
+    if not user or user.role != 'tenant':
+        flash("Access denied. You must be a tenant to view this page.", "danger")
+        return redirect(url_for('dashboard'))
+
+    bookings = Booking.query.filter_by(tenant_id=user.id).all()
+
+    return render_template('tenants_booking.html', bookings=bookings, user=user)
+
+@app.route('/billing')
+@login_required
+def billing():
+    """Billing page"""
+    user = current_user
+    current_year = date.today().year
+
+    if user.role == 'landlord':
+        bills = Billing.query.join(Property).filter(Property.landlord_id == user.id).all()
+    else:
+        bills = Billing.query.filter_by(tenant_id=user.id).all()
+
+    for bill in bills:
+        if bill.status.lower() == 'unpaid' and bill.due_date:
+            if date.today() > bill.due_date:
+                bill.penalty = bill.amount * 0.1
+                bill.status = 'overdue'
+            else:
+                bill.penalty = 0
+        
+        if bill.status.lower() == 'paid' and hasattr(bill, 'payment_date') and bill.due_date:
+            if bill.payment_date <= bill.due_date:
+                bill.discount = bill.amount * 0.05
+            else:
+                bill.discount = 0
+
+    db.session.commit()
+
+    return render_template('billing.html', bills=bills, user=user, current_year=current_year)
+
+@app.route('/confirm_payment/<int:bill_id>', methods=['POST'])
+@login_required
+def confirm_payment(bill_id):
+    """Confirm payment"""
+    user = User.query.get(session['user_id'])
+    if user.role != 'tenant':
+        flash("You are not allowed to perform this action.", "danger")
+        return redirect(url_for('billing'))
+
+    bill = Billing.query.get_or_404(bill_id)
+    if bill.status == 'paid':
+        flash("This bill has already been paid.", "info")
+        return redirect(url_for('billing'))
+
+    payment_method = request.form.get('payment_method')
+    if not payment_method:
+        flash("Please select a payment method.", "warning")
+        return redirect(url_for('billing'))
+
+    total_amount = (bill.amount * (bill.months or 1)) + (bill.penalty or 0) - (bill.discount or 0)
+    bill.admin_commission = total_amount * 0.05
+    bill.status = 'paid'
+    bill.payment_method = payment_method
+    bill.payment_date = date.today()
+
+    db.session.commit()
+
+    flash(f"Bill {bill.id} has been paid! Total: ₱{total_amount:.2f}, Admin Commission: ₱{bill.admin_commission:.2f}", "success")
+    return redirect(url_for('billing'))
+
+@app.route('/pay_bill/<int:bill_id>', methods=['POST'])
+@login_required
+def pay_bill(bill_id):
+    """Pay a bill"""
+    user = User.query.get(session['user_id'])
+    if user.role != 'landlord':
+        flash("You are not allowed to perform this action.", "danger")
+        return redirect(url_for('billing'))
+
+    bill = Billing.query.get_or_404(bill_id)
+    if bill.status == 'paid':
+        flash("This bill has already been paid.", "info")
+        return redirect(url_for('billing'))
+
+    today = date.today()
+    discount = 0
+    penalty = 0
+
+    if bill.due_date:
+        if today <= bill.due_date:
+            discount = bill.amount * 0.05
+        else:
+            days_late = (today - bill.due_date).days
+            penalty = days_late * 50
+
+    final_amount = bill.amount - discount + penalty
+
+    bill.status = 'paid'
+    bill.discount = discount
+    bill.penalty = penalty
+    bill.payment_date = today
+    db.session.commit()
+
+    flash(f"Bill {bill.id} marked as paid! Final amount: ₱{final_amount:.2f}", "success")
+    return redirect(url_for('billing'))
+
+@app.route('/bills/<int:user_id>')
+def bills_page(user_id):
+    """Bills page"""
+    user = User.query.get_or_404(user_id)
+
+    if user.role == 'landlord':
+        bills = Billing.query.join(Property).filter(Property.landlord_id == user.id).all()
+    else:
+        bills = Billing.query.filter_by(tenant_id=user.id).all()
+
+    for bill in bills:
+        bill.current_penalty = 0
+        bill.current_discount = 0
+
+        if bill.status.lower() == 'paid' and bill.due_date and hasattr(bill, 'payment_date'):
+            if bill.payment_date <= bill.due_date:
+                bill.current_discount = bill.amount * 0.05
+
+        elif bill.status.lower() == 'unpaid' and bill.due_date:
+            if date.today() > bill.due_date:
+                bill.current_penalty = bill.amount * 0.1
+
+    return render_template('bills.html', bills=bills, user=user)
+
+@app.route('/monthly_invoice', methods=['GET', 'POST'])
+@login_required
+def monthly_invoice():
+    """Monthly invoice"""
+    user = current_user
+    if not user:
+        flash("Please login first.", "danger")
+        return redirect(url_for('login'))
+
+    selected_year = request.args.get('year', date.today().year, type=int)
+    selected_month = request.args.get('month', date.today().month, type=int)
+
+    if user.role == 'landlord':
+        bills = Billing.query.join(Property).filter(
+            Property.landlord_id == user.id,
+            db.extract('year', Billing.due_date) == selected_year,
+            db.extract('month', Billing.due_date) == selected_month
+        ).all()
+    else:
+        bills = Billing.query.filter(
+            Billing.tenant_id == user.id,
+            db.extract('year', Billing.due_date) == selected_year,
+            db.extract('month', Billing.due_date) == selected_month
+        ).all()
+
+    total_amount = sum(b.amount for b in bills)
+    total_discount = sum(b.amount * 0.05 if b.status.lower() == 'paid' and b.due_date >= b.payment_date else 0 for b in bills if hasattr(b, 'payment_date'))
+    total_penalty = sum((date.today() - b.due_date).days * 50 if b.status.lower() == 'unpaid' and b.due_date < date.today() else 0 for b in bills if b.due_date)
+
+    return render_template(
+        'monthly_invoice.html',
+        bills=bills,
+        total_amount=total_amount,
+        total_discount=total_discount,
+        total_penalty=total_penalty,
+        selected_year=selected_year,
+        selected_month=selected_month,
+        user=user
     )
 
-    return render_template("inbox.html", partners=chat_partners)
+@app.route('/admin/commissions')
+@login_required
+def admin_commissions():
+    """Admin commission dashboard"""
+    user = User.query.get(session['user_id'])
+    if user.role != 'admin':
+        flash("You are not allowed to access this page.", "danger")
+        return redirect(url_for('dashboard'))
 
-# --- Add Review Route ---
+    paid_bills = Billing.query.filter_by(status='paid').all()
+    total_commission = sum(bill.admin_commission or 0 for bill in paid_bills)
+    
+    unpaid_bills = Billing.query.filter_by(status='unpaid').all()
+    pending_commission = sum(bill.amount * 0.05 for bill in unpaid_bills)
+    
+    properties_count = Property.query.count()
+    tenants_count = User.query.filter_by(role='tenant').count()
+
+    return render_template('admin_commissions.html', 
+                        total_commission=total_commission,
+                        pending_commission=pending_commission,
+                        properties_count=properties_count,
+                        tenants_count=tenants_count,
+                        bills=paid_bills,
+                        user=user)
+
+@app.route('/process_payment', methods=['POST'])
+def process_payment():
+    """Process payment"""
+    method = request.form.get('payment_method')
+    flash(f'You selected {method} as your payment method!', 'success')
+    return redirect(url_for('billing'))
+
+@app.route('/gcash')
+def gcash_page():
+    return render_template("gcash.html")
+
+@app.route('/maya')
+def maya_page():
+    return render_template("maya.html")
+
+@app.route('/paypal')
+def paypal_page():
+    return render_template("paypal.html")
+
+@app.route('/bank')
+def bank_page():
+    return render_template("bank.html")
+
 @app.route('/add_review/<int:property_id>', methods=['POST'])
 @login_required
 def add_review(property_id):
+    """Add review for property"""
     user = User.query.get(session['user_id'])
     property = Property.query.get_or_404(property_id)
     
-    # FIXED: User can review if they have an APPROVED booking (during or after stay)
     has_approved_booking = Booking.query.filter(
         Booking.property_id == property_id,
         Booking.tenant_id == user.id,
         Booking.status == 'approved'
-        # Removed the end_date check
     ).first()
     
     if not has_approved_booking:
         flash("You can only review properties you have an approved booking for.", "warning")
         return redirect(url_for('property_detail', property_id=property_id))
     
-    # Check if user already reviewed this property
     existing_review = Review.query.filter_by(
         property_id=property_id,
         tenant_id=user.id
@@ -994,76 +1729,10 @@ def add_review(property_id):
     flash("Thank you for your review! Other tenants can now see your feedback.", "success")
     return redirect(url_for('property_detail', property_id=property_id))
 
-
-@app.route('/debug-email-full')
-def debug_email_full():
-    """Comprehensive email debug"""
-    try:
-        print("=== FULL EMAIL DEBUG ===")
-        print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
-        print(f"MAIL_PASSWORD: {app.config['MAIL_PASSWORD']}")
-        print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
-        print(f"MAIL_PORT: {app.config['MAIL_PORT']}")
-        print(f"MAIL_USE_TLS: {app.config['MAIL_USE_TLS']}")
-        
-        # Test sending to YOURSELF
-        msg = Message(
-            subject='FINAL TEST - Boardify Email',
-            recipients=['lebrontan2004@gmail.com'],  # Send to yourself
-            body='This is the final test email. If you get this, email is working!',
-            sender=app.config['MAIL_DEFAULT_SENDER']
-        )
-        
-        mail.send(msg)
-        return """
-        <h2>✅ Email sent successfully!</h2>
-        <p>Check your inbox at <strong>lebrontan2004@gmail.com</strong></p>
-        <p>Refresh your inbox and check spam folder.</p>
-        """
-        
-    except Exception as e:
-        return f"""
-        <h2>❌ Email Failed Completely</h2>
-        <p><strong>Error:</strong> {str(e)}</p>
-        <h3>Your Current Configuration:</h3>
-        <ul>
-            <li>Username: {app.config['MAIL_USERNAME']}</li>
-            <li>Password: {app.config['MAIL_PASSWORD']} (length: {len(app.config['MAIL_PASSWORD'])})</li>
-            <li>Server: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}</li>
-        </ul>
-        <h3>Possible Issues:</h3>
-        <ol>
-            <li>App password is incorrect</li>
-            <li>2FA not enabled on Gmail</li>
-            <li>Google blocking sign-in attempts</li>
-            <li>Need to allow less secure apps (temporarily)</li>
-        </ol>
-        """
-@app.route('/test-new-app-password')
-def test_new_app_password():
-    try:
-        msg = Message(
-            subject='Boardify - New App Password Test',
-            recipients=['lebrontan2004@gmail.com'],
-            body='If you receive this, your NEW app password is working! 🎉'
-        )
-        mail.send(msg)
-        return """
-        <h2>✅ Email sent with NEW app password!</h2>
-        <p>Check your inbox at <strong>lebrontan2004@gmail.com</strong></p>
-        <p>Refresh and check spam folder if needed.</p>
-        """
-    except Exception as e:
-        return f"""
-        <h2>❌ Still failing with new password</h2>
-        <p><strong>Error:</strong> {str(e)}</p>
-        <p>Try allowing less secure apps as a temporary solution.</p>
-        """
-
-# --- Edit Review Route ---
 @app.route('/edit_review/<int:review_id>', methods=['GET', 'POST'])
 @login_required
 def edit_review(review_id):
+    """Edit review"""
     review = Review.query.get_or_404(review_id)
     user = User.query.get(session['user_id'])
     
@@ -1080,10 +1749,10 @@ def edit_review(review_id):
     
     return render_template('edit_review.html', review=review, user=user)
 
-# --- Delete Review Route ---
 @app.route('/delete_review/<int:review_id>', methods=['POST'])
 @login_required
 def delete_review(review_id):
+    """Delete review"""
     review = Review.query.get_or_404(review_id)
     user = User.query.get(session['user_id'])
     property_id = review.property_id
@@ -1097,60 +1766,34 @@ def delete_review(review_id):
     flash("Review deleted successfully!", "success")
     return redirect(url_for('property_detail', property_id=property_id))
 
-# --- Safe way to create Review table (run once) ---
-@app.route('/create_review_table')
-def create_review_table():
-    try:
-        # Create only the Review table if it doesn't exist
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        
-        if 'review' not in inspector.get_table_names():
-            Review.__table__.create(db.engine)
-            return "✅ Review table created successfully! You can now remove this route."
-        else:
-            return "✅ Review table already exists! You can remove this route."
-    except Exception as e:
-        return f"❌ Error: {str(e)}"
-    
+@app.route("/inbox")
+@login_required
+def inbox():
+    """Inbox - view message partners"""
+    my_id = session["user_id"]
 
-@app.route('/fix-db-now')
-def fix_db_now():
-    """Force fix the database"""
-    try:
-        # Drop and recreate all tables
-        db.drop_all()
-        db.create_all()
-        
-        # Create admin user
-        from werkzeug.security import generate_password_hash
-        admin = User(
-            name="Admin",
-            email="admin@example.com",
-            password_hash=generate_password_hash("admin123", method="pbkdf2:sha256"),
-            role="admin",
-            is_verified=True,
-            is_approved_by_admin=True,
-            gender="Prefer not to say",
-            birthdate=date(1990, 1, 1)
-        )
-        db.session.add(admin)
-        db.session.commit()
-        
-        return "✅ Database completely reset with correct schema!"
-    except Exception as e:
-        return f"Error: {str(e)}"
+    chat_partners = (
+        db.session.query(User)
+        .join(MessageModel, or_(MessageModel.sender_id == User.id, MessageModel.receiver_id == User.id))
+        .filter(or_(MessageModel.sender_id == my_id, MessageModel.receiver_id == my_id))
+        .filter(User.id != my_id)
+        .distinct()
+        .all()
+    )
+
+    return render_template("inbox.html", partners=chat_partners)
 
 @app.route("/messages/<int:user_id>", methods=["GET", "POST"])
 @login_required
 def messages(user_id):
+    """View and send messages"""
     my_id = session["user_id"]
     other = User.query.get_or_404(user_id)
 
     if request.method == "POST":
         content = request.form.get("content", "").strip()
         if content:
-            db.session.add(MessageModel(sender_id=my_id, receiver_id=other.id, content=content))  # Change here
+            db.session.add(MessageModel(sender_id=my_id, receiver_id=other.id, content=content))
             db.session.commit()
             flash("Message sent!", "success")
         else:
@@ -1158,30 +1801,22 @@ def messages(user_id):
         return redirect(url_for("messages", user_id=other.id))
 
     chat = (
-        MessageModel.query  # Change here
+        MessageModel.query
         .filter(
             or_(
                 (MessageModel.sender_id == my_id) & (MessageModel.receiver_id == other.id),
                 (MessageModel.sender_id == other.id) & (MessageModel.receiver_id == my_id),
             )
         )
-        .order_by(MessageModel.timestamp.asc())  # Change here
+        .order_by(MessageModel.timestamp.asc())
         .all()
     )
 
     return render_template("messages.html", chat=chat, other=other)
 
-@app.route('/export-data')
-@login_required
-def export_data():
-    """Simple data export endpoint"""
-    flash('Data export feature is coming soon!', 'info')
-    return redirect(url_for('profile'))
-
-
-
 @app.route('/send_message/<int:receiver_id>', methods=['POST'])
 def send_message(receiver_id):
+    """Send message"""
     if 'user_id' not in session:
         flash("Please log in first.")
         return redirect(url_for('login'))
@@ -1193,7 +1828,7 @@ def send_message(receiver_id):
         flash("Message cannot be empty.")
         return redirect(url_for('messages', user_id=receiver_id))
 
-    new_message = MessageModel(sender_id=sender_id, receiver_id=receiver_id, content=content)  # Change here
+    new_message = MessageModel(sender_id=sender_id, receiver_id=receiver_id, content=content)
     db.session.add(new_message)
     db.session.commit()
 
@@ -1202,440 +1837,29 @@ def send_message(receiver_id):
 @app.route("/users")
 @login_required
 def users():
+    """View all users"""
     all_users = User.query.all()
     return render_template("users.html", users=all_users)
 
-
-@app.route('/process_payment', methods=['POST'])
-def process_payment():
-    method = request.form.get('payment_method')
-    # handle different payment methods here
-    flash(f'You selected {method} as your payment method!', 'success')
-    return redirect(url_for('billing'))
-
-
-@app.route('/gcash')
-def gcash_page():
-    return render_template("gcash.html")
-
-@app.route('/maya')
-def maya_page():
-    return render_template("maya.html")
-
-@app.route('/paypal')
-def paypal_page():
-    return render_template("paypal.html")
-
-@app.route('/bank')
-def bank_page():
-    return render_template("bank.html")
-
-
-
-
-@app.route('/confirm_payment/<int:bill_id>', methods=['POST'])
-@login_required
-def confirm_payment(bill_id):
-    user = User.query.get(session['user_id'])
-    if user.role != 'tenant':
-        flash("You are not allowed to perform this action.", "danger")
-        return redirect(url_for('billing'))
-
-    bill = Billing.query.get_or_404(bill_id)
-    if bill.status == 'paid':
-        flash("This bill has already been paid.", "info")
-        return redirect(url_for('billing'))
-
-    payment_method = request.form.get('payment_method')
-    if not payment_method:
-        flash("Please select a payment method.", "warning")
-        return redirect(url_for('billing'))
-
-    # Total based on months booked
-    total_amount = (bill.amount * (bill.months or 1)) + (bill.penalty or 0) - (bill.discount or 0)
-
-    # Admin commission 5% of total
-    bill.admin_commission = total_amount * 0.05
-
-    bill.status = 'paid'
-    bill.payment_method = payment_method
-
-    db.session.commit()
-
-    flash(f"Bill {bill.id} has been paid! Total: ₱{total_amount:.2f}, Admin Commission: ₱{bill.admin_commission:.2f}", "success")
-    return redirect(url_for('billing'))
-
-
-
-# Admin dashboard route showing total commissions
-@app.route('/admin/commissions')
-@login_required
-def admin_commissions():
-    user = User.query.get(session['user_id'])
-    if user.role != 'admin':
-        flash("You are not allowed to access this page.", "danger")
-        return redirect(url_for('dashboard'))
-
-    # Get all paid bills with commission
-    paid_bills = Billing.query.filter_by(status='paid').all()
-    total_commission = sum(bill.admin_commission or 0 for bill in paid_bills)
-    
-    # Calculate pending commission
-    unpaid_bills = Billing.query.filter_by(status='unpaid').all()
-    pending_commission = sum(bill.amount * 0.05 for bill in unpaid_bills)
-    
-    # Get additional stats
-    properties_count = Property.query.count()
-    tenants_count = User.query.filter_by(role='tenant').count()
-
-    return render_template('admin_commissions.html', 
-                         total_commission=total_commission,
-                         pending_commission=pending_commission,
-                         properties_count=properties_count,
-                         tenants_count=tenants_count,
-                         bills=paid_bills,
-                         user=user)
-
-
-# Tenant's view of their own bookings
-@app.route('/my_bookings')
-@login_required
-def my_bookings_tenant():
-    user = User.query.get(session['user_id'])
-
-    # Only allow tenants to access this page
-    if not user or user.role != 'tenant':
-        flash("Access denied. You must be a tenant to view this page.", "danger")
-        return redirect(url_for('dashboard'))
-
-    # Fetch all bookings for this tenant, ordered by newest first
-    bookings = Booking.query.filter_by(tenant_id=user.id).order_by(Booking.created_at.desc()).all()
-
-    return render_template('my_bookings_tenant.html', bookings=bookings, user=user)
-
-
-@app.route('/pay_bill/<int:bill_id>', methods=['POST'])
-@login_required
-def pay_bill(bill_id):
-    user = User.query.get(session['user_id'])
-    if user.role != 'landlord':
-        flash("You are not allowed to perform this action.", "danger")
-        return redirect(url_for('billing'))
-
-    bill = Billing.query.get_or_404(bill_id)
-    if bill.status == 'paid':
-        flash("This bill has already been paid.", "info")
-        return redirect(url_for('billing'))
-
-    # Calculate discount or penalty
-    today = date.today()
-    discount = 0
-    penalty = 0
-
-    if bill.due_date:
-        if today <= bill.due_date:
-            discount = bill.amount * 0.05  # 5% early payment discount
-        else:
-            days_late = (today - bill.due_date).days
-            penalty = days_late * 50  # Example: 50 per day late fee
-
-    final_amount = bill.amount - discount + penalty
-
-    # Update bill
-    bill.status = 'paid'
-    bill.discount = discount
-    bill.penalty = penalty
-    bill.payment_date = today
-    db.session.commit()
-
-    flash(f"Bill {bill.id} marked as paid! Final amount: ₱{final_amount:.2f}", "success")
-    return redirect(url_for('billing'))
-
-
-@app.route('/monthly_invoice', methods=['GET', 'POST'])
-@login_required
-def monthly_invoice():
-    user = current_user
-    if not user:
-        flash("Please login first.", "danger")
-        return redirect(url_for('login'))
-
-    # Default: show current month
-    selected_year = request.args.get('year', date.today().year, type=int)
-    selected_month = request.args.get('month', date.today().month, type=int)
-
-    # Filter bills by month
-    if user.role == 'landlord':
-        bills = Billing.query.join(Property).filter(
-            Property.landlord_id == user.id,
-            db.extract('year', Billing.due_date) == selected_year,
-            db.extract('month', Billing.due_date) == selected_month
-        ).all()
-    else:  # tenant
-        bills = Billing.query.filter(
-            Billing.tenant_id == user.id,
-            db.extract('year', Billing.due_date) == selected_year,
-            db.extract('month', Billing.due_date) == selected_month
-        ).all()
-
-    # Calculate total, discounts, penalties
-    total_amount = sum(b.amount for b in bills)
-    total_discount = sum(b.amount * 0.05 if b.status.lower() == 'paid' and b.due_date >= b.payment_date else 0 for b in bills if hasattr(b, 'payment_date'))
-    total_penalty = sum((date.today() - b.due_date).days * 50 if b.status.lower() == 'unpaid' and b.due_date < date.today() else 0 for b in bills if b.due_date)
-
-    return render_template(
-        'monthly_invoice.html',
-        bills=bills,
-        total_amount=total_amount,
-        total_discount=total_discount,
-        total_penalty=total_penalty,
-        selected_year=selected_year,
-        selected_month=selected_month,
-        user=user
-    )
-
-
-
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        user = User.query.filter_by(email=email).first()
-
-        if user and check_password_hash(user.password_hash, password):
-            # Check if email is verified
-            if not user.is_verified:
-                flash("Please verify your email before logging in. Check your inbox for the verification link.", "warning")
-                return redirect(url_for('login'))
-                
-            login_user(user)  # Flask-Login
-            session['user_id'] = user.id
-            session['user_role'] = user.role
-            session['user_name'] = user.name
-            session['user_verified'] = user.is_verified  # Add verification status to session
-            flash("Login successful!", "success")
-            return redirect(url_for('dashboard'))
-
-        flash("Invalid credentials.", "danger")
-        return redirect(url_for('login'))
-
-    return render_template('login.html')
-
-@app.route('/test-verification')
-def test_verification():
-    """Test verification without real email"""
-    # Create a test user
-    test_user = User(
-        name="Test User",
-        email="test@example.com", 
-        password_hash="test",
-        role="tenant",
-        is_verified=False
-    )
-    db.session.add(test_user)
-    db.session.commit()
-    
-    # Try to send verification
-    if send_verification_email(test_user):
-        return "✅ Email would be sent! User created with is_verified=False"
-    else:
-        return "❌ Email failed, but user was created with is_verified=False"
-
-@app.route('/resend-verification', methods=['POST'])
-def resend_verification():
-    email = request.form.get('email')
-    user = User.query.filter_by(email=email).first()
-    
-    if user:
-        if user.is_verified:
-            flash("Email is already verified.", "info")
-            return redirect(url_for('login'))
-        
-        if send_verification_email(user):
-            flash("Verification email sent! Please check your inbox.", "success")
-        else:
-            flash("Failed to send verification email. Please try again later.", "danger")
-    else:
-        flash("Email not found.", "danger")
-    
-    return redirect(url_for('login'))
-
-
-
-@app.route('/test-email-detailed')
-def test_email_detailed():
-    """Detailed email test with full error reporting"""
-    try:
-        print("=== Testing Email Configuration ===")
-        print(f"Username: {app.config['MAIL_USERNAME']}")
-        print(f"Password: {app.config['MAIL_PASSWORD']} (length: {len(app.config['MAIL_PASSWORD'])})")
-        print(f"Server: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}")
-        
-        # Test with a simple message
-        msg = Message(
-            subject='Boardify - Test Email',
-            recipients=[app.config['MAIL_USERNAME']],  # Send to yourself
-            body='This is a test email from your Boardify application.',
-            sender=app.config['MAIL_DEFAULT_SENDER']
-        )
-        
-        mail.send(msg)
-        return """
-        <h2>✅ Email sent successfully!</h2>
-        <p>Check your inbox and spam folder at <strong>lebrontan2004@gmail.com</strong></p>
-        <p>If you don't see it:</p>
-        <ol>
-            <li>Check your spam folder</li>
-            <li>Wait 1-2 minutes</li>
-            <li>Verify the app password is correct</li>
-        </ol>
-        """
-        
-    except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        return f"""
-        <h2>❌ Email Failed</h2>
-        <p><strong>Error:</strong> {str(e)}</p>
-        <p><strong>Full Details:</strong></p>
-        <pre>{error_details}</pre>
-        
-        <h3>Checklist:</h3>
-        <ul>
-            <li>✅ 2FA enabled on Gmail</li>
-            <li>✅ App Password generated (16 characters)</li>
-            <li>✅ Using App Password, not regular password</li>
-            <li>✅ No spaces in app password</li>
-            <li>✅ Correct email: lebrontan2004@gmail.com</li>
-        </ul>
-        """
-
-@app.route('/profile', methods=['GET', 'POST'])
-@login_required
-def profile():
-    user = User.query.get(session.get('user_id'))
-    if not user:
-        flash("User not found.", "danger")
-        return redirect(url_for('login'))
-
-    # Handle profile update
-    if request.method == 'POST':
-        new_name = request.form.get('name')
-        if new_name:
-            user.name = new_name
-            session['user_name'] = new_name  # Update session
-
-        # Handle gender and birthdate
-        user.gender = request.form.get('gender')
-        birthdate_str = request.form.get('birthdate')
-        if birthdate_str:
-            try:
-                user.birthdate = datetime.strptime(birthdate_str, '%Y-%m-%d').date()
-            except ValueError:
-                flash("Invalid birthdate format.", "danger")
-
-        # Handle email update with re-verification
-        new_email = request.form.get('email')
-        if new_email and new_email != user.email:
-            # Check if email already exists
-            existing_user = User.query.filter_by(email=new_email).first()
-            if existing_user and existing_user.id != user.id:
-                flash("Email already registered to another account.", "danger")
-            else:
-                user.email = new_email
-                user.is_verified = False  # Require re-verification for new email
-                # Send new verification email
-                if send_verification_email(user):
-                    flash("Email updated! Please verify your new email address.", "warning")
-                else:
-                    flash("Email updated but verification email failed to send. Please contact support.", "warning")
-
-        # Handle phone and bio if you have these fields
-        if hasattr(user, 'phone'):
-            user.phone = request.form.get('phone')
-        if hasattr(user, 'bio'):
-            user.bio = request.form.get('bio')
-
-        # Handle profile picture upload
-        file = request.files.get('profile_pic')
-        if file and file.filename != '':
-            if allowed_file(file):
-                filename = secure_filename(file.filename)
-                # Add timestamp to make filename unique
-                unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-                file.save(file_path)
-                user.profile_pic = unique_filename
-            else:
-                flash("Invalid file type or file too large. Please use PNG, JPG, or JPEG files under 5MB.", "danger")
-
-        # Handle resend verification request
-        if request.form.get('resend_verification'):
-            if not user.is_verified:
-                if send_verification_email(user):
-                    flash("Verification email sent! Please check your inbox.", "success")
-                else:
-                    flash("Failed to send verification email. Please try again later.", "danger")
-            else:
-                flash("Your email is already verified.", "info")
-
-        db.session.commit()
-        flash("Profile updated successfully!", "success")
-        return redirect(url_for('profile'))
-
-    # Fetch user-specific data
-    if user.role == 'landlord':
-        properties = Property.query.filter_by(landlord_id=user.id).all()
-        bookings = Booking.query.join(Property).filter(Property.landlord_id == user.id).all()
-        bills = Billing.query.join(Property).filter(Property.landlord_id == user.id).all()
-    else:
-        properties = []
-        bookings = Booking.query.filter_by(tenant_id=user.id).all()
-        bills = Billing.query.filter_by(tenant_id=user.id).all()
-
-    # Update session with current verification status
-    session['user_verified'] = user.is_verified
-
-    # Calculate age for display
-    age = None
-    if user.birthdate:
-        from datetime import date
-        today = date.today()
-        age = today.year - user.birthdate.year - ((today.month, today.day) < (user.birthdate.month, user.birthdate.day))
-
-    # Render profile
-    return render_template(
-        'profile.html',
-        user=user,
-        properties=properties,
-        bookings=bookings,
-        bills=bills,
-        today=date.today(),
-        age=age,
-        verified=user.is_verified  # Pass verification status to template
-    )
- # --- View Policies ---
 @app.route('/policies')
 @login_required
 def policies():
+    """View policies"""
     user = User.query.get(session['user_id'])
     if not user:
         flash("User not found. Please log in again.", "danger")
         return redirect(url_for('login'))
 
-    # Show policies relevant to the logged-in user
     relevant_policies = Policy.query.filter(
         (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
     ).all()
 
     return render_template('policies.html', user=user, policies=relevant_policies)
 
-# --- Add Policy (Landlord/Admin only) ---
 @app.route('/add_policy', methods=['GET', 'POST'])
 @login_required
 def add_policy():
+    """Add policy (landlord/admin)"""
     user = User.query.get(session['user_id'])
     if user.role != 'landlord':
         flash("You are not allowed to add policies.", "danger")
@@ -1657,40 +1881,10 @@ def add_policy():
 
     return render_template('add_policy.html', user=user)
 
-
-@app.route('/bills/<int:user_id>')
-def bills_page(user_id):
-    # Get the user
-    user = User.query.get_or_404(user_id)
-
-    # Fetch bills based on role
-    if user.role == 'landlord':
-        # Landlord sees all bills for their properties
-        bills = Billing.query.join(Property).filter(Property.landlord_id == user.id).all()
-    else:  # tenant
-        bills = Billing.query.filter_by(tenant_id=user.id).all()
-
-    # Calculate penalties and discounts
-    for bill in bills:
-        bill.current_penalty = 0
-        bill.current_discount = 0
-
-        # Discount if paid before due date
-        if bill.status.lower() == 'paid' and bill.due_date and hasattr(bill, 'payment_date'):
-            if bill.payment_date <= bill.due_date:
-                bill.current_discount = bill.amount * 0.05  # 5% early payment discount
-
-        # Penalty if unpaid and past due date
-        elif bill.status.lower() == 'unpaid' and bill.due_date:
-            if date.today() > bill.due_date:
-                bill.current_penalty = bill.amount * 0.1  # 10% late penalty
-
-    # Render the bills template
-    return render_template('bills.html', bills=bills, user=user)
-
 @app.route('/help_support', methods=['GET', 'POST'])
 @login_required
 def help_support():
+    """Help and support ticket submission"""
     user = User.query.get(session['user_id'])
 
     if request.method == 'POST':
@@ -1700,8 +1894,6 @@ def help_support():
         if not subject or not message:
             flash("All fields are required.", "danger")
         else:
-            # Here you can save to DB or send email
-            # Example: save to HelpSupport table
             new_ticket = HelpSupport(user_id=user.id, subject=subject, message=message)
             db.session.add(new_ticket)
             db.session.commit()
@@ -1711,10 +1903,10 @@ def help_support():
 
     return render_template('help_support.html', user=user)
 
-
 @app.route('/support_tickets')
 @login_required
 def support_tickets():
+    """View all support tickets (admin)"""
     user = User.query.get(session['user_id'])
 
     if user.role != 'admin':
@@ -1727,22 +1919,21 @@ def support_tickets():
 @app.route('/my_tickets')
 @login_required
 def my_tickets():
+    """View user's own tickets"""
     user = User.query.get(session['user_id'])
     tickets = HelpSupport.query.filter_by(user_id=user.id).order_by(HelpSupport.timestamp.desc()).all()
     return render_template('my_tickets.html', tickets=tickets, user=user)
 
-
 @app.route('/admin/help_tickets', methods=['GET', 'POST'])
 @login_required
 def admin_help_tickets():
+    """Admin help ticket management"""
     user = User.query.get(session['user_id'])
     
-    # Only allow admin to access
     if user.role != 'admin':
         flash("Access denied.", "danger")
         return redirect(url_for('dashboard'))
 
-    # Handle status updates
     if request.method == 'POST':
         ticket_id = request.form.get('ticket_id')
         new_status = request.form.get('status')
@@ -1753,1117 +1944,201 @@ def admin_help_tickets():
             flash(f"Ticket '{ticket.subject}' updated to {new_status}.", "success")
         return redirect(url_for('admin_help_tickets'))
 
-    # Fetch all tickets
     tickets = HelpSupport.query.order_by(HelpSupport.timestamp.desc()).all()
     return render_template('admin_help_tickets.html', tickets=tickets, user=user)
 
 @app.route('/admin/help_support')
 @login_required
 def admin_help_support():
+    """Admin help support dashboard"""
     user = User.query.get(session['user_id'])
     if user.role != 'admin':
         flash("Access denied.", "danger")
         return redirect(url_for('dashboard'))
 
-    # Get all tickets ordered by newest first
     tickets = HelpSupport.query.order_by(HelpSupport.timestamp.desc()).all()
     return render_template('admin_help_support.html', tickets=tickets)
 
-
-
-
-
-
-@app.route('/dashboard', methods=['GET', 'POST'])
-@login_required
-def dashboard():
-    user_id = session.get('user_id')
-    user = User.query.get(user_id)
-
-    if not user:
-        flash("User not found. Please log in again.", "danger")
-        return redirect(url_for('login'))
-
-    # --- ADMIN DASHBOARD ---
-    if user.role == 'admin':
-        # Get stats for admin dashboard
-        total_users = User.query.count()
-        total_landlords = User.query.filter_by(role='landlord').count()
-        total_tenants = User.query.filter_by(role='tenant').count()
-        total_properties = Property.query.count()
-        
-        # Get pending verification requests
-        pending_verifications = User.query.filter_by(
-            role='landlord', 
-            is_approved_by_admin=False
-        ).count()
-        
-        # Get pending support tickets
-        pending_tickets = HelpSupport.query.filter_by(status='pending').count()
-        
-        # Get commission data
-        paid_bills = Billing.query.filter_by(status='paid').all()
-        total_commission = sum(bill.admin_commission or 0 for bill in paid_bills)
-        
-        # Calculate pending commission (unpaid bills)
-        unpaid_bills = Billing.query.filter_by(status='unpaid').all()
-        pending_commission = sum(bill.amount * 0.05 for bill in unpaid_bills)  # 5% commission
-        
-        # Recent activities
-        recent_tickets = HelpSupport.query.order_by(HelpSupport.timestamp.desc()).limit(5).all()
-        recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
-        
-        response = make_response(render_template(
-            'admin_dashboard.html',
-            user=user,
-            # Stats
-            total_users=total_users,
-            total_landlords=total_landlords,
-            total_tenants=total_tenants,
-            total_properties=total_properties,
-            pending_verifications=pending_verifications,
-            pending_tickets=pending_tickets,
-            total_commission=total_commission,
-            pending_commission=pending_commission,
-            # Recent activities
-            recent_tickets=recent_tickets,
-            recent_users=recent_users
-        ))
-        
-        # Add cache control headers
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-        return response
-
-    # --- LANDLORD DASHBOARD ---
-    elif user.role == 'landlord':
-        # Handle trend image upload for landlords
-        if request.method == 'POST':
-            file = request.files.get('trend_image')
-            if file and file.filename != "":
-                import time
-                filename = f"{int(time.time())}_{secure_filename(file.filename)}"
-                upload_path = os.path.join('static/uploads', filename)
-                file.save(upload_path)
-                user.trend_image = filename
-                db.session.commit()
-                flash("Trend image uploaded successfully!", "success")
-            return redirect(url_for('dashboard'))
-
-        # Load trend image
-        chart_image = getattr(user, 'trend_image', None)
-
-        # Get landlord's properties and data
-        properties = Property.query.filter_by(landlord_id=user.id).all()
-        property_ids = [p.id for p in properties]
-        
-        # Get pending bookings for landlord's properties
-        pending_bookings = Booking.query.filter(
-            Booking.property_id.in_(property_ids),
-            Booking.status == 'pending'
-        ).all()
-        
-        # Get bills for landlord's properties
-        tenant_bills = []
-        for prop in properties:
-            tenant_bills.extend(getattr(prop, 'bills', []))
-
-        # Fetch policies relevant to the user
-        relevant_policies = Policy.query.filter(
-            (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
-        ).all()
-
-        response = make_response(render_template(
-            'dashboard.html',
-            user=user,
-            properties=properties,
-            pending_bookings=pending_bookings,
-            tenant_bills=tenant_bills,
-            chart_image=chart_image,
-            policies=relevant_policies
-        ))
-        
-        # Add cache control headers
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-        return response
-
-    # --- TENANT DASHBOARD ---
-    elif user.role == 'tenant':
-        # Get tenant's bookings
-        bookings = Booking.query.filter_by(tenant_id=user.id).all()
-        pending_bookings = [b for b in bookings if b.status == 'pending']
-        
-        # Get tenant's bills
-        tenant_bills = Billing.query.filter_by(tenant_id=user.id).all()
-        
-        # Get trend image from first approved booking's property owner
-        chart_image = None
-        approved_booking = Booking.query.filter_by(
-            tenant_id=user.id, 
-            status='approved'
-        ).first()
-        if approved_booking and approved_booking.property and approved_booking.property.owner:
-            chart_image = getattr(approved_booking.property.owner, 'trend_image', None)
-
-        # Fetch policies relevant to the user
-        relevant_policies = Policy.query.filter(
-            (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
-        ).all()
-
-        response = make_response(render_template(
-            'dashboard.html',
-            user=user,
-            properties=bookings,  # For tenants, show their bookings as "properties"
-            pending_bookings=pending_bookings,
-            tenant_bills=tenant_bills,
-            chart_image=chart_image,
-            policies=relevant_policies
-        ))
-        
-        # Add cache control headers
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-        return response
-
-    # --- FALLBACK: If user role is not recognized ---
-    else:
-        flash("Unknown user role. Please contact support.", "danger")
-        return redirect(url_for('logout'))
-
-@app.route('/billing')
-@login_required
-def billing():
-    user = current_user
-    current_year = date.today().year  # Add this for the template
-
-    # Get bills depending on role
-    if user.role == 'landlord':
-        bills = Billing.query.join(Property).filter(Property.landlord_id == user.id).all()
-    else:  # tenant
-        bills = Billing.query.filter_by(tenant_id=user.id).all()
-
-    # Apply penalties and discounts to the actual bill fields (not current_penalty/discount)
-    for bill in bills:
-        # Auto-apply penalties for overdue bills
-        if bill.status.lower() == 'unpaid' and bill.due_date:
-            if date.today() > bill.due_date:
-                # Apply penalty directly to the bill
-                bill.penalty = bill.amount * 0.1  # 10% penalty
-                bill.status = 'overdue'  # Update status to overdue
-            else:
-                bill.penalty = 0  # Reset penalty if not overdue
-        
-        # Auto-apply discounts for early payments
-        if bill.status.lower() == 'paid' and hasattr(bill, 'payment_date') and bill.due_date:
-            if bill.payment_date <= bill.due_date:
-                bill.discount = bill.amount * 0.05  # 5% discount
-            else:
-                bill.discount = 0  # No discount if paid late
-
-    # Commit the changes to the database
-    db.session.commit()
-
-    return render_template('billing.html', bills=bills, user=user, current_year=current_year)
-
-@app.route('/fix-database')
-def fix_database():
-    """Add the missing is_approved_by_admin column"""
-    try:
-        # Add the missing column
-        db.engine.execute('ALTER TABLE user ADD COLUMN is_approved_by_admin BOOLEAN DEFAULT FALSE')
-        
-        # Set existing landlords as approved for testing
-        landlords = User.query.filter_by(role='landlord').all()
-        for landlord in landlords:
-            landlord.is_approved_by_admin = True
-            print(f"Approved landlord: {landlord.name}")
-        
-        # Set admin as approved
-        admin = User.query.filter_by(role='admin').first()
-        if admin:
-            admin.is_approved_by_admin = True
-        
-        db.session.commit()
-        return "✅ Database fixed! Added is_approved_by_admin column and approved existing users."
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-
-
-
-# ---------- View Properties Route ----------
-@app.route('/properties')
-@login_required
-def viewproperties():
-    user = User.query.get(session.get('user_id'))
-    if not user:
-        flash("User not found.", "danger")
-        return redirect(url_for('login'))
-
-    if user.role == 'landlord':
-        properties = Property.query.filter_by(landlord_id=user.id).all()
-    else:
-        properties = Property.query.all()
-
-    # Prepare property info for template
-    property_data = []
-    for prop in properties:
-        # Get total slots
-        total_slots = prop.slots if prop.slots is not None else 10
-        
-        # Count ONLY approved bookings to calculate available slots
-        approved_bookings_count = sum(1 for booking in prop.bookings if booking.status == 'approved')
-        
-        # Calculate actual slots left
-        slots_left = max(0, total_slots - approved_bookings_count)
-        
-        # Check if current user has booked this property
-        user_has_booked = any(b.tenant_id == user.id for b in prop.bookings)
-        
-        property_data.append({
-            'property': prop,
-            'slots_left': slots_left,
-            'total_slots': total_slots,
-            'user_has_booked': user_has_booked
-        })
-
-    return render_template('viewproperties.html', properties=property_data, user=user)
-
-@app.route('/logout')
-@login_required
-def logout():
-    session.pop('user_id', None)
-    session.pop('user_role', None)
-    session.pop('user_name', None)
-    flash("You have been logged out.", "info")
-    return redirect(url_for('login'))
-
-@app.route('/landlord/booked_properties')
-@login_required
-@verified_landlord_required
-def booked_properties():
-    user = User.query.get(session.get('user_id'))
-
-    # Ensure the user is a landlord
-    if not user or user.role != 'landlord':
-        flash("Access denied. You must be a landlord to view this page.", "danger")
-        return redirect(url_for('home'))
-
-    # Fetch all properties of this landlord
-    properties = Property.query.filter_by(landlord_id=user.id).all()
-
-    booked_properties = []
-
-    # Collect all bookings for each property
-    for prop in properties:
-        for booking in prop.bookings:
-            booked_properties.append({
-                'id': booking.id,
-                'property': prop,
-                'tenant': booking.tenant,
-                'start_date': booking.start_date,
-                'end_date': booking.end_date,
-                'status': booking.status
-            })
-
-    return render_template('booked_properties.html', booked_properties=booked_properties, user=user)
-  
-
-
-
-
-
-
-
-
-@app.route('/buy_property/<int:property_id>', methods=['POST'])
-def buy_property(property_id):
-    property = Property.query.get_or_404(property_id)
-    # Handle the booking/payment logic here
-    property.status = 'booked'  # Change status to booked
-    db.session.commit()
-    flash(f"Property {property.title} has been booked!", "success")
-    return redirect(url_for('dashboard'))  # Redirect to the dashboard
-
-    
-
-@app.route('/my_bookings_tenant')
-@login_required
-def my_bookings_tenant_page():
-    user = User.query.get(session.get('user_id'))
-
-    if not user or user.role != 'tenant':
-        flash("Access denied. You must be a tenant to view this page.", "danger")
-        return redirect(url_for('dashboard'))
-
-    # Fetch tenant's bookings
-    bookings = Booking.query.filter_by(tenant_id=user.id).all()
-
-    return render_template('tenants_booking.html', bookings=bookings, user=user)
-
-
-
-@app.route('/add_property', methods=['GET', 'POST'])
-@login_required
-@verified_landlord_required
-def add_property():
-    user = User.query.get(session.get('user_id'))
-    
-    # DEBUG: Check user status
-    print(f"=== DEBUG ADD PROPERTY ===")
-    print(f"User: {user.name if user else 'None'}")
-    print(f"User role: {user.role if user else 'None'}")
-    print(f"User verified: {user.is_verified if user else 'None'}")
-    print(f"User approved by admin: {getattr(user, 'is_approved_by_admin', 'NO ATTR')}")
-    
-    # Check if user is a landlord (temporarily skip verification for testing)
-    if not user or user.role != 'landlord':
-        flash("Only landlords can add properties.", "danger")
-        return redirect(url_for('dashboard'))
-    
-    # TEMPORARY: Skip full verification for testing
-    # if not user.is_verified_landlord():
-    #     flash("Please verify your email and get admin approval first.", "danger")
-    #     return redirect(url_for('dashboard'))
-    
-    if request.method == 'POST':
-        print("=== FORM SUBMISSION DETECTED ===")
-        print(f"Form data: {dict(request.form)}")
-        
-        try:
-            # Get form data with proper validation
-            title = request.form.get('title', '').strip()
-            description = request.form.get('description', '').strip()
-            price = request.form.get('price', '0')
-            location = request.form.get('location', '').strip()
-            gender_preference = request.form.get('gender_preference')
-            property_type = request.form.get('property_type')
-            bedrooms = request.form.get('bedrooms', '0')
-            bathrooms = request.form.get('bathrooms', '0')
-            slots = request.form.get('slots', '10')
-            amenities = request.form.getlist('amenities')  # This returns a list
-
-            # Debug form data
-            print(f"Title: {title}")
-            print(f"Description: {description[:50]}...")
-            print(f"Price: {price}")
-            print(f"Location: {location}")
-            print(f"Gender Preference: {gender_preference}")
-            print(f"Property Type: {property_type}")
-            print(f"Bedrooms: {bedrooms}")
-            print(f"Bathrooms: {bathrooms}")
-            print(f"Slots: {slots}")
-            print(f"Amenities: {amenities}")
-            
-            # Validate required fields
-            required_fields = {
-                'title': title,
-                'description': description, 
-                'price': price,
-                'property_type': property_type,
-                'slots': slots,
-                'gender_preference': gender_preference
-            }
-            
-            missing_fields = [field for field, value in required_fields.items() if not value]
-            if missing_fields:
-                flash(f"Missing required fields: {', '.join(missing_fields)}", "danger")
-                return redirect(request.url)
-
-            # Convert numeric fields
-            try:
-                price = float(price)
-                slots = int(slots)
-                bedrooms = int(bedrooms) if bedrooms and bedrooms != '0' else None
-                bathrooms = float(bathrooms) if bathrooms and bathrooms != '0' else None
-            except ValueError as e:
-                flash(f"Invalid number format: {str(e)}", "danger")
-                return redirect(request.url)
-
-            # Validate price and slots
-            if price <= 0:
-                flash("Price must be greater than 0.", "danger")
-                return redirect(request.url)
-                
-            if slots <= 0:
-                flash("Slots must be greater than 0.", "danger")
-                return redirect(request.url)
-
-            # Handle file uploads
-            files = request.files.getlist('images')
-            print(f"Number of images: {len(files)}")
-            
-            if len(files) > app.config['MAX_IMAGE_COUNT']:
-                flash(f"Maximum {app.config['MAX_IMAGE_COUNT']} images allowed.", "danger")
-                return redirect(request.url)
-
-            main_image = None
-            image_filenames = []
-            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-            # Process uploaded images
-            for idx, file in enumerate(files):
-                if file and file.filename != '':
-                    print(f"Processing file {idx}: {file.filename}")
-                    if not allowed_file(file):
-                        flash(f"File not allowed or too large: {file.filename}. Please use PNG, JPG, or JPEG files under 5MB.", "danger")
-                        continue
-
-                    original_filename = secure_filename(file.filename)
-                    unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{original_filename}"
-                    upload_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-
-                    try:
-                        file.save(upload_path)
-                        image_filenames.append(unique_filename)
-                        if idx == 0:  # First image is the main image
-                            main_image = unique_filename
-                        print(f"Saved image: {unique_filename}")
-                    except Exception as e:
-                        print(f"Error saving file {file.filename}: {e}")
-                        flash(f"Error saving file {file.filename}", "danger")
-
-            # Create and save the property
-            new_property = Property(
-                title=title,
-                description=description,
-                price=price,
-                location=location,
-                gender_preference=gender_preference,
-                property_type=property_type,
-                bedrooms=bedrooms,
-                bathrooms=bathrooms,
-                slots=slots,
-                image=main_image,
-                landlord_id=user.id,
-                amenities=','.join(amenities) if amenities else None  # Store amenities as comma-separated string
-            )
-
-            db.session.add(new_property)
-            db.session.flush()  # Get the ID without committing
-            
-            print(f"New property created with ID: {new_property.id}")
-
-            # Save additional images to PropertyImage table
-            for fname in image_filenames:
-                # Skip the main image since it's already saved in Property.image
-                if fname != main_image:
-                    prop_image = PropertyImage(property_id=new_property.id, filename=fname)
-                    db.session.add(prop_image)
-                    print(f"Added additional image: {fname}")
-
-            # Commit everything
-            db.session.commit()
-            print("=== PROPERTY ADDED SUCCESSFULLY ===")
-
-            flash("Property added successfully!", "success")
-            return redirect(url_for('viewproperties'))
-            
-        except Exception as e:
-            db.session.rollback()
-            print(f"=== ERROR ADDING PROPERTY: {str(e)} ===")
-            import traceback
-            print(f"Full traceback: {traceback.format_exc()}")
-            flash(f"Error adding property: {str(e)}", "danger")
-            return redirect(request.url)
-
-    return render_template('add_property.html', user=user)
-
-@app.route('/fix-property-model')
-def fix_property_model():
-    """Add the missing amenities column to Property table"""
-    try:
-        # Check if column exists
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        columns = [col['name'] for col in inspector.get_columns('property')]
-        
-        if 'amenities' not in columns:
-            db.engine.execute('ALTER TABLE property ADD COLUMN amenities TEXT')
-            return "✅ Added amenities column to Property table!"
-        else:
-            return "✅ Amenities column already exists!"
-    except Exception as e:
-        return f"Error: {str(e)}"
-    
-
-    
-# Admin verification dashboard
 @app.route('/admin/verify')
 @login_required
 def admin_verify():
+    """Admin verification dashboard"""
     if current_user.role != 'admin':
         flash("Unauthorized access!", "danger")
         return redirect(url_for('dashboard'))
 
-    # Landlords not yet approved by admin (check both fields)
     unverified_landlords = User.query.filter_by(role='landlord').filter(
         (User.is_approved_by_admin == False) | (User.is_verified == False)
     ).all()
     return render_template('admin_verify.html', unverified_users=unverified_landlords)
-# Approve landlord
+
 @app.route('/admin/verify/<int:user_id>', methods=['POST'])
 @login_required
 def verify_landlord(user_id):
+    """Approve landlord"""
     if current_user.role != 'admin':
         flash("Unauthorized access!", "danger")
         return redirect(url_for('dashboard'))
 
     user = User.query.get_or_404(user_id)
-    user.is_approved_by_admin = True  # This is the key line!
-    user.is_verified = True  # Also verify their email
+    user.is_approved_by_admin = True
+    user.is_verified = True
     db.session.commit()
     flash(f"Landlord {user.name} has been approved by admin!", "success")
     return redirect(url_for('admin_verify'))
 
-# Reject landlord
 @app.route('/admin/reject/<int:user_id>', methods=['POST'])
 @login_required
 def reject_landlord(user_id):
+    """Reject landlord"""
     if current_user.role != 'admin':
         flash("Unauthorized access!", "danger")
         return redirect(url_for('dashboard'))
 
     user = User.query.get_or_404(user_id)
-    user.is_approved_by_admin = False  # Explicitly reject
+    user.is_approved_by_admin = False
     db.session.commit()
     flash(f"Landlord {user.name} has been rejected by admin.", "warning")
     return redirect(url_for('admin_verify'))
 
-@app.route('/add-admin-approval-column')
-def add_admin_approval_column():
-    """Add the missing is_approved_by_admin column to database"""
-    try:
-        db.engine.execute('ALTER TABLE user ADD COLUMN is_approved_by_admin BOOLEAN DEFAULT FALSE')
-        
-        # Set existing landlords as approved for testing
-        landlords = User.query.filter_by(role='landlord').all()
-        for landlord in landlords:
-            landlord.is_approved_by_admin = True
-        db.session.commit()
-        
-        return "✅ Added is_approved_by_admin column and approved existing landlords!"
-    except Exception as e:
-        return f"Column might already exist: {str(e)}"
-    
-    # Add this after your existing routes, before the scheduler setup
-
-@app.route('/booking/confirmation/<reference_number>')
+@app.route('/upload_trend', methods=['POST'])
 @login_required
-def booking_confirmation(reference_number):
-    """Show booking confirmation with reference number"""
-    booking = Booking.query.filter_by(reference_number=reference_number).first_or_404()
-    
-    # Ensure the current user owns this booking
-    if booking.tenant_id != current_user.id and current_user.role != 'admin':
-        flash("Access denied.", "danger")
+def upload_trend():
+    """Upload trend image"""
+    if 'file' not in request.files:
+        flash("No file part", "danger")
         return redirect(url_for('dashboard'))
-    
-    return render_template('booking_confirmation.html', 
-                         booking=booking, 
-                         user=current_user)
 
-@app.route('/search_booking', methods=['GET'])
-@login_required
-def search_booking():
-    """Search for booking by reference number"""
-    reference_number = request.args.get('reference', '').strip().upper()
-    
-    if reference_number:
-        booking = Booking.query.filter_by(reference_number=reference_number).first()
-        
-        if booking:
-            # Check if user has permission to view this booking
-            if booking.tenant_id == current_user.id or current_user.role in ['admin', 'landlord']:
-                return redirect(url_for('booking_details', reference_number=reference_number))
-            else:
-                flash("Access denied to this booking.", "danger")
-        else:
-            flash("Booking reference not found.", "danger")
-    
-    # Get recent bookings for the current user
-    recent_bookings = []
-    if current_user.role == 'tenant':
-        recent_bookings = Booking.query.filter_by(tenant_id=current_user.id)\
-            .order_by(Booking.created_at.desc())\
-            .limit(5)\
-            .all()
-    
-    return render_template('search_booking.html', 
-                         user=current_user, 
-                         recent_bookings=recent_bookings)
-@app.route('/booking/details/<reference_number>')
-@login_required
-def booking_details(reference_number):
-    """Show detailed booking information"""
-    booking = Booking.query.filter_by(reference_number=reference_number).first_or_404()
-    
-    # Check permissions
-    if not (booking.tenant_id == current_user.id or 
-            current_user.role == 'admin' or 
-            (current_user.role == 'landlord' and booking.property.landlord_id == current_user.id)):
-        flash("Access denied.", "danger")
+    file = request.files['file']
+    if file.filename == '':
+        flash("No selected file", "danger")
         return redirect(url_for('dashboard'))
-    
-    # Get billing information
-    billing = Billing.query.filter_by(booking_reference=reference_number).all()
-    
-    return render_template('booking_details.html', 
-                         booking=booking, 
-                         billing=billing,
-                         user=current_user)
 
-@app.route('/delete-property/<int:property_id>', methods=['POST'])
-@login_required
-def delete_property(property_id):
-    user_id = session.get('user_id')
-    user = User.query.get(user_id)
-    
-    property_obj = Property.query.get_or_404(property_id)
-    
-    # DEBUG: Log before deletion
-    count_before = Property.query.filter_by(landlord_id=user.id).count()
-    print(f"=== DELETING PROPERTY DEBUG ===")
-    print(f"User: {user.name} (ID: {user.id})")
-    print(f"Property to delete: {property_obj.title} (ID: {property_obj.id})")
-    print(f"Properties count BEFORE deletion: {count_before}")
-    
-    # Check if user is the owner
-    if user.role != 'landlord' or property_obj.landlord_id != user_id:
-        return jsonify({'success': False, 'message': 'You do not have permission to delete this property.'}), 403
+    if not allowed_file(file):
+        flash("Invalid file type or size exceeds 5MB!", "danger")
+        return redirect(url_for('dashboard'))
+
+    user_trend_count = len(os.listdir(app.config['UPLOAD_FOLDER']))
+    if user_trend_count >= app.config['MAX_IMAGE_COUNT']:
+        flash(f"Maximum {app.config['MAX_IMAGE_COUNT']} images allowed!", "danger")
+        return redirect(url_for('dashboard'))
+
+    filename = secure_filename(file.filename)
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    flash("Trend image uploaded successfully!", "success")
+
+    return redirect(url_for('dashboard'))
+
+@app.route('/test-email')
+def test_email():
+    """Test email configuration"""
+    if not EMAIL_ENABLED:
+        return "Email is not configured. Please set MAIL_USERNAME and MAIL_PASSWORD environment variables."
     
     try:
-        # Your existing deletion code...
-        property_images = PropertyImage.query.filter_by(property_id=property_id).all()
-        for img in property_images:
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
-            if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
-                except Exception as e:
-                    print(f"Error deleting image file {img.filename}: {e}")
-            db.session.delete(img)
+        test_recipient = request.args.get('to', 'test@example.com')
+        msg = Message(
+            'Test Email from Boardify',
+            recipients=[test_recipient],
+            sender=app.config['MAIL_DEFAULT_SENDER']
+        )
+        msg.body = 'If you receive this, email is working correctly!'
+        msg.html = '<h1>Test Email</h1><p>If you receive this, email is working correctly!</p>'
         
-        # Delete main property image if exists
-        if property_obj.image:
-            main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], property_obj.image)
-            if os.path.exists(main_image_path):
-                try:
-                    os.remove(main_image_path)
-                except Exception as e:
-                    print(f"Error deleting main image: {e}")
-        
-        # Delete associated bookings
-        Booking.query.filter_by(property_id=property_id).delete()
-        
-        # Delete associated bills
-        Billing.query.filter_by(property_id=property_id).delete()
-        
-        # Delete associated reviews
-        Review.query.filter_by(property_id=property_id).delete()
-        
-        # Delete the property
-        db.session.delete(property_obj)
-        db.session.commit()
-        
-        # DEBUG: Log after deletion
-        count_after = Property.query.filter_by(landlord_id=user.id).count()
-        print(f"Properties count AFTER deletion: {count_after}")
-        print(f"Successfully deleted property {property_id}")
-        print(f"Count changed from {count_before} to {count_after}")
-        
-        return jsonify({
-            'success': True, 
-            'message': 'Property deleted successfully',
-            'new_count': count_after  # Return the new count to frontend
-        })
-        
+        mail.send(msg)
+        return f"✅ Email sent successfully to {test_recipient}! Check your inbox."
     except Exception as e:
-        db.session.rollback()
-        print(f"Error deleting property: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error deleting property: {str(e)}'}), 500
-    
-@app.route('/book_property/<int:property_id>', methods=['POST'])
+        import traceback
+        error_details = traceback.format_exc()
+        return f"❌ Email failed: {str(e)}<br><br><pre>{error_details}</pre>"
+
+@app.route('/export-data')
 @login_required
-def book_property(property_id):
+def export_data():
+    """Export user data"""
+    flash('Data export feature is coming soon!', 'info')
+    return redirect(url_for('profile'))
+
+@app.route('/buy_property/<int:property_id>', methods=['POST'])
+def buy_property(property_id):
+    """Buy/book property"""
     property = Property.query.get_or_404(property_id)
-    
-    # DEBUG: Print all form data
-    print("=== DEBUG FORM DATA ===")
-    print(f"Form data: {dict(request.form)}")
-    
-    start_date = request.form.get('start_date')
-    end_date = request.form.get('end_date')
-    
-    print(f"Start date from form: {start_date}")
-    print(f"End date from form: {end_date}")
-    
-    if not start_date or not end_date:
-        flash("Please provide both start and end dates.", "danger")
-        return redirect(url_for('property_detail', property_id=property.id))
-    
-    # Convert dates
-    try:
-        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
-        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
-        
-        print(f"Parsed start date: {start_date_obj}")
-        print(f"Parsed end date: {end_date_obj}")
-        
-        if end_date_obj <= start_date_obj:
-            flash("End date must be after start date.", "danger")
-            return redirect(url_for('property_detail', property_id=property.id))
-            
-    except ValueError as e:
-        print(f"Date parsing error: {e}")
-        flash("Invalid date format. Please use YYYY-MM-DD.", "danger")
-        return redirect(url_for('property_detail', property_id=property.id))
-    
-    # Check available slots
-    active_bookings = Booking.query.filter(
-        Booking.property_id == property.id,
-        Booking.status.in_(["pending", "approved"]),
-        Booking.start_date <= end_date_obj,
-        Booking.end_date >= start_date_obj
-    ).count()
-    
-    available_slots = MAX_SLOTS - active_bookings
-    if available_slots <= 0:
-        flash("Sorry, this property is fully booked for the selected dates.", "danger")
-        return redirect(url_for('property_detail', property_id=property.id))
-    
-    # SIMPLE CALCULATION (same as frontend)
-    total_days = (end_date_obj - start_date_obj).days
-    monthly_rate = property.price
-    daily_rate = monthly_rate / 30
-    
-    total_bill = total_days * daily_rate
-    
-    print(f"=== BACKEND CALCULATION ===")
-    print(f"Total days: {total_days}")
-    print(f"Monthly rate: {monthly_rate}")
-    print(f"Daily rate: {daily_rate:.2f}")
-    print(f"Total bill: {total_bill:.2f}")
-    
-    # Create booking (reference_number will be auto-generated by the model)
-    booking = Booking(
-        property_id=property.id,
-        tenant_id=current_user.id,
-        start_date=start_date_obj,
-        end_date=end_date_obj,
-        status='pending',
-        total_bill=total_bill
-    )
-    db.session.add(booking)
-    db.session.flush()  # This generates the ID and reference number without committing
-    
-    print(f"Generated booking reference: {booking.reference_number}")
-    
-    # Create billing with reference to booking
-    billing = Billing(
-        tenant_id=current_user.id,
-        property_id=property.id,
-        amount=total_bill,
-        status='unpaid',
-        due_date=end_date_obj,
-        booking_reference=booking.reference_number  # Link billing to booking
-    )
-    db.session.add(billing)
+    property.status = 'booked'
     db.session.commit()
-    
-    flash(
-        f"Booking requested successfully! Your booking reference is: <strong>{booking.reference_number}</strong><br>"
-        f"{total_days} days × ₱{daily_rate:.2f}/day = ₱{total_bill:,.2f}. Waiting for approval.", 
-        "success"
-    )
-    
-    # Redirect to confirmation page instead of property detail
-    return redirect(url_for('booking_confirmation', reference_number=booking.reference_number))
+    flash(f"Property {property.title} has been booked!", "success")
+    return redirect(url_for('dashboard'))
 
-@app.route('/add-amenities-column')
-def add_amenities_column():
-    """Add the missing amenities column to property table"""
-    try:
-        # Add the amenities column
-        db.engine.execute('ALTER TABLE property ADD COLUMN amenities TEXT')
-        
-        # Verify it was added
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        columns = [col['name'] for col in inspector.get_columns('property')]
-        
-        if 'amenities' in columns:
-            return "✅ Successfully added 'amenities' column to property table!"
-        else:
-            return "❌ Failed to add amenities column"
-    except Exception as e:
-        return f"Error: {str(e)}"
-    
-@app.route('/debug-property-count')
-@login_required
-def debug_property_count():
-    user_id = session.get('user_id')
-    user = User.query.get(user_id)
-    
-    # Count all properties for this landlord
-    all_properties = Property.query.filter_by(landlord_id=user.id).all()
-    total_count = Property.query.filter_by(landlord_id=user.id).count()
-    
-    debug_info = {
-        'user_id': user.id,
-        'user_name': user.name,
-        'all_properties_count': total_count,
-        'properties_list': []
-    }
-    
-    for prop in all_properties:
-        debug_info['properties_list'].append({
-            'id': prop.id,
-            'title': prop.title,
-            'status': prop.status
-        })
-    
-    return jsonify(debug_info)
-    
-@app.route('/reset-db-final-fix')
-def reset_db_final_fix():
-    """Final database reset with all relationship fixes"""
-    try:
-        print("=== FINAL DATABASE RESET ===")
-        
-        # Drop all tables
-        db.drop_all()
-        print("✅ Dropped all tables")
-        
-        # Create all tables with corrected schema
-        db.create_all()
-        print("✅ Created all tables with fixed relationships")
-        
-        # Recreate admin user
-        from werkzeug.security import generate_password_hash
-        admin = User(
-            name="Admin",
-            email="admin@example.com",
-            password_hash=generate_password_hash("admin123", method="pbkdf2:sha256"),
-            role="admin",
-            is_verified=True,
-            is_approved_by_admin=True,
-            gender="Prefer not to say",
-            birthdate=date(1990, 1, 1)
-        )
-        db.session.add(admin)
-        db.session.commit()
-        print("✅ Created admin user")
-        
-        return """
-        <h2>✅ Database Successfully Reset with Fixed Relationships!</h2>
-        <p>All relationship conflicts have been resolved.</p>
-        <p><strong>Fixed relationships:</strong></p>
-        <ul>
-            <li>Property.images → property_images</li>
-            <li>Property.reviews → property_reviews</li>
-            <li>User.reviews → user_reviews</li>
-            <li>User.help_tickets → help_support_tickets</li>
-        </ul>
-        <p><a href="/" class="btn btn-primary">Go to Homepage</a></p>
-        """
-            
-    except Exception as e:
-        import traceback
-        return f"""
-        <h2>❌ Error during reset</h2>
-        <p><strong>Error:</strong> {str(e)}</p>
-        <pre>{traceback.format_exc()}</pre>
-        """
-    
-@app.route('/reset-db-keep-names')
-def reset_db_keep_names():
-    """Reset database while keeping original relationship names"""
-    try:
-        print("=== RESETTING DATABASE WITH ORIGINAL NAMES ===")
-        
-        # Drop all tables
-        db.drop_all()
-        print("✅ Dropped all tables")
-        
-        # Create all tables with corrected schema
-        db.create_all()
-        print("✅ Created all tables with original relationship names")
-        
-        # Recreate admin user
-        from werkzeug.security import generate_password_hash
-        admin = User(
-            name="Admin",
-            email="admin@example.com",
-            password_hash=generate_password_hash("admin123", method="pbkdf2:sha256"),
-            role="admin",
-            is_verified=True,
-            is_approved_by_admin=True,
-            gender="Prefer not to say",
-            birthdate=date(1990, 1, 1)
-        )
-        db.session.add(admin)
-        db.session.commit()
-        print("✅ Created admin user")
-        
-        return """
-        <h2>✅ Database Successfully Reset!</h2>
-        <p>All relationships now use original names that match your templates.</p>
-        <p><strong>Relationship names preserved:</strong></p>
-        <ul>
-            <li>Property.images</li>
-            <li>Property.reviews</li>
-            <li>User.reviews → user_reviews (only this one changed to avoid conflict)</li>
-        </ul>
-        <p><a href="/" class="btn btn-primary">Go to Homepage</a></p>
-        """
-            
-    except Exception as e:
-        import traceback
-        return f"""
-        <h2>❌ Error during reset</h2>
-        <p><strong>Error:</strong> {str(e)}</p>
-        <pre>{traceback.format_exc()}</pre>
-        """
+# ========== DATABASE INITIALIZATION ==========
 
-@app.route('/migrate-booking-references')
-def migrate_booking_references():
-    """Add reference numbers to existing bookings"""
-    try:
-        bookings_without_ref = Booking.query.filter(Booking.reference_number == None).all()
-        
-        for booking in bookings_without_ref:
-            # Generate reference for existing bookings
-            from models import generate_booking_reference
-            booking.reference_number = generate_booking_reference()
-            print(f"Added reference {booking.reference_number} to booking {booking.id}")
-        
-        db.session.commit()
-        return f"✅ Added reference numbers to {len(bookings_without_ref)} existing bookings!"
-    except Exception as e:
-        return f"Error: {str(e)}"
-    
-@app.route('/check-property-schema')
-def check_property_schema():
-    """Check current property table columns"""
-    from sqlalchemy import inspect
-    inspector = inspect(db.engine)
-    columns = inspector.get_columns('property')
-    
-    result = "<h2>Property Table Columns:</h2><ul>"
-    for col in columns:
-        result += f"<li>{col['name']} ({col['type']})</li>"
-    result += "</ul>"
-    
-    return result
+# Ensure required directories exist
+os.makedirs(os.path.join(BASE_DIR, 'instance'), exist_ok=True)
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-
-@app.route('/reset-db-fix-amenities')
-def reset_db_fix_amenities():
-    """Completely reset database with correct schema"""
-    try:
-        print("=== STARTING DATABASE RESET ===")
-        
-        # Drop all tables
-        db.drop_all()
-        print("✅ Dropped all tables")
-        
-        # Create all tables with updated schema
-        db.create_all()
-        print("✅ Created all tables with updated schema")
-        
-        # Recreate admin user
-        from werkzeug.security import generate_password_hash
-        admin = User(
-            name="Admin",
-            email="admin@example.com",
-            password_hash=generate_password_hash("admin123", method="pbkdf2:sha256"),
-            role="admin",
-            is_verified=True,
-            is_approved_by_admin=True,
-            gender="Prefer not to say",
-            birthdate=date(1990, 1, 1)
-        )
-        db.session.add(admin)
-        db.session.commit()
-        print("✅ Created admin user")
-        
-        # Verify the amenities column exists
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        columns = [col['name'] for col in inspector.get_columns('property')]
-        
-        print(f"Property table columns: {columns}")
-        
-        if 'amenities' in columns:
-            return """
-            <h2>✅ Database Successfully Reset!</h2>
-            <p>Amenities column now exists in property table.</p>
-            <p><a href="/add_property">Try adding a property now</a></p>
-            <p><strong>Property table columns:</strong> {}</p>
-            """.format(', '.join(columns))
-        else:
-            return "❌ Amenities column still missing after reset"
-            
-    except Exception as e:
-        import traceback
-        return f"""
-        <h2>❌ Error during reset</h2>
-        <p><strong>Error:</strong> {str(e)}</p>
-        <pre>{traceback.format_exc()}</pre>
-        """
-
-@app.route('/fix-all-issues')
-def fix_all_issues():
-    """Fix all database issues manually"""
-    try:
-        # Check and add amenities column if missing
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        
-        # Fix property table
-        property_columns = [col['name'] for col in inspector.get_columns('property')]
-        if 'amenities' not in property_columns:
-            db.engine.execute('ALTER TABLE property ADD COLUMN amenities TEXT')
-            print("✅ Added amenities column to property")
-        
-        # Fix any other missing columns you might have
-        # Add more fixes here as needed...
-        
-        db.session.commit()
-        return "✅ All database issues fixed!"
-        
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-# --- Scheduler Setup ---
-scheduler = BackgroundScheduler()
-
-# Run penalty checker daily
-scheduler.add_job(apply_penalties, 'interval', days=1)
-
-# Run discount checker daily
-scheduler.add_job(apply_discounts, 'interval', days=1)
-
-# Run SMS reminders monthly
-scheduler.add_job(send_monthly_sms, 'interval', days=30)
-
-scheduler.start()
-
-
-
-
-
-
-# ----------------- Create DB -----------------
-# Run this command once to create the necessary database tables
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        print("✅ Database tables created successfully")
+        
+        # Create admin account from environment variables
+        admin_email = os.environ.get('ADMIN_EMAIL')
+        admin_password = os.environ.get('ADMIN_PASSWORD')
+        
+        if admin_email and admin_password:
+            admin = User.query.filter_by(email=admin_email).first()
+            if not admin:
+                admin = User(
+                    name="Boardify Admin",
+                    email=admin_email,
+                    password_hash=generate_password_hash(admin_password, method="pbkdf2:sha256"),
+                    role="admin",
+                    is_verified=True,
+                    is_approved_by_admin=True,
+                    gender="Prefer not to say",
+                    birthdate=date(1990, 1, 1)
+                )
+                db.session.add(admin)
+                db.session.commit()
+                print(f"✅ Admin account created: {admin_email}")
+            else:
+                print(f"ℹ️  Admin account already exists: {admin_email}")
+        else:
+            print("⚠️  ADMIN_EMAIL and ADMIN_PASSWORD not set in environment variables")
+            print("⚠️  Admin account will not be created automatically")
+    except Exception as e:
+        print(f"⚠️ Database initialization error: {e}")
+        import traceback
+        traceback.print_exc()
 
-# ----------------- Run App -----------------
+# ========== APPLICATION ENTRY POINT ==========
+
+def create_app():
+    """Application factory pattern for Render compatibility"""
+    return app
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    
+    # Production settings for Render
+    if os.environ.get('RENDER'):
+        print("=" * 60)
+        print("🚀 Starting Boardify in PRODUCTION mode on Render")
+        print("=" * 60)
+        db_type = "PostgreSQL" if 'postgresql' in database_url else "SQLite"
+        print(f"📊 Database: {db_type}")
+        print(f"📧 Email: {'Enabled ✅' if EMAIL_ENABLED else 'Disabled ⚠️'}")
+        print(f"🔒 Security: HTTPS, Secure Cookies")
+        print(f"🌐 Port: {port}")
+        print("=" * 60)
+        create_app().run(host="0.0.0.0", port=port, debug=False)
+    else:
+        # Development settings
+        print("=" * 60)
+        print("🔧 Starting Boardify in DEVELOPMENT mode")
+        print("=" * 60)
+        print(f"📊 Database: SQLite (local)")
+        print(f"📧 Email: {'Enabled ✅' if EMAIL_ENABLED else 'Disabled ⚠️ (auto-verify users)'}")
+        print(f"🌐 Port: {port}")
+        print(f"🔑 Admin: {os.environ.get('ADMIN_EMAIL', 'Not configured')}")
+        print("=" * 60)
+        debug_mode = os.environ.get('FLASK_ENV') == 'development'
+        create_app().run(host="0.0.0.0", port=port, debug=debug_mode)

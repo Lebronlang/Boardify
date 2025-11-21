@@ -371,6 +371,67 @@
         color: #16a34a;
         border-left-color: #16a34a;
     }
+
+    /* Verification Section Styling */
+    .verification-section {
+        margin-top: 30px;
+        padding: 20px;
+        background: #f0f9ff;
+        border-radius: 12px;
+        border: 2px solid #bfdbfe;
+        text-align: center;
+    }
+
+    .verification-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e40af;
+        margin-bottom: 15px;
+    }
+
+    .verification-form {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .verification-input {
+        flex: 1;
+        min-width: 200px;
+        padding: 12px 16px;
+        border: 2px solid #cbd5e1;
+        border-radius: 10px;
+        font-size: 14px;
+        background: white;
+        transition: all 0.3s ease;
+    }
+
+    .verification-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    .verification-btn {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .verification-btn:hover {
+        background: linear-gradient(135deg, #1d4ed8, #1e40af);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
     
     @media (max-width: 768px) {
         .register-wrapper {
@@ -400,6 +461,14 @@
         
         .verification-form {
             flex-direction: column;
+        }
+
+        .verification-input {
+            width: 100%;
+        }
+
+        .verification-btn {
+            width: 100%;
         }
     }
 </style>
@@ -449,7 +518,7 @@
                     {% if messages %}
                         {% for category, message in messages %}
                             <div class="alert {% if category == 'danger' %}alert-danger{% elif category == 'warning' %}alert-warning{% elif category == 'success' %}alert-success{% else %}alert-info{% endif %}">
-                                {{ message }}
+                                {{ message|safe }}
                             </div>
                         {% endfor %}
                     {% endif %}
@@ -530,6 +599,15 @@
                         Already have an account? <a href="{{ url_for('login') }}">Sign in here</a>
                     </div>
                 </form>
+
+                <!-- Resend Verification Section (MOVED OUTSIDE FORM) -->
+                <div class="verification-section">
+                    <div class="verification-title">Didn't receive verification email?</div>
+                    <form action="{{ url_for('resend_verification') }}" method="POST" class="verification-form">
+                        <input type="email" name="email" placeholder="Enter your email" class="verification-input" required>
+                        <button type="submit" class="verification-btn">Resend Verification</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -585,7 +663,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Password strength indicator (optional enhancement)
+    // Password strength indicator
     const passwordInput = document.getElementById('password');
     if (passwordInput) {
         passwordInput.addEventListener('input', function() {

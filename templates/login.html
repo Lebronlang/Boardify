@@ -521,18 +521,7 @@
                     <a href="{{ url_for('register') }}" class="register-btn">Create New Account</a>
                 </div>
                 
-                <!-- Resend Verification Section -->
-                <div class="verification-section">
-                    <div class="verification-title">Didn't receive verification email?</div>
-                    <form action="{{ url_for('resend_verification') }}" method="POST" class="verification-form">
-                        <input type="email" name="email" placeholder="Enter your email" class="verification-input" required>
-                        <button type="submit" class="verification-btn">Resend Verification</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+               
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
