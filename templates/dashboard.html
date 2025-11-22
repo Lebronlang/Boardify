@@ -25,7 +25,7 @@
                 <i class="bi bi-check2-square me-3"></i> Approvals
             </a>
             {% else %}
-            <a href="{{ url_for('my_bookings_tenant_page') }}" class="nav-link d-flex align-items-center">
+            <a href="{{ url_for('my_bookings_tenant') }}" class="nav-link d-flex align-items-center">
                 <i class="bi bi-calendar-check me-3"></i> My Bookings
             </a>
             {% endif %}
@@ -145,7 +145,7 @@
                             </a>
                         </div>
                         <div class="col-md-3 col-sm-6">
-                            <a href="{{ url_for('my_bookings_tenant_page') }}" class="quick-action-card">
+                            <a href="{{ url_for('my_bookings_tenant') }}" class="quick-action-card">
                                 <div class="action-icon-wrapper">
                                     <i class="bi bi-calendar-check-fill"></i>
                                 </div>
