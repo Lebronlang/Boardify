@@ -183,11 +183,10 @@ def send_verification_email(user):
         
         print(f"🌐 Verification URL: {verification_url}")
 
-        # Create email message - FIXED: Use subject= keyword argument
-        msg = Message(
-            subject="Verify Your Email - Boardify",  # ✅ CORRECT - keyword argument
-            recipients=[user.email],
-            html=f"""
+        # Create email message - Flask-Mail 0.9.1 syntax
+        msg = Message("Verify Your Email - Boardify")  # ✅ Subject as first positional arg
+        msg.recipients = [user.email]
+        msg.html = f"""
             <h2>Welcome to Boardify! 🎉</h2>
             <p>Please verify your email address by clicking the link below:</p>
             <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
@@ -195,8 +194,7 @@ def send_verification_email(user):
             <p>This link will expire in 24 hours.</p>
             <br>
             <p>Best regards,<br>Boardify Team</p>
-            """
-        )
+        """
 
         # Try to send email
         print("📧 Attempting to send email...")
@@ -254,11 +252,10 @@ def test_email():
 def test_gmail():
     """Test Gmail configuration"""
     try:
-        msg = Message(
-            "🎉 Boardify Gmail Test",  # Remove 'subject='
-            recipients=[app.config['MAIL_USERNAME']],
-            body="Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
-        )
+        msg = Message("🎉 Boardify Gmail Test")  # ✅ Subject as first positional arg
+        msg.recipients = [app.config['MAIL_USERNAME']]
+        msg.body = "Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
+        
         mail.send(msg)
         return "✅ Gmail test email sent successfully! Check your inbox."
     except Exception as e:
@@ -1175,11 +1172,10 @@ def property_detail(property_id):
 def test_gmail_simple():
     """Simple Gmail test"""
     try:
-        msg = Message(
-            subject="🎉 Gmail Test Successful!",  # ✅ Add subject= keyword
-            recipients=["lebrontan2004@gmail.com"],
-            body="Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
-        )
+        msg = Message("🎉 Gmail Test Successful!")  # ✅ Subject as first positional arg
+        msg.recipients = ["lebrontan2004@gmail.com"]
+        msg.body = "Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
+        
         mail.send(msg)
         return "✅ Gmail test email sent successfully! Check your inbox."
     except Exception as e:
