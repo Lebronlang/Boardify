@@ -127,7 +127,18 @@ login_manager.login_message_category = 'warning'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    """Load user by ID - with debugging"""
+    try:
+        print(f"🔍 [USER_LOADER] Loading user ID: {user_id}")
+        user = User.query.get(int(user_id))
+        if user:
+            print(f"✅ [USER_LOADER] User loaded: {user.email}")
+        else:
+            print(f"❌ [USER_LOADER] User not found: {user_id}")
+        return user
+    except Exception as e:
+        print(f"❌ [USER_LOADER] ERROR: {str(e)}")
+        return None
 
 # Constants
 MAX_SLOTS = 9
@@ -759,36 +770,133 @@ def resend_verification():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """User login - FIXED"""
+    """User login - FIXED WITH ERROR HANDLING"""
     if request.method == 'POST':
-        email = request.form['email'].strip().lower()
-        password = request.form['password']
-        
-        user = User.query.filter_by(email=email).first()
+        try:
+            email = request.form['email'].strip().lower()
+            password = request.form['password']
+            
+            print(f"🔍 [LOGIN] Attempting login for: {email}")
+            
+            user = User.query.filter_by(email=email).first()
 
-        if user and check_password_hash(user.password_hash, password):
-            if not user.is_verified and EMAIL_ENABLED:
-                flash("⚠️ Please verify your email before logging in. Check your inbox for the verification link.", "warning")
-                return render_template('login.html', show_resend=True, user_email=email)
+            if user and check_password_hash(user.password_hash, password):
+                print(f"✅ [LOGIN] Password correct for: {email}")
                 
-            login_user(user)
-            session['user_id'] = user.id
-            session['user_role'] = user.role
-            session['user_name'] = user.name
-            session['user_verified'] = user.is_verified
-            
-            flash(f"Welcome back, {user.name}!", "success")
-            
-            # Redirect to intended page or dashboard
-            next_page = request.args.get('next')
-            if next_page:
-                return redirect(next_page)
-            return redirect(url_for('dashboard'))
+                # Check if user needs verification
+                if not user.is_verified and EMAIL_ENABLED:
+                    print(f"⚠️ [LOGIN] User not verified: {email}")
+                    flash("⚠️ Please verify your email before logging in. Check your inbox for the verification link.", "warning")
+                    return render_template('login.html', show_resend=True, user_email=email)
+                    
+                # Login successful
+                login_user(user)
+                session['user_id'] = user.id
+                session['user_role'] = user.role
+                session['user_name'] = user.name
+                session['user_verified'] = user.is_verified
+                
+                print(f"🎉 [LOGIN] Login successful for: {user.name}")
+                flash(f"Welcome back, {user.name}!", "success")
+                
+                # Redirect to intended page or dashboard
+                next_page = request.args.get('next')
+                if next_page:
+                    return redirect(next_page)
+                return redirect(url_for('dashboard'))
 
-        flash("Invalid email or password.", "danger")
-        return redirect(url_for('login'))
+            else:
+                print(f"❌ [LOGIN] Invalid credentials for: {email}")
+                flash("Invalid email or password.", "danger")
+                return redirect(url_for('login'))
+                
+        except Exception as e:
+            print(f"❌ [LOGIN] ERROR: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            flash("Login failed due to server error. Please try again.", "danger")
+            return redirect(url_for('login'))
 
+    # GET request - just show the login form
     return render_template('login.html')
+
+
+@app.route('/debug-dashboard-issue')
+@login_required
+def debug_dashboard_issue():
+    """Debug dashboard loading issues"""
+    try:
+        user_id = session.get('user_id')
+        user = User.query.get(user_id)
+        
+        debug_info = {
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'role': user.role,
+                'verified': user.is_verified
+            },
+            'session': dict(session),
+            'templates_exist': {
+                'admin_dashboard': os.path.exists('templates/admin_dashboard.html'),
+                'dashboard': os.path.exists('templates/dashboard.html')
+            }
+        }
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'type': type(e).__name__})
+
+@app.route('/debug-login-issue')
+def debug_login_issue():
+    """Debug the login problem"""
+    try:
+        # Test database connection
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1'))
+        db_status = "✅ Database connected"
+        
+        # Test user query
+        test_email = "lebrontan2004@gmail.com"
+        user = User.query.filter_by(email=test_email).first()
+        
+        if user:
+            user_info = {
+                'exists': True,
+                'id': user.id,
+                'email': user.email,
+                'is_verified': user.is_verified,
+                'role': user.role,
+                'has_password_hash': bool(user.password_hash)
+            }
+        else:
+            user_info = {'exists': False}
+            
+        return jsonify({
+            'database': db_status,
+            'user': user_info,
+            'session_keys': list(session.keys()),
+            'email_enabled': EMAIL_ENABLED
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'type': type(e).__name__})
+
+@app.route('/debug-all-users')
+def debug_all_users():
+    """List all users to see what's in the database"""
+    users = User.query.all()
+    user_list = []
+    for user in users:
+        user_list.append({
+            'id': user.id,
+            'email': user.email,
+            'role': user.role,
+            'is_verified': user.is_verified,
+            'is_approved_by_admin': getattr(user, 'is_approved_by_admin', None)
+        })
+    return jsonify({'users': user_list})
 
 @app.route('/logout')
 @login_required
@@ -805,117 +913,179 @@ def logout():
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
-    """User dashboard"""
-    user_id = session.get('user_id')
-    user = User.query.get(user_id)
+    """User dashboard - FIXED WITH ERROR HANDLING"""
+    try:
+        user_id = session.get('user_id')
+        user = User.query.get(user_id)
 
-    if not user:
-        flash("User not found. Please log in again.", "danger")
+        if not user:
+            flash("User not found. Please log in again.", "danger")
+            return redirect(url_for('login'))
+
+        print(f"🔍 [DASHBOARD] Loading dashboard for: {user.email}, Role: {user.role}")
+
+        if user.role == 'admin':
+            print("🔍 [DASHBOARD] Loading admin dashboard...")
+            
+            # Admin statistics with error handling
+            try:
+                total_users = User.query.count()
+                total_landlords = User.query.filter_by(role='landlord').count()
+                total_tenants = User.query.filter_by(role='tenant').count()
+                total_properties = Property.query.count()
+                pending_verifications = User.query.filter_by(role='landlord', is_approved_by_admin=False).count()
+                pending_tickets = HelpSupport.query.filter_by(status='pending').count()
+                
+                paid_bills = Billing.query.filter_by(status='paid').all()
+                total_commission = sum(bill.admin_commission or 0 for bill in paid_bills)
+                unpaid_bills = Billing.query.filter_by(status='unpaid').all()
+                pending_commission = sum(bill.amount * 0.05 for bill in unpaid_bills)
+                
+                recent_tickets = HelpSupport.query.order_by(HelpSupport.timestamp.desc()).limit(5).all()
+                recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
+                
+                print(f"✅ [DASHBOARD] Admin stats loaded: {total_users} users, {total_properties} properties")
+                
+            except Exception as e:
+                print(f"❌ [DASHBOARD] Error loading admin stats: {e}")
+                # Set default values if queries fail
+                total_users = total_landlords = total_tenants = total_properties = 0
+                pending_verifications = pending_tickets = 0
+                total_commission = pending_commission = 0
+                recent_tickets = []
+                recent_users = []
+
+            response = make_response(render_template(
+                'admin_dashboard.html',
+                user=user,
+                total_users=total_users,
+                total_landlords=total_landlords,
+                total_tenants=total_tenants,
+                total_properties=total_properties,
+                pending_verifications=pending_verifications,
+                pending_tickets=pending_tickets,
+                total_commission=total_commission,
+                pending_commission=pending_commission,
+                recent_tickets=recent_tickets,
+                recent_users=recent_users
+            ))
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            return response
+
+        elif user.role == 'landlord':
+            print("🔍 [DASHBOARD] Loading landlord dashboard...")
+            
+            if request.method == 'POST':
+                file = request.files.get('trend_image')
+                if file and file.filename != "":
+                    try:
+                        import time
+                        filename = f"{int(time.time())}_{secure_filename(file.filename)}"
+                        upload_path = os.path.join('static/uploads', filename)
+                        file.save(upload_path)
+                        user.trend_image = filename
+                        db.session.commit()
+                        flash("Trend image uploaded successfully!", "success")
+                    except Exception as e:
+                        print(f"❌ [DASHBOARD] Error uploading trend image: {e}")
+                        flash("Error uploading trend image.", "danger")
+                return redirect(url_for('dashboard'))
+
+            # Landlord data with error handling
+            try:
+                chart_image = getattr(user, 'trend_image', None)
+                properties = Property.query.filter_by(landlord_id=user.id).all()
+                property_ids = [p.id for p in properties]
+                pending_bookings = Booking.query.filter(
+                    Booking.property_id.in_(property_ids),
+                    Booking.status == 'pending'
+                ).all()
+                
+                tenant_bills = []
+                for prop in properties:
+                    # Safely get bills attribute
+                    bills = getattr(prop, 'bills', [])
+                    if bills:
+                        tenant_bills.extend(bills)
+
+                relevant_policies = Policy.query.filter(
+                    (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
+                ).all()
+
+                print(f"✅ [DASHBOARD] Landlord data loaded: {len(properties)} properties, {len(pending_bookings)} pending bookings")
+                
+            except Exception as e:
+                print(f"❌ [DASHBOARD] Error loading landlord data: {e}")
+                chart_image = None
+                properties = []
+                pending_bookings = []
+                tenant_bills = []
+                relevant_policies = []
+
+            response = make_response(render_template(
+                'dashboard.html',
+                user=user,
+                properties=properties,
+                pending_bookings=pending_bookings,
+                tenant_bills=tenant_bills,
+                chart_image=chart_image,
+                policies=relevant_policies
+            ))
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            return response
+
+        elif user.role == 'tenant':
+            print("🔍 [DASHBOARD] Loading tenant dashboard...")
+            
+            # Tenant data with error handling
+            try:
+                bookings = Booking.query.filter_by(tenant_id=user.id).all()
+                pending_bookings = [b for b in bookings if b.status == 'pending']
+                tenant_bills = Billing.query.filter_by(tenant_id=user.id).all()
+                
+                chart_image = None
+                approved_booking = Booking.query.filter_by(tenant_id=user.id, status='approved').first()
+                if approved_booking and approved_booking.property and approved_booking.property.owner:
+                    chart_image = getattr(approved_booking.property.owner, 'trend_image', None)
+
+                relevant_policies = Policy.query.filter(
+                    (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
+                ).all()
+
+                print(f"✅ [DASHBOARD] Tenant data loaded: {len(bookings)} bookings, {len(tenant_bills)} bills")
+                
+            except Exception as e:
+                print(f"❌ [DASHBOARD] Error loading tenant data: {e}")
+                bookings = []
+                pending_bookings = []
+                tenant_bills = []
+                chart_image = None
+                relevant_policies = []
+
+            response = make_response(render_template(
+                'dashboard.html',
+                user=user,
+                properties=bookings,
+                pending_bookings=pending_bookings,
+                tenant_bills=tenant_bills,
+                chart_image=chart_image,
+                policies=relevant_policies
+            ))
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            return response
+
+        else:
+            print(f"❌ [DASHBOARD] Unknown user role: {user.role}")
+            flash("Unknown user role. Please contact support.", "danger")
+            return redirect(url_for('logout'))
+
+    except Exception as e:
+        print(f"❌ [DASHBOARD] CRITICAL ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        flash("An error occurred while loading the dashboard. Please try again.", "danger")
         return redirect(url_for('login'))
 
-    if user.role == 'admin':
-        total_users = User.query.count()
-        total_landlords = User.query.filter_by(role='landlord').count()
-        total_tenants = User.query.filter_by(role='tenant').count()
-        total_properties = Property.query.count()
-        pending_verifications = User.query.filter_by(role='landlord', is_approved_by_admin=False).count()
-        pending_tickets = HelpSupport.query.filter_by(status='pending').count()
-        
-        paid_bills = Billing.query.filter_by(status='paid').all()
-        total_commission = sum(bill.admin_commission or 0 for bill in paid_bills)
-        unpaid_bills = Billing.query.filter_by(status='unpaid').all()
-        pending_commission = sum(bill.amount * 0.05 for bill in unpaid_bills)
-        
-        recent_tickets = HelpSupport.query.order_by(HelpSupport.timestamp.desc()).limit(5).all()
-        recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
-        
-        response = make_response(render_template(
-            'admin_dashboard.html',
-            user=user,
-            total_users=total_users,
-            total_landlords=total_landlords,
-            total_tenants=total_tenants,
-            total_properties=total_properties,
-            pending_verifications=pending_verifications,
-            pending_tickets=pending_tickets,
-            total_commission=total_commission,
-            pending_commission=pending_commission,
-            recent_tickets=recent_tickets,
-            recent_users=recent_users
-        ))
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        return response
-
-    elif user.role == 'landlord':
-        if request.method == 'POST':
-            file = request.files.get('trend_image')
-            if file and file.filename != "":
-                import time
-                filename = f"{int(time.time())}_{secure_filename(file.filename)}"
-                upload_path = os.path.join('static/uploads', filename)
-                file.save(upload_path)
-                user.trend_image = filename
-                db.session.commit()
-                flash("Trend image uploaded successfully!", "success")
-            return redirect(url_for('dashboard'))
-
-        chart_image = getattr(user, 'trend_image', None)
-        properties = Property.query.filter_by(landlord_id=user.id).all()
-        property_ids = [p.id for p in properties]
-        pending_bookings = Booking.query.filter(
-            Booking.property_id.in_(property_ids),
-            Booking.status == 'pending'
-        ).all()
-        
-        tenant_bills = []
-        for prop in properties:
-            tenant_bills.extend(getattr(prop, 'bills', []))
-
-        relevant_policies = Policy.query.filter(
-            (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
-        ).all()
-
-        response = make_response(render_template(
-            'dashboard.html',
-            user=user,
-            properties=properties,
-            pending_bookings=pending_bookings,
-            tenant_bills=tenant_bills,
-            chart_image=chart_image,
-            policies=relevant_policies
-        ))
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        return response
-
-    elif user.role == 'tenant':
-        bookings = Booking.query.filter_by(tenant_id=user.id).all()
-        pending_bookings = [b for b in bookings if b.status == 'pending']
-        tenant_bills = Billing.query.filter_by(tenant_id=user.id).all()
-        
-        chart_image = None
-        approved_booking = Booking.query.filter_by(tenant_id=user.id, status='approved').first()
-        if approved_booking and approved_booking.property and approved_booking.property.owner:
-            chart_image = getattr(approved_booking.property.owner, 'trend_image', None)
-
-        relevant_policies = Policy.query.filter(
-            (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
-        ).all()
-
-        response = make_response(render_template(
-            'dashboard.html',
-            user=user,
-            properties=bookings,
-            pending_bookings=pending_bookings,
-            tenant_bills=tenant_bills,
-            chart_image=chart_image,
-            policies=relevant_policies
-        ))
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        return response
-
-    else:
-        flash("Unknown user role. Please contact support.", "danger")
-        return redirect(url_for('logout'))
     
 # @app.route('/check-resend-config')
 # def check_resend_config():
