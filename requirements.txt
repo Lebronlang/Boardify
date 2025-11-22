@@ -8,8 +8,8 @@ Werkzeug==2.3.7
 itsdangerous==2.1.2
 WTForms==3.2.1
 python-dotenv==1.0.0
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.11
 gunicorn==21.2.0
-greenlet==3.0.3
+greenlet==3.2.4
 cryptography==42.0.5
-SQLAlchemy==2.0.23
+SQLAlchemy==2.0.44
