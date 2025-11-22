@@ -173,21 +173,21 @@ def send_verification_email(user):
         # Generate token
         token = ts.dumps(user.email, salt='email-verify')
         
-        # Generate verification URL
-        # Generate verification URL
-        if os.environ.get('RENDER') == 'true':
-                        base_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://boardify-3aop.onrender.com')
-                        verification_url = f"{base_url}/verify-email/{token}"
-        else:
-                with app.app_context():
-                          verification_url = url_for('verify_email', token=token, _external=True)
+        # Generate verification URL - SIMPLIFIED
+        try:
+            verification_url = url_for('verify_email', token=token, _external=True)
+        except RuntimeError:
+            # Fallback for when request context is unavailable
+            base_url = os.environ.get('RENDER_EXTERNAL_URL', 'http://localhost:5000')
+            verification_url = f"{base_url}/verify-email/{token}"
+        
         print(f"🌐 Verification URL: {verification_url}")
 
-        # Create email message - IMPROVED VERSION
+        # Create email message - FIXED: Use subject= keyword argument
         msg = Message(
-            "Verify Your Email - Boardify",  # Remove 'subject='
-             recipients=[user.email],
-             html=f"""
+            subject="Verify Your Email - Boardify",  # ✅ CORRECT - keyword argument
+            recipients=[user.email],
+            html=f"""
             <h2>Welcome to Boardify! 🎉</h2>
             <p>Please verify your email address by clicking the link below:</p>
             <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
@@ -217,6 +217,7 @@ def send_verification_email(user):
             print("🔧 FIX: Check SSL/TLS configuration")
             
         return False
+    
 
 @app.route('/test-email')
 def test_email():
@@ -1175,7 +1176,7 @@ def test_gmail_simple():
     """Simple Gmail test"""
     try:
         msg = Message(
-            subject="🎉 Gmail Test Successful!",
+            subject="🎉 Gmail Test Successful!",  # ✅ Add subject= keyword
             recipients=["lebrontan2004@gmail.com"],
             body="Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
         )
