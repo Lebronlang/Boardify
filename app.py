@@ -1057,16 +1057,6 @@ def debug_dashboard_issue():
     
 
 
-    # Only allow tenants to access this page
-    if not user or user.role != 'tenant':
-        flash("Access denied. You must be a tenant to view this page.", "danger")
-        return redirect(url_for('dashboard'))
-
-    # Fetch all bookings for this tenant, ordered by newest first
-    bookings = Booking.query.filter_by(tenant_id=user.id).order_by(Booking.created_at.desc()).all()
-
-    return render_template('my_bookings_tenant.html', bookings=bookings, user=user)
-
 @app.route('/debug-login-issue')
 def debug_login_issue():
     """Debug the login problem"""
@@ -2326,7 +2316,6 @@ def my_bookings_tenant():
     bookings = Booking.query.filter_by(tenant_id=user.id).order_by(Booking.created_at.desc()).all()
 
     return render_template('my_bookings_tenant.html', bookings=bookings, user=user)
-
 
 
 @app.route('/billing')
