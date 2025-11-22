@@ -134,31 +134,77 @@ MAX_SLOTS = 9
 
 # ========== UTILITY FUNCTIONS ==========
 def send_verification_email(user):
-    """Send verification email using Resend.com API"""
-    print(f"📧 Attempting to send verification email to: {user.email}")
+    """Send verification email using Resend.com API - ENHANCED"""
+    print(f"📧 [EMAIL] Starting email send for: {user.email}")
     
     try:
-        # Check if requests is available
-        try:
-            import requests
-        except ImportError:
-            print("❌ 'requests' library not installed")
+        import requests
+        
+        # Check if Resend API key is available
+        api_key = os.environ.get('RESEND_API_KEY')
+        if not api_key:
+            print("❌ [EMAIL] RESEND_API_KEY not set in environment variables")
             return False
-            
+        
+        print(f"🔑 [EMAIL] Resend API Key: {api_key[:10]}...")
+
         # Generate token
         token = ts.dumps(user.email, salt='email-verify')
+        print(f"🔐 [EMAIL] Token generated: {token[:20]}...")
         
         # Generate verification URL
         base_url = os.environ.get('RENDER_EXTERNAL_URL', 'http://localhost:5000')
         verification_url = f"{base_url}/verify-email/{token}"
+        print(f"🌐 [EMAIL] Verification URL: {verification_url}")
+
+        # Prepare email data
+        email_data = {
+            'from': 'Boardify <onboarding@resend.dev>',
+            'to': [user.email],
+            'subject': 'Verify Your Email - Boardify',
+            'html': f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background: #4CAF50; color: white; padding: 20px; text-align: center; }}
+                        .button {{ background: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+                        .footer {{ margin-top: 20px; padding: 20px; background: #f9f9f9; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>Welcome to Boardify! 🎉</h1>
+                        </div>
+                        
+                        <p>Hello {user.name},</p>
+                        
+                        <p>Thank you for registering with Boardify! Please verify your email address by clicking the button below:</p>
+                        
+                        <p style="text-align: center;">
+                            <a href="{verification_url}" class="button">Verify Email Address</a>
+                        </p>
+                        
+                        <p>Or copy and paste this link in your browser:<br>
+                        <code>{verification_url}</code></p>
+                        
+                        <p><strong>⚠️ Important:</strong> This verification link will expire in 24 hours.</p>
+                        
+                        <div class="footer">
+                            <p>If you didn't create an account with Boardify, please ignore this email.</p>
+                            <p>Best regards,<br><strong>Boardify Team</strong></p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            """
+        }
+
+        print(f"📤 [EMAIL] Sending request to Resend API...")
         
-        print(f"🌐 Verification URL: {verification_url}")
-
-        api_key = os.environ.get('RESEND_API_KEY')
-        if not api_key:
-            print("❌ RESEND_API_KEY not set")
-            return False
-
         # Resend API call
         response = requests.post(
             'https://api.resend.com/emails',
@@ -166,33 +212,84 @@ def send_verification_email(user):
                 'Authorization': f'Bearer {api_key}',
                 'Content-Type': 'application/json'
             },
-            json={
-                'from': 'Boardify <onboarding@resend.dev>',
-                'to': [user.email],
-                'subject': 'Verify Your Email - Boardify',
-                'html': f"""
-                    <h2>Welcome to Boardify! 🎉</h2>
-                    <p>Please verify your email address by clicking the link below:</p>
-                    <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a></p>
-                    <p>Or copy this link: <br>{verification_url}</p>
-                    <p><strong>This link will expire in 24 hours.</strong></p>
-                    <br>
-                    <p>Best regards,<br>Boardify Team</p>
-                """
-            },
-            timeout=10
+            json=email_data,
+            timeout=15  # Increased timeout
         )
         
+        print(f"📨 [EMAIL] Resend API Response Status: {response.status_code}")
+        
         if response.status_code == 200:
-            print(f"✅ Verification email sent to {user.email}")
+            response_data = response.json()
+            print(f"✅ [EMAIL] Verification email sent successfully to {user.email}")
+            print(f"📧 [EMAIL] Email ID: {response_data.get('id', 'Unknown')}")
             return True
         else:
-            print(f"❌ Resend API error: {response.status_code} - {response.text}")
+            print(f"❌ [EMAIL] Resend API error: {response.status_code}")
+            print(f"❌ [EMAIL] Error details: {response.text}")
             return False
             
-    except Exception as e:
-        print(f"❌ Email sending failed: {type(e).__name__}: {str(e)}")
+    except requests.exceptions.Timeout:
+        print("❌ [EMAIL] Request timeout - email sending took too long")
         return False
+    except requests.exceptions.ConnectionError:
+        print("❌ [EMAIL] Connection error - cannot reach Resend API")
+        return False
+    except Exception as e:
+        print(f"❌ [EMAIL] Unexpected error: {type(e).__name__}: {str(e)}")
+        return False
+    
+@app.route('/debug-email-send')
+def debug_email_send():
+    """Debug email sending in real-time"""
+    try:
+        # Create a test user object
+        class TestUser:
+            def __init__(self, email, name="Test User"):
+                self.email = email
+                self.name = name
+        
+        test_email = request.args.get('email', 'lebrontan2004@gmail.com')
+        test_user = TestUser(test_email)
+        
+        # Test the email function directly
+        result = send_verification_email(test_user)
+        
+        return jsonify({
+            'email_sent': result,
+            'user_email': test_user.email,
+            'resend_key_set': bool(os.environ.get('RESEND_API_KEY')),
+            'resend_key_preview': os.environ.get('RESEND_API_KEY', '')[:10] + '...' if os.environ.get('RESEND_API_KEY') else 'NOT_SET',
+            'base_url': os.environ.get('RENDER_EXTERNAL_URL', 'http://localhost:5000')
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+@app.route('/test-verification-email')
+def test_verification_email():
+    """Test the actual verification email function"""
+    try:
+        test_email = request.args.get('email', 'lebrontan2004@gmail.com')
+        
+        # Create a test user object
+        class TestUser:
+            def __init__(self, email, name="Test User"):
+                self.email = email
+                self.name = name
+        
+        test_user = TestUser(test_email)
+        
+        # Test the actual verification email
+        result = send_verification_email(test_user)
+        
+        return jsonify({
+            'success': result,
+            'message': f'Verification email test completed for {test_email} - check your inbox and spam folder',
+            'test_email': test_email
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 
 def verify_token(token, expiration=86400):
@@ -360,9 +457,11 @@ def home():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """User registration - FIXED"""
+    """User registration - FIXED & IMPROVED"""
     if request.method == 'POST':
         try:
+            print("🔍 [DEBUG] Registration form submitted")
+            
             if not request.form.get('terms'):
                 flash("You must agree to the terms and conditions to register.", "danger")
                 return redirect(url_for('register'))
@@ -380,8 +479,10 @@ def register():
                 flash("All fields are required.", "danger")
                 return redirect(url_for('register'))
 
-            if User.query.filter_by(email=email).first():
-                flash("Email already registered.", "danger")
+            # Check if email already exists
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user:
+                flash("Email already registered. Please use a different email or login.", "danger")
                 return redirect(url_for('register'))
 
             # Birthdate validation
@@ -419,32 +520,41 @@ def register():
                 gender=gender,
                 birthdate=birthdate,
                 license_image=filename,
-                is_verified=False,  # Always start as unverified when email is enabled
+                is_verified=False,  # Always start as unverified
                 is_approved_by_admin=False if role == 'landlord' else True
             )
             
             db.session.add(new_user)
             db.session.commit()
+            print(f"✅ [DEBUG] User created: {email}, ID: {new_user.id}")
 
-            # Send verification email - FIXED LOGIC
+            # Send verification email - IMPROVED LOGIC
+            print(f"🔍 [DEBUG] EMAIL_ENABLED: {EMAIL_ENABLED}")
+            
             if EMAIL_ENABLED:
+                print(f"🔍 [DEBUG] Attempting to send verification email to: {email}")
                 email_sent = send_verification_email(new_user)
+                print(f"🔍 [DEBUG] Email send result: {email_sent}")
+                
                 if email_sent:
-                    flash("Registration successful! Please check your email to verify your account before logging in.", "success")
+                    flash("🎉 Registration successful! Please check your email to verify your account before logging in.", "success")
+                    print(f"✅ [DEBUG] Verification email sent successfully to {email}")
                 else:
-                    # User remains unverified - they need to resend verification
-                    flash("Registration successful but we couldn't send the verification email. Please use the 'Resend Verification' option on the login page.", "warning")
+                    # Email failed to send - user can resend later
+                    flash("✅ Registration successful! However, we couldn't send the verification email. Please use the 'Resend Verification' option on the login page.", "warning")
+                    print(f"⚠️ [DEBUG] Email failed to send for {email}")
             else:
-                # Only auto-verify if email is completely disabled
+                # Email completely disabled - auto-verify user
                 new_user.is_verified = True
                 db.session.commit()
-                flash("Registration successful! You can now login.", "success")
+                flash("✅ Registration successful! You can now login.", "success")
+                print(f"ℹ️ [DEBUG] Email disabled - auto-verified user: {email}")
 
             return redirect(url_for('login'))
             
         except Exception as e:
             db.session.rollback()
-            print(f"Registration error: {e}")
+            print(f"❌ Registration error: {e}")
             import traceback
             traceback.print_exc()
             flash(f"Registration failed: {str(e)}", "danger")
