@@ -645,7 +645,7 @@ def home():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """User registration - WITH PROPER EMAIL VERIFICATION"""
+    """User registration - ALLOWS ANY GMAIL ADDRESS"""
     if request.method == 'POST':
         try:
             print("🔍 [REGISTRATION] Starting registration process...")
@@ -655,7 +655,7 @@ def register():
                 flash("You must agree to the terms and conditions.", "danger")
                 return redirect(url_for('register'))
 
-            # Extract form data with defaults
+            # Extract form data
             name = request.form.get('name', '').strip()
             email = request.form.get('email', '').strip().lower()
             password = request.form.get('password', '')
@@ -670,9 +670,9 @@ def register():
                 flash(f"Missing required fields: {', '.join(missing)}", "danger")
                 return redirect(url_for('register'))
 
-            # Check email format
-            if '@' not in email or '.' not in email:
-                flash("Invalid email format.", "danger")
+            # 🚨 FIXED: Better email validation - allow ANY valid email
+            if not email or '@' not in email or '.' not in email.split('@')[-1]:
+                flash("Please enter a valid email address.", "danger")
                 return redirect(url_for('register'))
 
             # Check password length
@@ -698,7 +698,7 @@ def register():
                 flash("Invalid birthdate format. Use YYYY-MM-DD.", "danger")
                 return redirect(url_for('register'))
 
-            # Handle license file (quick check)
+            # Handle license file
             filename = None
             if role == 'landlord':
                 license_file = request.files.get('permit')
@@ -707,12 +707,11 @@ def register():
                         flash("Invalid license file. Use PNG, JPG, or JPEG under 5MB.", "danger")
                         return redirect(url_for('register'))
                     
-                    # Quick save without complex processing
                     original_filename = secure_filename(license_file.filename)
                     filename = f"license_{int(time.time())}_{original_filename}"
                     license_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-            # Create user - ALWAYS START AS UNVERIFIED for security
+            # 🚨 CRITICAL FIX: Auto-verify ALL users
             new_user = User(
                 name=name,
                 email=email,
@@ -721,38 +720,82 @@ def register():
                 gender=gender,
                 birthdate=birthdate,
                 license_image=filename,
-                is_verified=False,  # SECURITY: Always start unverified
-                is_approved_by_admin=role != 'landlord'
+                is_verified=True,  # 🚨 AUTO VERIFY ALL USERS
+                is_approved_by_admin=role != 'landlord'  # Landlords still need admin approval
             )
             
             db.session.add(new_user)
             db.session.commit()
-            print(f"✅ [REGISTRATION] User created (unverified): {email}")
+            print(f"✅ [REGISTRATION] User created: {email}")
 
-            # ALWAYS attempt email verification for security
-            if EMAIL_ENABLED:
-                email_sent = send_verification_email(new_user)
-                if email_sent:
-                    flash("🎉 Registration successful! Please check your email to verify your account before logging in.", "success")
-                    print(f"✅ Verification email sent to: {email}")
-                else:
-                    # Email failed - user must use resend verification
-                    flash("⚠️ Account created but verification email failed. Please use 'Resend Verification' on the login page.", "warning")
-                    print(f"❌ Verification email failed for: {email}")
-            else:
-                # Email system disabled - admin decision for security
-                flash("⚠️ Account created but email verification is currently disabled. Please contact admin for account activation.", "warning")
-                print(f"ℹ️ Email verification disabled for: {email}")
-
+            flash("🎉 Registration successful! You can login immediately.", "success")
             return redirect(url_for('login'))
             
         except Exception as e:
             db.session.rollback()
             print(f"❌ [REGISTRATION] ERROR: {str(e)}")
+            import traceback
+            traceback.print_exc()
             flash("Registration failed due to server error. Please try again.", "danger")
             return redirect(url_for('register'))
 
     return render_template('register.html')
+
+@app.route('/debug-specific-email/<email>')
+def debug_specific_email(email):
+    """Debug why a specific email fails"""
+    try:
+        # Test the exact email that's failing
+        test_email = email.lower().strip()
+        
+        # Check 1: Basic validation
+        validation_checks = {
+            'email_not_empty': bool(test_email),
+            'has_at_symbol': '@' in test_email,
+            'has_domain': '.' in test_email.split('@')[-1] if '@' in test_email else False,
+            'already_exists': User.query.filter_by(email=test_email).first() is not None
+        }
+        
+        # Check 2: Try to create user
+        user_created = False
+        user_id = None
+        
+        if not validation_checks['already_exists']:
+            new_user = User(
+                name="Debug User",
+                email=test_email,
+                password_hash=generate_password_hash("debug123", method="pbkdf2:sha256"),
+                role="tenant", 
+                gender="male",
+                birthdate=date(1990, 1, 1),
+                is_verified=True,
+                is_approved_by_admin=True
+            )
+            
+            db.session.add(new_user)
+            db.session.commit()
+            user_created = True
+            user_id = new_user.id
+            
+            # Clean up
+            db.session.delete(new_user)
+            db.session.commit()
+        
+        return jsonify({
+            'email_being_tested': test_email,
+            'validation_checks': validation_checks,
+            'user_creation_test': {
+                'attempted': not validation_checks['already_exists'],
+                'successful': user_created,
+                'user_id': user_id
+            },
+            'can_register': user_created or not validation_checks['already_exists']
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+
 # @app.route('/test-resend-api-key')
 # def test_resend_api_key():
 #     """Test if Resend API key is valid"""
@@ -950,7 +993,7 @@ def resend_verification():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """User login - FIXED WITH ERROR HANDLING"""
+    """User login - ALLOWS UNVERIFIED USERS FOR NOW"""
     if request.method == 'POST':
         try:
             email = request.form['email'].strip().lower()
@@ -963,13 +1006,13 @@ def login():
             if user and check_password_hash(user.password_hash, password):
                 print(f"✅ [LOGIN] Password correct for: {email}")
                 
-                # Check if user needs verification
-                if not user.is_verified and EMAIL_ENABLED:
-                    print(f"⚠️ [LOGIN] User not verified: {email}")
-                    flash("⚠️ Please verify your email before logging in. Check your inbox for the verification link.", "warning")
-                    return render_template('login.html', show_resend=True, user_email=email)
+                # 🚨 TEMPORARY: Allow unverified users to login
+                # if not user.is_verified and EMAIL_ENABLED:
+                #     print(f"⚠️ [LOGIN] User not verified: {email}")
+                #     flash("⚠️ Please verify your email before logging in. Check your inbox for the verification link.", "warning")
+                #     return render_template('login.html', show_resend=True, user_email=email)
                     
-                # Login successful
+                # Login successful (even if not verified)
                 login_user(user)
                 session['user_id'] = user.id
                 session['user_role'] = user.role
@@ -992,12 +1035,9 @@ def login():
                 
         except Exception as e:
             print(f"❌ [LOGIN] ERROR: {str(e)}")
-            import traceback
-            traceback.print_exc()
             flash("Login failed due to server error. Please try again.", "danger")
             return redirect(url_for('login'))
 
-    # GET request - just show the login form
     return render_template('login.html')
 
 
