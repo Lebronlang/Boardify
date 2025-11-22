@@ -1,5 +1,4 @@
-property details:
-    {% extends "base.html" %}
+ {% extends "base.html" %}
 
     {% block content %}
     <div class="d-flex" style="min-height: 100vh;">
@@ -29,7 +28,7 @@ property details:
                     <i class="bi bi-check2-square me-3"></i> Approvals
                 </a>
                 {% elif current_user.is_authenticated %}
-                <a href="{{ url_for('my_bookings_tenant_page') }}" class="nav-link d-flex align-items-center">
+                <a href="{{ url_for('my_bookings_tenant') }}" class="nav-link d-flex align-items-center">
                     <i class="bi bi-calendar-check me-3"></i> My Bookings
                 </a>
                 {% endif %}
@@ -2209,38 +2208,73 @@ property details:
     }
 
     /* ===== MOBILE RESPONSIVE FIXES ===== */
-@media (max-width: 768px) {
-    /* Main layout fixes */
-    .d-flex {
-        flex-direction: column;
-    }
-    
+@media (max-width: 992px) {
     .sidebar {
+        position: fixed;
         width: 100%;
-        height: auto;
-        min-height: auto;
-        position: relative;
-        border-right: none;
-        border-bottom: 1px solid var(--border-color);
+        height: 100vh;
+        z-index: 1050;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
     }
-    
-    .sidebar .nav-links {
+
+       /* Mobile menu toggle button */
+    .mobile-menu-toggle {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 1060;
+        background: var(--fb-primary);
+        color: white;
+        border: none;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-    
-    .sidebar .nav-link {
-        flex: 1;
-        min-width: 140px;
-        text-align: center;
+        align-items: center;
         justify-content: center;
-        margin-bottom: 0.5rem;
+        font-size: 1.2rem;
+        box-shadow: var(--shadow-3);
     }
+
     
-    .main-content {
-        width: 100%;
-    }
+
+.sidebar {
+    background: var(--bg-primary);
+    width: 280px;
+    min-width: 280px;
+    box-shadow: var(--shadow-2);
+    border-right: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.main-content {
+    background: var(--bg-secondary);
+    min-height: 100vh;
+    margin-left: 280px; /* Match sidebar width */
+    width: calc(100% - 280px);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+/* ===== BACK NAVIGATION FIX ===== */
+.back-navigation-bar {
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-1);
+    margin-left: 0;
+}
+
     
     /* Property header fixes */
     .property-header-card {
@@ -2291,8 +2325,10 @@ property details:
     
     /* Content layout fixes */
     .container-fluid.p-4 {
-        padding: 1rem !important;
-    }
+    padding: 1.5rem !important;
+    max-width: 100%;
+    margin: 0;
+}
     
     .row.g-4 {
         margin: 0;
@@ -3117,6 +3153,37 @@ html, body {
         }
     }
 
+
+
+    /* ===== MOBILE OVERLAY ===== */
+.mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.mobile-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.mobile-menu-toggle {
+    display: none;
+}
+
+@media (max-width: 992px) {
+    .mobile-menu-toggle {
+        display: flex;
+    }
+}
+
     /* ===== RESPONSIVE DESIGN ===== */
     @media (max-width: 992px) {
         .sidebar {
@@ -3312,6 +3379,16 @@ html, body {
     }
 
     /* ===== SMOOTH TRANSITIONS ===== */
+
+
+    html {
+    scroll-behavior: smooth;
+}
+
+body {
+    overflow-x: hidden;
+}
+
     * {
         transition-property: background-color, border-color, color, fill, stroke;
         transition-duration: 0.3s;
@@ -3350,11 +3427,15 @@ function toggleTheme() {
 }
 
 // ===== MAIN INITIALIZATION =====
+// ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🏠 Boardify Property Detail Page Loading...');
     
     // Load saved theme
     initializeTheme();
+    
+    // Initialize mobile menu
+    initializeMobileMenu();
     
     // Initialize all event listeners
     initializeTabs();
@@ -3456,6 +3537,42 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+
+// ===== MOBILE MENU FUNCTIONALITY =====
+function initializeMobileMenu() {
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const sidebar = document.getElementById('mainSidebar');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    
+    if (mobileMenuToggle && sidebar) {
+        mobileMenuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('mobile-open');
+            mobileOverlay.classList.toggle('active');
+            document.body.style.overflow = sidebar.classList.contains('mobile-open') ? 'hidden' : '';
+        });
+        
+        mobileOverlay.addEventListener('click', function() {
+            sidebar.classList.remove('mobile-open');
+            mobileOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        });
+        
+        // Close menu when clicking on nav links
+        const navLinks = sidebar.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                sidebar.classList.remove('mobile-open');
+                mobileOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+        });
+    }
+}
+
+// Initialize mobile menu when DOM loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeMobileMenu();
+});
 // ===== SIMPLE GALLERY FUNCTIONALITY =====
 function initializeGallery() {
     const mainImages = document.querySelectorAll('.gallery-main-image');
