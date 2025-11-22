@@ -70,14 +70,15 @@ print(f"🌐 RENDER_EXTERNAL_URL: {os.environ.get('RENDER_EXTERNAL_URL')}")
 
 # ========== GMAIL SMTP CONFIGURATION ==========
 # ========== GMAIL SMTP CONFIGURATION ==========
+# ========== GMAIL SMTP CONFIGURATION ==========
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 465  # Use 465 for SSL
-app.config['MAIL_USE_TLS'] = False
-app.config['MAIL_USE_SSL'] = True  # Enable SSL
+app.config['MAIL_PORT'] = 587  # ← CHANGE TO 587 (works better on Render)
+app.config['MAIL_USE_TLS'] = True  # ← ENABLE TLS for port 587
+app.config['MAIL_USE_SSL'] = False  # ← DISABLE SSL for port 587
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
-app.config['MAIL_TIMEOUT'] = 30
+app.config['MAIL_TIMEOUT'] = 10  # ← REDUCE TIMEOUT to 10 seconds
 app.config['MAIL_DEBUG'] = False
 # Fix for URL generation in Render
 if os.environ.get('RENDER'):
@@ -175,13 +176,13 @@ def send_verification_email(user):
         # Generate token
         token = ts.dumps(user.email, salt='email-verify')
         
-        # Generate verification URL - SIMPLIFIED
+        # Generate verification URL
         base_url = os.environ.get('RENDER_EXTERNAL_URL', 'http://localhost:5000')
         verification_url = f"{base_url}/verify-email/{token}"
         
         print(f"🌐 Verification URL: {verification_url}")
 
-        # ✅ CORRECT Flask-Mail 0.9.1 syntax - FIXED
+        # Create message - Flask-Mail 0.9.1 compatible
         msg = Message()
         msg.subject = "Verify Your Email - Boardify"
         msg.recipients = [user.email]
@@ -195,7 +196,7 @@ def send_verification_email(user):
             <p>Best regards,<br>Boardify Team</p>
         """
 
-        # Try to send email
+        # Try to send email with timeout
         print("📧 Attempting to send email...")
         mail.send(msg)
         print(f"✅ Verification email sent to {user.email}")
@@ -907,6 +908,47 @@ def dashboard():
 
     
 
+@app.route('/test-smtp-connection')
+def test_smtp_connection():
+    """Test SMTP connection directly"""
+    try:
+        import smtplib
+        import time
+        
+        start_time = time.time()
+        
+        # Test connection
+        server = smtplib.SMTP('smtp.gmail.com', 587, timeout=10)
+        print("✅ Step 1: SMTP connected")
+        
+        # Start TLS
+        server.starttls()
+        print("✅ Step 2: TLS started")
+        
+        # Login
+        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+        print("✅ Step 3: Login successful")
+        
+        server.quit()
+        
+        return f"✅ SMTP test passed in {time.time() - start_time:.2f} seconds"
+        
+    except Exception as e:
+        return f"❌ SMTP test failed: {type(e).__name__}: {str(e)}"
+
+@app.route('/debug-email-env')
+def debug_email_env():
+    """Debug email environment without sending"""
+    return jsonify({
+        'mail_server': app.config.get('MAIL_SERVER'),
+        'mail_port': app.config.get('MAIL_PORT'),
+        'mail_username': app.config.get('MAIL_USERNAME'),
+        'mail_password_set': bool(app.config.get('MAIL_PASSWORD')),
+        'mail_use_tls': app.config.get('MAIL_USE_TLS'),
+        'mail_use_ssl': app.config.get('MAIL_USE_SSL'),
+        'mail_timeout': app.config.get('MAIL_TIMEOUT'),
+        'email_enabled': EMAIL_ENABLED
+    })
 
 
 @app.route('/profile', methods=['GET', 'POST'])
