@@ -8,7 +8,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from flask_mail import Mail, Message
 from flask_migrate import Migrate
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from sqlalchemy import or_
@@ -62,24 +61,8 @@ app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 
-print("🔧 Initializing Gmail SMTP configuration...")
-print(f"📧 MAIL_SERVER: smtp.gmail.com")
-print(f"📧 MAIL_USERNAME: {os.environ.get('MAIL_USERNAME')}")
-print(f"📧 MAIL_PASSWORD_SET: {bool(os.environ.get('MAIL_PASSWORD'))}")
-print(f"🌐 RENDER_EXTERNAL_URL: {os.environ.get('RENDER_EXTERNAL_URL')}")
 
-# ========== GMAIL SMTP CONFIGURATION ==========
-# ========== GMAIL SMTP CONFIGURATION ==========
-# ========== GMAIL SMTP CONFIGURATION ==========
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587  # ← CHANGE TO 587 (works better on Render)
-app.config['MAIL_USE_TLS'] = True  # ← ENABLE TLS for port 587
-app.config['MAIL_USE_SSL'] = False  # ← DISABLE SSL for port 587
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
-app.config['MAIL_TIMEOUT'] = 10  # ← REDUCE TIMEOUT to 10 seconds
-app.config['MAIL_DEBUG'] = False
+
 # Fix for URL generation in Render
 if os.environ.get('RENDER'):
     # Get the Render external URL
@@ -101,26 +84,12 @@ if os.environ.get('RENDER'):
     app.config['PREFERRED_URL_SCHEME'] = 'https'
 
 # Enhanced email availability check
-EMAIL_ENABLED = bool(
-    app.config['MAIL_USERNAME'] and 
-    app.config['MAIL_PASSWORD'] and 
-    app.config['MAIL_SERVER']
-)
+EMAIL_ENABLED = bool(os.environ.get('RESEND_API_KEY'))
 
 
-# Print email config for debugging
-print("🔧 Email Configuration:")
-print(f"   Server: {app.config['MAIL_SERVER']}")
-print(f"   Port: {app.config['MAIL_PORT']}")
-print(f"   TLS: {app.config['MAIL_USE_TLS']}")
-print(f"   SSL: {app.config['MAIL_USE_SSL']}")
-print(f"   Username: {app.config['MAIL_USERNAME']}")
-print(f"   Password Set: {bool(app.config['MAIL_PASSWORD'])}")
-print(f"   Sender: {app.config['MAIL_DEFAULT_SENDER']}")
-print(f"   Email Enabled: {EMAIL_ENABLED}")
 
 # Initialize extensions
-mail = Mail(app)
+
 ts = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
 # Import models AFTER app configuration
@@ -165,12 +134,8 @@ MAX_SLOTS = 9
 
 # ========== UTILITY FUNCTIONS ==========
 def send_verification_email(user):
-    """Send verification email with better error handling"""
+    """Send verification email using Resend.com API"""
     print(f"📧 Attempting to send verification email to: {user.email}")
-    
-    if not EMAIL_ENABLED:
-        print("❌ Email not configured")
-        return False
     
     try:
         # Generate token
@@ -182,76 +147,45 @@ def send_verification_email(user):
         
         print(f"🌐 Verification URL: {verification_url}")
 
-        # Create message - Flask-Mail 0.9.1 compatible
-        msg = Message()
-        msg.subject = "Verify Your Email - Boardify"
-        msg.recipients = [user.email]
-        msg.html = f"""
-            <h2>Welcome to Boardify! 🎉</h2>
-            <p>Please verify your email address by clicking the link below:</p>
-            <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
-            <p>Or copy this link: {verification_url}</p>
-            <p>This link will expire in 24 hours.</p>
-            <br>
-            <p>Best regards,<br>Boardify Team</p>
-        """
-
-        # Try to send email with timeout
-        print("📧 Attempting to send email...")
-        mail.send(msg)
-        print(f"✅ Verification email sent to {user.email}")
-        return True
+        # Import requests
+        import requests
         
+        # Resend API call
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={
+                'Authorization': f'Bearer {os.environ.get("RESEND_API_KEY")}',
+                'Content-Type': 'application/json'
+            },
+            json={
+                'from': 'Boardify <onboarding@resend.dev>',
+                'to': [user.email],
+                'subject': 'Verify Your Email - Boardify',
+                'html': f"""
+                    <h2>Welcome to Boardify! 🎉</h2>
+                    <p>Please verify your email address by clicking the link below:</p>
+                    <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a></p>
+                    <p>Or copy this link: <br>{verification_url}</p>
+                    <p><strong>This link will expire in 24 hours.</strong></p>
+                    <br>
+                    <p>Best regards,<br>Boardify Team</p>
+                """
+            },
+            timeout=10  # 10 second timeout
+        )
+        
+        if response.status_code == 200:
+            print(f"✅ Verification email sent to {user.email}")
+            return True
+        else:
+            print(f"❌ Resend API error: {response.status_code} - {response.text}")
+            return False
+            
     except Exception as e:
         print(f"❌ Email sending failed: {type(e).__name__}: {str(e)}")
         return False
 
-@app.route('/test-email')
-def test_email():
-    """Test email configuration"""
-    debug_info = {
-        'email_configured': EMAIL_ENABLED,
-        'mail_server': app.config['MAIL_SERVER'],
-        'mail_port': app.config['MAIL_PORT'],
-        'mail_use_tls': app.config['MAIL_USE_TLS'],
-        'mail_use_ssl': app.config['MAIL_USE_SSL'],
-        'mail_username': app.config['MAIL_USERNAME'],
-        'mail_password_set': bool(app.config['MAIL_PASSWORD']),
-        'mail_default_sender': app.config['MAIL_DEFAULT_SENDER'],
-        'render_external_url': os.environ.get('RENDER_EXTERNAL_URL')
-    }
-    
-    # Create a simple test user object without saving to database
-    class TestUser:
-        def __init__(self, name, email):
-            self.name = name
-            self.email = email
-    
-    test_user = TestUser("Test User", app.config['MAIL_USERNAME'])
-    
-    try:
-        result = send_verification_email(test_user)
-        debug_info['email_test_result'] = 'SUCCESS' if result else 'FAILED'
-    except Exception as e:
-        debug_info['email_test_result'] = f'ERROR: {str(e)}'
-    
-    return jsonify(debug_info)
 
-@app.route('/test-gmail')
-def test_gmail():
-    """Test Gmail configuration - FIXED FOR Flask-Mail 0.9.1"""
-    try:
-        # ✅ CORRECT Flask-Mail 0.9.1 syntax
-        msg = Message()
-        msg.subject = "🎉 Boardify Gmail Test"
-        msg.recipients = [app.config['MAIL_USERNAME']]
-        msg.body = "Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
-        
-        mail.send(msg)
-        return "✅ Gmail test email sent successfully! Check your inbox."
-    except Exception as e:
-        return f"❌ Gmail test failed: {str(e)}"
-    
 
 def verify_token(token, expiration=86400):
     """Verify the token and return email if valid - ENHANCED"""
@@ -564,63 +498,35 @@ def register():
 #         }), 500
     
 
-@app.route('/debug-email-detailed')
-def debug_email_detailed():
-    """Test both SMTP ports to see which works"""
-    debug_info = {}
-    
-    # Test Port 587 (TLS)
-    debug_info['port_587_test'] = test_smtp_connection(587, False, True)
-    
-    # Test Port 465 (SSL)  
-    debug_info['port_465_test'] = test_smtp_connection(465, True, False)
-    
-    # Test environment
-    debug_info['environment'] = {
-        'mail_username': app.config['MAIL_USERNAME'],
-        'mail_password_set': bool(app.config['MAIL_PASSWORD']),
-        'render_external_url': os.environ.get('RENDER_EXTERNAL_URL')
-    }
-    
-    return jsonify(debug_info)
-
-def test_smtp_connection(port, use_ssl, use_tls):
-    """Test SMTP connection with specific settings"""
-    import smtplib
-    
-    test_result = {
-        'port': port,
-        'ssl': use_ssl,
-        'tls': use_tls,
-        'status': 'unknown'
-    }
-    
+@app.route('/test-resend')
+def test_resend():
+    """Test Resend.com email sending"""
     try:
-        if use_ssl:
-            # SSL connection
-            server = smtplib.SMTP_SSL('smtp.gmail.com', port, timeout=15)
-            test_result['connection'] = 'SSL Connected'
+        import requests
+        
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={
+                'Authorization': f'Bearer {os.environ.get("RESEND_API_KEY")}',
+                'Content-Type': 'application/json'
+            },
+            json={
+                'from': 'Boardify <onboarding@resend.dev>',
+                'to': ['lebrontan2004@gmail.com'],  # Send to yourself first
+                'subject': '🎉 Resend Test - Boardify Email Working!',
+                'html': '<h2>Congratulations! 🎉</h2><p>Your Boardify email system is now working perfectly with Resend!</p><p>Users will receive verification emails instantly.</p>'
+            }
+        )
+        
+        if response.status_code == 200:
+            return "✅ Resend test email sent! Check your inbox."
         else:
-            # TLS connection
-            server = smtplib.SMTP('smtp.gmail.com', port, timeout=15)
-            test_result['connection'] = 'TCP Connected'
+            return f"❌ Resend test failed: {response.status_code} - {response.text}"
             
-            if use_tls:
-                server.starttls()
-                test_result['starttls'] = 'Success'
-        
-        # Test authentication
-        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-        test_result['authentication'] = 'Success'
-        
-        server.quit()
-        test_result['status'] = 'SUCCESS'
-        
     except Exception as e:
-        test_result['status'] = 'FAILED'
-        test_result['error'] = f'{type(e).__name__}: {str(e)}'
-    
-    return test_result
+        return f"❌ Resend test error: {str(e)}"
+
+
 
 # @app.route('/debug-email-setup')
 # def debug_email_setup():
@@ -908,47 +814,9 @@ def dashboard():
 
     
 
-@app.route('/test-smtp-connection')
-def test_smtp_connection():
-    """Test SMTP connection directly"""
-    try:
-        import smtplib
-        import time
-        
-        start_time = time.time()
-        
-        # Test connection
-        server = smtplib.SMTP('smtp.gmail.com', 587, timeout=10)
-        print("✅ Step 1: SMTP connected")
-        
-        # Start TLS
-        server.starttls()
-        print("✅ Step 2: TLS started")
-        
-        # Login
-        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-        print("✅ Step 3: Login successful")
-        
-        server.quit()
-        
-        return f"✅ SMTP test passed in {time.time() - start_time:.2f} seconds"
-        
-    except Exception as e:
-        return f"❌ SMTP test failed: {type(e).__name__}: {str(e)}"
 
-@app.route('/debug-email-env')
-def debug_email_env():
-    """Debug email environment without sending"""
-    return jsonify({
-        'mail_server': app.config.get('MAIL_SERVER'),
-        'mail_port': app.config.get('MAIL_PORT'),
-        'mail_username': app.config.get('MAIL_USERNAME'),
-        'mail_password_set': bool(app.config.get('MAIL_PASSWORD')),
-        'mail_use_tls': app.config.get('MAIL_USE_TLS'),
-        'mail_use_ssl': app.config.get('MAIL_USE_SSL'),
-        'mail_timeout': app.config.get('MAIL_TIMEOUT'),
-        'email_enabled': EMAIL_ENABLED
-    })
+
+
 
 
 @app.route('/profile', methods=['GET', 'POST'])
@@ -1046,30 +914,7 @@ def profile():
         verified=user.is_verified
     )
 
-@app.route('/debug-email-complete')
-def debug_email_complete():
-    """Complete email debugging"""
-    debug_info = {
-        'environment': {
-            'RENDER': bool(os.environ.get('RENDER')),
-            'FLASK_ENV': os.environ.get('FLASK_ENV'),
-            'RENDER_EXTERNAL_URL': os.environ.get('RENDER_EXTERNAL_URL'),
-        },
-        'email_config': {
-            'MAIL_SERVER': app.config.get('MAIL_SERVER'),
-            'MAIL_PORT': app.config.get('MAIL_PORT'),
-            'MAIL_USE_TLS': app.config.get('MAIL_USE_TLS'),
-            'MAIL_USE_SSL': app.config.get('MAIL_USE_SSL'),
-            'MAIL_USERNAME': app.config.get('MAIL_USERNAME'),
-            'MAIL_PASSWORD_SET': bool(app.config.get('MAIL_PASSWORD')),
-            'MAIL_DEFAULT_SENDER': app.config.get('MAIL_DEFAULT_SENDER'),
-        },
-        'gmail_app_password_check': {
-            'username': 'lebrontan2004@gmail.com',
-            'app_password_configured': bool(os.environ.get('MAIL_PASSWORD')),
-            'app_password_length': len(os.environ.get('MAIL_PASSWORD', ''))
-        }
-    }
+
     
     # Test SMTP connection
     try:
@@ -1239,20 +1084,7 @@ def property_detail(property_id):
         review_count=len(reviews)
     )
 
-@app.route('/test-gmail-simple')
-def test_gmail_simple():
-    """Simple Gmail test - FIXED FOR Flask-Mail 0.9.1"""
-    try:
-        # ✅ CORRECT Flask-Mail 0.9.1 syntax
-        msg = Message()
-        msg.subject = "🎉 Gmail Test Successful!"
-        msg.recipients = ["lebrontan2004@gmail.com"]
-        msg.body = "Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
-        
-        mail.send(msg)
-        return "✅ Gmail test email sent successfully! Check your inbox."
-    except Exception as e:
-        return f"❌ Gmail test failed: {str(e)}"
+
 
 @app.route('/add_property', methods=['GET', 'POST'])
 @login_required
