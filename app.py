@@ -176,27 +176,25 @@ def send_verification_email(user):
         token = ts.dumps(user.email, salt='email-verify')
         
         # Generate verification URL - SIMPLIFIED
-        try:
-            verification_url = url_for('verify_email', token=token, _external=True)
-        except RuntimeError:
-            # Fallback for when request context is unavailable
-            base_url = os.environ.get('RENDER_EXTERNAL_URL', 'http://localhost:5000')
-            verification_url = f"{base_url}/verify-email/{token}"
+        base_url = os.environ.get('RENDER_EXTERNAL_URL', 'http://localhost:5000')
+        verification_url = f"{base_url}/verify-email/{token}"
         
         print(f"🌐 Verification URL: {verification_url}")
 
-        # Create email message - Flask-Mail 0.9.1 syntax
-        msg = Message("Verify Your Email - Boardify")  # ✅ Subject as first positional arg
-        msg.recipients = [user.email]
-        msg.html = f"""
-            <h2>Welcome to Boardify! 🎉</h2>
-            <p>Please verify your email address by clicking the link below:</p>
-            <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
-            <p>Or copy this link: {verification_url}</p>
-            <p>This link will expire in 24 hours.</p>
-            <br>
-            <p>Best regards,<br>Boardify Team</p>
-        """
+        # ✅ CORRECT Flask-Mail 0.9.1 syntax
+        msg = Message(
+            subject="Verify Your Email - Boardify",
+            recipients=[user.email],
+            html=f"""
+                <h2>Welcome to Boardify! 🎉</h2>
+                <p>Please verify your email address by clicking the link below:</p>
+                <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
+                <p>Or copy this link: {verification_url}</p>
+                <p>This link will expire in 24 hours.</p>
+                <br>
+                <p>Best regards,<br>Boardify Team</p>
+            """
+        )
 
         # Try to send email
         print("📧 Attempting to send email...")
@@ -206,18 +204,7 @@ def send_verification_email(user):
         
     except Exception as e:
         print(f"❌ Email sending failed: {type(e).__name__}: {str(e)}")
-        
-        # Log specific error details
-        error_msg = str(e).lower()
-        if "network is unreachable" in error_msg:
-            print("🔧 FIX: Try using port 465 with SSL instead of 587 with TLS")
-        elif "authentication" in error_msg:
-            print("🔧 FIX: Check Gmail App Password and enable 2FA")
-        elif "ssl" in error_msg or "tls" in error_msg:
-            print("🔧 FIX: Check SSL/TLS configuration")
-            
         return False
-    
 
 @app.route('/test-email')
 def test_email():
@@ -252,17 +239,18 @@ def test_email():
 
 @app.route('/test-gmail')
 def test_gmail():
-    """Test Gmail configuration"""
+    """Test Gmail configuration - FIXED SYNTAX"""
     try:
-        msg = Message("🎉 Boardify Gmail Test")  # ✅ Subject as first positional arg
-        msg.recipients = [app.config['MAIL_USERNAME']]
-        msg.body = "Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
+        msg = Message(
+            subject="🎉 Boardify Gmail Test",
+            recipients=[app.config['MAIL_USERNAME']],
+            body="Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
+        )
         
         mail.send(msg)
         return "✅ Gmail test email sent successfully! Check your inbox."
     except Exception as e:
         return f"❌ Gmail test failed: {str(e)}"
-    
 
     
 
