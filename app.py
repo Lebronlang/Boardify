@@ -1395,6 +1395,28 @@ def delete_property(property_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Error deleting property: {str(e)}'}), 500
+    
+
+@app.route('/admin/delete-user/<email>')
+def delete_user_by_email(email):
+    """Delete specific user by email"""
+    try:
+        user = User.query.filter_by(email=email).first()
+        if user:
+            # Delete related records first
+            Booking.query.filter_by(tenant_id=user.id).delete()
+            Billing.query.filter_by(tenant_id=user.id).delete()
+            
+            # Delete the user
+            db.session.delete(user)
+            db.session.commit()
+            
+            return f"✅ Deleted user: {email}"
+        else:
+            return f"❌ User {email} not found"
+    except Exception as e:
+        db.session.rollback()
+        return f"❌ Error: {str(e)}"
 
 @app.route('/book_property/<int:property_id>', methods=['POST'])
 @login_required
