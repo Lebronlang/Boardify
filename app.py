@@ -1055,11 +1055,20 @@ def debug_dashboard_issue():
         return jsonify({'error': str(e), 'type': type(e).__name__})
     
 
-@app.route('/my-bookings')
+@app.route('/my_bookings')
 @login_required
-def my_bookings_tenant_page():
-    """Tenant's bookings page - ALIAS for my_bookings_tenant"""
-    return my_bookings_tenant()
+def my_bookings_tenant():
+    user = User.query.get(session['user_id'])
+
+    # Only allow tenants to access this page
+    if not user or user.role != 'tenant':
+        flash("Access denied. You must be a tenant to view this page.", "danger")
+        return redirect(url_for('dashboard'))
+
+    # Fetch all bookings for this tenant, ordered by newest first
+    bookings = Booking.query.filter_by(tenant_id=user.id).order_by(Booking.created_at.desc()).all()
+
+    return render_template('my_bookings_tenant.html', bookings=bookings, user=user)
 
 @app.route('/debug-login-issue')
 def debug_login_issue():
