@@ -1,3 +1,4 @@
+# Email verification fixed - Flask-Mail 0.9.1 syntax
 import os
 import uuid
 from datetime import date, datetime, timedelta
