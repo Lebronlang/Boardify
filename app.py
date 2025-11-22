@@ -1670,60 +1670,199 @@ def viewproperties():
 
 @app.route('/property_detail/<int:property_id>', methods=['GET'])
 def property_detail(property_id):
-    """Property detail page"""
-    property = Property.query.get_or_404(property_id)
-
-    user_booking = None
-    user_review = None
-    can_review = False
-    
-    if 'user_id' in session and session.get('user_role') == 'tenant':
-        user_id = session['user_id']
-        user_booking = Booking.query.filter_by(
-            property_id=property.id,
-            tenant_id=user_id
-        ).all()
+    """Property detail page - FIXED VERSION"""
+    try:
+        print(f"🔍 [PROPERTY_DETAIL] Loading property ID: {property_id}")
         
-        user_review = Review.query.filter_by(
-            property_id=property_id,
-            tenant_id=user_id
-        ).first()
+        property = Property.query.get_or_404(property_id)
+        print(f"✅ [PROPERTY_DETAIL] Property found: {property.title}")
         
-        can_review = Booking.query.filter(
-            Booking.property_id == property_id,
-            Booking.tenant_id == user_id,
-            Booking.status == 'approved'
-        ).first() is not None and not user_review
+        # Initialize safe defaults
+        user_booking = None
+        user_review = None
+        can_review = False
+        reviews = []
+        avg_rating = 0
+        review_count = 0
+        
+        if 'user_id' in session and session.get('user_role') == 'tenant':
+            user_id = session['user_id']
+            print(f"👤 [PROPERTY_DETAIL] Loading tenant data for user: {user_id}")
+            
+            # Get user bookings safely
+            try:
+                user_booking = Booking.query.filter_by(
+                    property_id=property.id,
+                    tenant_id=user_id
+                ).all()
+                print(f"📅 [PROPERTY_DETAIL] User bookings: {len(user_booking)}")
+            except Exception as e:
+                print(f"⚠️ [PROPERTY_DETAIL] Error getting user bookings: {e}")
+                user_booking = []
+            
+            # Get user review safely
+            try:
+                user_review = Review.query.filter_by(
+                    property_id=property_id,
+                    tenant_id=user_id
+                ).first()
+                print(f"⭐ [PROPERTY_DETAIL] User review found: {user_review is not None}")
+            except Exception as e:
+                print(f"⚠️ [PROPERTY_DETAIL] Error getting user review: {e}")
+                user_review = None
+            
+            # Check if user can review
+            try:
+                can_review = Booking.query.filter(
+                    Booking.property_id == property_id,
+                    Booking.tenant_id == user_id,
+                    Booking.status == 'approved'
+                ).first() is not None and not user_review
+                print(f"📝 [PROPERTY_DETAIL] Can review: {can_review}")
+            except Exception as e:
+                print(f"⚠️ [PROPERTY_DETAIL] Error checking review eligibility: {e}")
+                can_review = False
 
-    total_slots = property.slots if property.slots is not None else 10
-    approved_bookings_count = sum(1 for booking in property.bookings if booking.status == 'approved')
-    slots_left = max(0, total_slots - approved_bookings_count)
+        # Calculate slots safely
+        try:
+            total_slots = property.slots if property.slots is not None else 10
+            approved_bookings_count = sum(1 for booking in property.bookings if getattr(booking, 'status', None) == 'approved')
+            slots_left = max(0, total_slots - approved_bookings_count)
+            print(f"🎯 [PROPERTY_DETAIL] Slots: {slots_left}/{total_slots} available")
+        except Exception as e:
+            print(f"⚠️ [PROPERTY_DETAIL] Error calculating slots: {e}")
+            total_slots = 10
+            slots_left = 10
 
-    reviews = Review.query.filter_by(property_id=property_id).join(User).order_by(Review.created_at.desc()).all()
+        # Get reviews safely
+        try:
+            reviews = Review.query.filter_by(property_id=property_id).join(User).order_by(Review.created_at.desc()).all()
+            review_count = len(reviews)
+            
+            if reviews:
+                avg_rating = sum(getattr(review, 'rating', 0) for review in reviews) / len(reviews)
+            print(f"⭐ [PROPERTY_DETAIL] Reviews: {review_count}, Avg rating: {avg_rating}")
+        except Exception as e:
+            print(f"⚠️ [PROPERTY_DETAIL] Error getting reviews: {e}")
+            reviews = []
+            review_count = 0
+            avg_rating = 0
+
+        # Handle images safely - SIMPLIFIED VERSION (No JavaScript)
+        image_urls = []
+        try:
+            # Method 1: Check if property.images exists and has images
+            if hasattr(property, 'images') and property.images:
+                for img in property.images:
+                    if hasattr(img, 'filename') and img.filename:
+                        # Check if file actually exists
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
+                        if os.path.exists(file_path):
+                            image_url = url_for('static', filename='uploads/' + img.filename)
+                            image_urls.append(image_url)
+                            print(f"🖼️ [PROPERTY_DETAIL] Added image: {img.filename}")
+                        else:
+                            print(f"⚠️ [PROPERTY_DETAIL] Image file not found: {img.filename}")
+            
+            # Method 2: If no images from relationship, try main image
+            if not image_urls and hasattr(property, 'image') and property.image:
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], property.image)
+                if os.path.exists(file_path):
+                    image_urls.append(url_for('static', filename='uploads/' + property.image))
+                    print(f"🖼️ [PROPERTY_DETAIL] Using main image: {property.image}")
+                else:
+                    print(f"⚠️ [PROPERTY_DETAIL] Main image not found: {property.image}")
+            
+            # Method 3: Fallback to default image
+            if not image_urls:
+                default_image = 'default.jpg'
+                default_path = os.path.join(app.config['UPLOAD_FOLDER'], default_image)
+                if os.path.exists(default_path):
+                    image_urls.append(url_for('static', filename='uploads/' + default_image))
+                    print("🖼️ [PROPERTY_DETAIL] Using default image")
+                else:
+                    # Last resort - use a placeholder
+                    image_urls.append(url_for('static', filename='img/placeholder-property.jpg'))
+                    print("🖼️ [PROPERTY_DETAIL] Using placeholder image")
+                    
+            print(f"🖼️ [PROPERTY_DETAIL] Total images: {len(image_urls)}")
+                    
+        except Exception as e:
+            print(f"❌ [PROPERTY_DETAIL] Error processing images: {e}")
+            # Fallback to placeholder
+            image_urls = [url_for('static', filename='img/placeholder-property.jpg')]
+
+        # Get owner safely
+        owner = None
+        try:
+            owner = property.owner
+            print(f"👤 [PROPERTY_DETAIL] Owner: {owner.name if owner else 'Not found'}")
+        except Exception as e:
+            print(f"⚠️ [PROPERTY_DETAIL] Error getting owner: {e}")
+            # Create a dummy owner object to prevent template errors
+            class DummyOwner:
+                name = "Unknown Owner"
+                email = ""
+                phone = ""
+            owner = DummyOwner()
+
+        print("✅ [PROPERTY_DETAIL] All data loaded successfully")
+        
+        return render_template(
+            'property_detail.html',
+            property=property,
+            user_booking=user_booking,
+            slots_left=slots_left,
+            total_slots=total_slots,
+            image_urls=image_urls,
+            reviews=reviews,
+            user_review=user_review,
+            can_review=can_review,
+            avg_rating=round(avg_rating, 1) if avg_rating > 0 else 0,
+            review_count=review_count,
+            owner=owner
+        )
+        
+    except Exception as e:
+        print(f"❌ [PROPERTY_DETAIL] CRITICAL ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        flash("Error loading property details. Please try again.", "danger")
+        return redirect(url_for('viewproperties'))
     
-    avg_rating = 0
-    if reviews:
-        avg_rating = sum(review.rating for review in reviews) / len(reviews)
-
-    image_urls = [
-        url_for('static', filename='uploads/' + img.filename) for img in property.images
-    ] if property.images else [
-        url_for('static', filename='uploads/' + (property.image or 'default.jpg'))
-    ]
-
-    return render_template(
-        'property_detail.html',
-        property=property,
-        user_booking=user_booking,
-        slots_left=slots_left,
-        total_slots=total_slots,
-        image_urls=image_urls,
-        reviews=reviews,
-        user_review=user_review,
-        can_review=can_review,
-        avg_rating=round(avg_rating, 1) if avg_rating > 0 else 0,
-        review_count=len(reviews)
-    )
+@app.route('/debug-property-images/<int:property_id>')
+def debug_property_images(property_id):
+    """Debug property images"""
+    try:
+        property = Property.query.get_or_404(property_id)
+        
+        debug_info = {
+            'property': {
+                'id': property.id,
+                'title': property.title,
+                'main_image': property.image
+            },
+            'images_relationship': {
+                'has_images_attr': hasattr(property, 'images'),
+                'images_type': str(type(getattr(property, 'images', None))),
+                'images_count': len(property.images) if hasattr(property, 'images') and property.images else 0
+            },
+            'image_details': []
+        }
+        
+        if hasattr(property, 'images') and property.images:
+            for i, img in enumerate(property.images):
+                debug_info['image_details'].append({
+                    'index': i,
+                    'id': img.id,
+                    'filename': img.filename,
+                    'property_id': img.property_id
+                })
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'type': type(e).__name__})
 
 
 
@@ -1731,7 +1870,7 @@ def property_detail(property_id):
 @login_required
 @verified_landlord_required
 def add_property():
-    """Add new property"""
+    """Add new property - FIXED VERSION"""
     user = User.query.get(session.get('user_id'))
     
     if not user or user.role != 'landlord':
@@ -1740,6 +1879,9 @@ def add_property():
     
     if request.method == 'POST':
         try:
+            print("🔍 [ADD_PROPERTY] Starting property creation...")
+            
+            # Extract form data
             title = request.form.get('title', '').strip()
             description = request.form.get('description', '').strip()
             price = request.form.get('price', '0')
@@ -1751,6 +1893,7 @@ def add_property():
             slots = request.form.get('slots', '10')
             amenities = request.form.getlist('amenities')
 
+            # Validate required fields
             required_fields = {
                 'title': title,
                 'description': description, 
@@ -1765,6 +1908,7 @@ def add_property():
                 flash(f"Missing required fields: {', '.join(missing_fields)}", "danger")
                 return redirect(request.url)
 
+            # Convert numeric fields
             try:
                 price = float(price)
                 slots = int(slots)
@@ -1782,7 +1926,9 @@ def add_property():
                 flash("Slots must be greater than 0.", "danger")
                 return redirect(request.url)
 
+            # Handle file uploads
             files = request.files.getlist('images')
+            print(f"📁 [ADD_PROPERTY] Files received: {len(files)}")
             
             if len(files) > app.config['MAX_IMAGE_COUNT']:
                 flash(f"Maximum {app.config['MAX_IMAGE_COUNT']} images allowed.", "danger")
@@ -1790,10 +1936,14 @@ def add_property():
 
             main_image = None
             image_filenames = []
+            
+            # Ensure upload directory exists
             os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
             for idx, file in enumerate(files):
                 if file and file.filename != '':
+                    print(f"📄 [ADD_PROPERTY] Processing file: {file.filename}")
+                    
                     if not allowed_file(file):
                         flash(f"File not allowed or too large: {file.filename}. Please use PNG, JPG, or JPEG files under 5MB.", "danger")
                         continue
@@ -1801,15 +1951,21 @@ def add_property():
                     original_filename = secure_filename(file.filename)
                     unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{original_filename}"
                     upload_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-
+                    
                     try:
                         file.save(upload_path)
                         image_filenames.append(unique_filename)
+                        print(f"✅ [ADD_PROPERTY] File saved: {unique_filename}")
+                        
+                        # Set first image as main image
                         if idx == 0:
                             main_image = unique_filename
                     except Exception as e:
+                        print(f"❌ [ADD_PROPERTY] Error saving file {file.filename}: {e}")
                         flash(f"Error saving file {file.filename}", "danger")
 
+            # Create the property
+            print("🏠 [ADD_PROPERTY] Creating property object...")
             new_property = Property(
                 title=title,
                 description=description,
@@ -1820,25 +1976,40 @@ def add_property():
                 bedrooms=bedrooms,
                 bathrooms=bathrooms,
                 slots=slots,
-                image=main_image,
+                image=main_image,  # This should be the filename string, not an object
                 landlord_id=user.id,
                 amenities=','.join(amenities) if amenities else None
             )
 
             db.session.add(new_property)
-            db.session.flush()
+            db.session.flush()  # This gets the ID without committing
+            print(f"✅ [ADD_PROPERTY] Property created with ID: {new_property.id}")
 
+            # Add additional images as PropertyImage records
             for fname in image_filenames:
-                if fname != main_image:
-                    prop_image = PropertyImage(property_id=new_property.id, filename=fname)
-                    db.session.add(prop_image)
+                if fname != main_image:  # Don't duplicate the main image
+                    try:
+                        prop_image = PropertyImage(
+                            property_id=new_property.id, 
+                            filename=fname
+                        )
+                        db.session.add(prop_image)
+                        print(f"🖼️ [ADD_PROPERTY] Added property image: {fname}")
+                    except Exception as e:
+                        print(f"❌ [ADD_PROPERTY] Error adding property image {fname}: {e}")
 
+            # Commit everything
             db.session.commit()
+            print("✅ [ADD_PROPERTY] Database committed successfully")
+            
             flash("Property added successfully!", "success")
             return redirect(url_for('viewproperties'))
             
         except Exception as e:
             db.session.rollback()
+            print(f"❌ [ADD_PROPERTY] CRITICAL ERROR: {str(e)}")
+            import traceback
+            traceback.print_exc()
             flash(f"Error adding property: {str(e)}", "danger")
             return redirect(request.url)
 

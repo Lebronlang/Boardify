@@ -93,58 +93,49 @@ property details:
                     <!-- Left Column: Gallery & Details -->
                     <div class="col-lg-8">
                         <!-- Image Gallery Section -->
-                        <div class="gallery-card mb-4">
-                            {% set property_images = property.images if property.images else [] %}
-                            {% set total_images = property_images|length if property_images else 1 %}
-                            
-                            <!-- Main Image Display -->
-                            <div class="main-gallery-container">
-                                {% if property_images %}
-                                    {% for image in property_images %}
-                                    <img 
-                                        src="{{ url_for('static', filename='uploads/' + image.filename) }}" 
-                                        class="gallery-main-image {% if loop.index0 == 0 %}active{% endif %}" 
-                                        alt="{{ property.title }} - Image {{ loop.index }}"
-                                        data-index="{{ loop.index0 }}"
-                                    >
-                                    {% endfor %}
-                                {% else %}
-                                    <img 
-                                        src="{{ url_for('static', filename='uploads/' + (property.image if property.image else 'default.jpg')) }}" 
-                                        class="gallery-main-image active" 
-                                        alt="{{ property.title }}"
-                                        data-index="0"
-                                    >
-                                {% endif %}
-                                
-                                {% if total_images > 1 %}
-                                <button class="gallery-arrow-btn prev-arrow" data-direction="-1">
-                                    <i class="bi bi-chevron-left"></i>
-                                </button>
-                                <button class="gallery-arrow-btn next-arrow" data-direction="1">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
-                                
-                                <div class="image-count-badge">
-                                    <span class="current-image-num">1</span> / <span class="total-image-num">{{ total_images }}</span>
-                                </div>
-                                {% endif %}
-                                
-                                <button class="fullscreen-btn" data-action="fullscreen">
-                                    <i class="bi bi-arrows-fullscreen"></i>
-                                </button>
-                            </div>
+                        <!-- Image Gallery Section - FIXED -->
+<!-- Image Gallery Section - FIXED (No JavaScript) -->
+<div class="gallery-card mb-4">
+    {% set total_images = image_urls|length %}
+    
+    <!-- Main Image Display -->
+    <div class="main-gallery-container">
+        {% for image_url in image_urls %}
+        <img 
+            src="{{ image_url }}" 
+            class="gallery-main-image {% if loop.index0 == 0 %}active{% endif %}" 
+            alt="{{ property.title }} - Image {{ loop.index }}"
+            data-index="{{ loop.index0 }}"
+        >
+        {% endfor %}
+        
+        {% if total_images > 1 %}
+        <button class="gallery-arrow-btn prev-arrow" data-direction="-1">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        <button class="gallery-arrow-btn next-arrow" data-direction="1">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+        
+        <div class="image-count-badge">
+            <span class="current-image-num">1</span> / <span class="total-image-num">{{ total_images }}</span>
+        </div>
+        {% endif %}
+        
+        <button class="fullscreen-btn" data-action="fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+        </button>
+    </div>
 
-                            <!-- Thumbnail Strip -->
-                            <!-- Thumbnail Strip -->
+    <!-- Thumbnail Strip -->
     {% if total_images > 1 %}
     <div class="thumbnail-strip">
         <div class="thumbnail-wrapper">
-            {% for image in property_images %}
+            {% for image_url in image_urls %}
             <div class="thumbnail-box {% if loop.index0 == 0 %}active{% endif %}" 
                 data-index="{{ loop.index0 }}">
                 <img 
-                    src="{{ url_for('static', filename='uploads/' + image.filename) }}" 
+                    src="{{ image_url }}" 
                     alt="Thumbnail {{ loop.index }}"
                     class="thumbnail-image"
                 >
@@ -153,7 +144,7 @@ property details:
         </div>
     </div>
     {% endif %}
-                        </div>
+</div>
 
                         <!-- Property Information Tabs -->
                         <div class="info-tabs-card mb-4">
