@@ -1431,9 +1431,48 @@ def profile():
         verified=user.is_verified
     )
 
+@app.route('/debug-email-problem')
+def debug_email_problem():
+    """Debug why email sending is failing"""
+    try:
+        # Get the latest user (the one that just failed)
+        latest_user = User.query.order_by(User.id.desc()).first()
+        
+        if not latest_user:
+            return jsonify({'error': 'No users found'})
+        
+        # Test email sending directly
+        print(f"🔍 Testing email for: {latest_user.email}")
+        result = send_verification_email(latest_user)
+        
+        # Check Resend configuration
+        api_key = os.environ.get('RESEND_API_KEY')
+        
+        debug_info = {
+            'latest_user': {
+                'id': latest_user.id,
+                'email': latest_user.email,
+                'name': latest_user.name,
+                'is_verified': latest_user.is_verified
+            },
+            'email_test_result': result,
+            'resend_config': {
+                'api_key_set': bool(api_key),
+                'api_key_preview': api_key[:10] + '...' if api_key else 'NOT_SET',
+                'email_enabled': EMAIL_ENABLED
+            },
+            'environment': {
+                'render_external_url': os.environ.get('RENDER_EXTERNAL_URL'),
+                'base_url': os.environ.get('RENDER_EXTERNAL_URL', 'http://localhost:5000')
+            }
+        }
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
-    
-    # Test SMTP connection
+ # Test SMTP connection
     try:
         import smtplib
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10)
