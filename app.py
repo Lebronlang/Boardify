@@ -1201,11 +1201,14 @@ def property_detail(property_id):
 
 @app.route('/test-gmail-simple')
 def test_gmail_simple():
-    """Simple Gmail test"""
+    """Simple Gmail test - FIXED SYNTAX"""
     try:
-        msg = Message("🎉 Gmail Test Successful!")  # ✅ Subject as first positional arg
-        msg.recipients = ["lebrontan2004@gmail.com"]
-        msg.body = "Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
+        # ✅ CORRECT - Use keyword arguments
+        msg = Message(
+            subject="🎉 Gmail Test Successful!",
+            recipients=["lebrontan2004@gmail.com"],
+            body="Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
+        )
         
         mail.send(msg)
         return "✅ Gmail test email sent successfully! Check your inbox."
