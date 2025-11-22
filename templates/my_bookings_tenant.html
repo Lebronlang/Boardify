@@ -54,50 +54,45 @@
             {% endif %}
         {% endwith %}
 
-        
-
         <!-- Pending Bookings Section -->
-        <!-- Pending Bookings Section -->
-{% if pending_bookings %}
-    <div class="bookings-section mb-5">
-        <div class="section-header-modern">
-            <div class="section-title-wrapper">
-                <div class="section-icon-circle bg-warning">
-                    <i class="bi bi-hourglass-split"></i>
-                </div>
-                <div>
-                    <h3 class="section-title">Pending Approval</h3>
-                    <p class="section-description">Waiting for landlord response</p>
-                </div>
-            </div>
-            <span class="section-count-badge bg-warning">{{ pending_bookings|length }}</span>
-        </div>
-        
-        <div class="row g-4">
-            {% for booking in pending_bookings %}
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="booking-card-modern pending-card">
-                    <div class="card-status-bar status-pending"></div>
-                    
-                    <div class="card-header-modern">
-                        <div class="property-image-wrapper">
-                            {% if booking.property.images and booking.property.images.count() > 0 %}
-                                {% set first_image = booking.property.images.first() %}
-                                <img src="{{ url_for('static', filename='uploads/' + first_image.filename) }}" 
-                                     alt="{{ booking.property.title }}" class="property-thumbnail">
-                            {% else %}
-                                <img src="{{ url_for('static', filename='uploads/' + (booking.property.image if booking.property.image else 'default.jpg')) }}" 
-                                     alt="{{ booking.property.title }}" class="property-thumbnail">
-                            {% endif %}
-                            <div class="status-overlay">
-                                <span class="status-badge badge-pending">
-                                    <i class="bi bi-clock-history me-1"></i>Pending
-                                </span>
-                            </div>
+        {% if pending_bookings %}
+            <div class="bookings-section mb-5">
+                <div class="section-header-modern">
+                    <div class="section-title-wrapper">
+                        <div class="section-icon-circle bg-warning">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                        <div>
+                            <h3 class="section-title">Pending Approval</h3>
+                            <p class="section-description">Waiting for landlord response</p>
                         </div>
                     </div>
-                    
-                    <!-- ... rest of the pending booking card content ... -->
+                    <span class="section-count-badge bg-warning">{{ pending_bookings|length }}</span>
+                </div>
+                
+                <div class="row g-4">
+                    {% for booking in pending_bookings %}
+                    <div class="col-12 col-md-6 col-xl-4">
+                        <div class="booking-card-modern pending-card">
+                            <div class="card-status-bar status-pending"></div>
+                            
+                            <div class="card-header-modern">
+                                <div class="property-image-wrapper">
+                                    {% if booking.property_obj.images and booking.property_obj.images.count() > 0 %}
+                                        {% set first_image = booking.property_obj.images.first() %}
+                                        <img src="{{ url_for('static', filename='uploads/' + first_image.filename) }}" 
+                                             alt="{{ booking.property_obj.title }}" class="property-thumbnail">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename='uploads/' + (booking.property_obj.image if booking.property_obj.image else 'default.jpg')) }}" 
+                                             alt="{{ booking.property_obj.title }}" class="property-thumbnail">
+                                    {% endif %}
+                                    <div class="status-overlay">
+                                        <span class="status-badge badge-pending">
+                                            <i class="bi bi-clock-history me-1"></i>Pending
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                             
                             <div class="card-body-modern">
                                 <!-- Booking Reference Number -->
@@ -110,7 +105,7 @@
                                 </div>
 
                                 <h5 class="property-title-card">
-                                    <i class="bi bi-house-door-fill me-2"></i>{{ booking.property.title }}
+                                    <i class="bi bi-house-door-fill me-2"></i>{{ booking.property_obj.title }}
                                 </h5>
                                 
                                 <div class="booking-info-grid">
@@ -148,7 +143,7 @@
                                 
                                 <div class="booking-price">
                                     <span class="price-label">Total Amount:</span>
-                                    <span class="price-value">₱{{ "{:,.2f}".format(booking.total_bill if booking.total_bill else booking.property.price) }}</span>
+                                    <span class="price-value">₱{{ "{:,.2f}".format(booking.total_bill if booking.total_bill else booking.property_obj.price) }}</span>
                                 </div>
                             </div>
                             
@@ -156,17 +151,17 @@
                                 <button class="btn-view-details" 
                                         data-booking-id="{{ booking.id }}"
                                         data-booking-reference="{{ booking.reference_number }}"
-                                        data-property-title="{{ booking.property.title|escape }}"
+                                        data-property-title="{{ booking.property_obj.title|escape }}"
                                         data-checkin="{{ booking.start_date.strftime('%B %d, %Y') }}"
                                         data-checkout="{% if booking.end_date %}{{ booking.end_date.strftime('%B %d, %Y') }}{% else %}Not specified{% endif %}"
                                         data-status="{{ booking.status }}"
-                                        data-location="{{ booking.property.location|escape if booking.property.location else 'Not specified' }}"
-                                        data-price="{{ booking.total_bill if booking.total_bill else booking.property.price }}"
+                                        data-location="{{ booking.property_obj.location|escape if booking.property_obj.location else 'Not specified' }}"
+                                        data-price="{{ booking.total_bill if booking.total_bill else booking.property_obj.price }}"
                                         data-created="{{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') }}">
                                     <i class="bi bi-eye-fill me-2"></i>View Details
                                 </button>
-                                {% if booking.property.owner and booking.property.owner.email %}
-                                <a href="mailto:{{ booking.property.owner.email }}?subject=Inquiry about booking {{ booking.reference_number }} - {{ booking.property.title|urlencode }}" 
+                                {% if booking.property_obj.owner and booking.property_obj.owner.email %}
+                                <a href="mailto:{{ booking.property_obj.owner.email }}?subject=Inquiry about booking {{ booking.reference_number }} - {{ booking.property_obj.title|urlencode }}" 
                                    class="btn-contact-host" title="Contact Host">
                                     <i class="bi bi-chat-dots-fill"></i>
                                 </a>
@@ -197,34 +192,34 @@
                 
                 <div class="row g-4">
                     {% for booking in processed_bookings %}
-<div class="col-12 col-md-6 col-xl-4">
-    <div class="booking-card-modern {% if booking.status == 'approved' %}approved-card{% else %}rejected-card{% endif %}">
-        <div class="card-status-bar {% if booking.status == 'approved' %}status-approved{% else %}status-rejected{% endif %}"></div>
-        
-        <div class="card-header-modern">
-            <div class="property-image-wrapper">
-                {% if booking.property.images and booking.property.images.count() > 0 %}
-    {% set first_image = booking.property.images.first() %}
-    <img src="{{ url_for('static', filename='uploads/' + first_image.filename) }}" 
-                         alt="{{ booking.property.title }}" class="property-thumbnail">
-                {% else %}
-                    <img src="{{ url_for('static', filename='uploads/' + (booking.property.image if booking.property.image else 'default.jpg')) }}" 
-                         alt="{{ booking.property.title }}" class="property-thumbnail">
-                {% endif %}
-                <div class="status-overlay">
-                    {% if booking.status == 'approved' %}
-                        <span class="status-badge badge-approved">
-                            <i class="bi bi-check-circle-fill me-1"></i>Approved
-                        </span>
-                    {% else %}
-                        <span class="status-badge badge-rejected">
-                            <i class="bi bi-x-circle-fill me-1"></i>Rejected
-                        </span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+                    <div class="col-12 col-md-6 col-xl-4">
+                        <div class="booking-card-modern {% if booking.status == 'approved' %}approved-card{% else %}rejected-card{% endif %}">
+                            <div class="card-status-bar {% if booking.status == 'approved' %}status-approved{% else %}status-rejected{% endif %}"></div>
                             
+                            <div class="card-header-modern">
+                                <div class="property-image-wrapper">
+                                    {% if booking.property_obj.images and booking.property_obj.images.count() > 0 %}
+                                        {% set first_image = booking.property_obj.images.first() %}
+                                        <img src="{{ url_for('static', filename='uploads/' + first_image.filename) }}" 
+                                             alt="{{ booking.property_obj.title }}" class="property-thumbnail">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename='uploads/' + (booking.property_obj.image if booking.property_obj.image else 'default.jpg')) }}" 
+                                             alt="{{ booking.property_obj.title }}" class="property-thumbnail">
+                                    {% endif %}
+                                    <div class="status-overlay">
+                                        {% if booking.status == 'approved' %}
+                                            <span class="status-badge badge-approved">
+                                                <i class="bi bi-check-circle-fill me-1"></i>Approved
+                                            </span>
+                                        {% else %}
+                                            <span class="status-badge badge-rejected">
+                                                <i class="bi bi-x-circle-fill me-1"></i>Rejected
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="card-body-modern">
                                 <!-- Booking Reference Number -->
                                 <div class="booking-reference-section">
@@ -236,7 +231,7 @@
                                 </div>
 
                                 <h5 class="property-title-card">
-                                    <i class="bi bi-house-door-fill me-2"></i>{{ booking.property.title }}
+                                    <i class="bi bi-house-door-fill me-2"></i>{{ booking.property_obj.title }}
                                 </h5>
                                 
                                 <div class="booking-info-grid">
@@ -274,7 +269,7 @@
                                 
                                 <div class="booking-price">
                                     <span class="price-label">Total Amount:</span>
-                                    <span class="price-value">₱{{ "{:,.2f}".format(booking.total_bill if booking.total_bill else booking.property.price) }}</span>
+                                    <span class="price-value">₱{{ "{:,.2f}".format(booking.total_bill if booking.total_bill else booking.property_obj.price) }}</span>
                                 </div>
                             </div>
                             
@@ -282,17 +277,17 @@
                                 <button class="btn-view-details"
                                         data-booking-id="{{ booking.id }}"
                                         data-booking-reference="{{ booking.reference_number }}"
-                                        data-property-title="{{ booking.property.title|escape }}"
+                                        data-property-title="{{ booking.property_obj.title|escape }}"
                                         data-checkin="{{ booking.start_date.strftime('%B %d, %Y') }}"
                                         data-checkout="{% if booking.end_date %}{{ booking.end_date.strftime('%B %d, %Y') }}{% else %}Not specified{% endif %}"
                                         data-status="{{ booking.status }}"
-                                        data-location="{{ booking.property.location|escape if booking.property.location else 'Not specified' }}"
-                                        data-price="{{ booking.total_bill if booking.total_bill else booking.property.price }}"
+                                        data-location="{{ booking.property_obj.location|escape if booking.property_obj.location else 'Not specified' }}"
+                                        data-price="{{ booking.total_bill if booking.total_bill else booking.property_obj.price }}"
                                         data-created="{{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') }}">
                                     <i class="bi bi-eye-fill me-2"></i>View Details
                                 </button>
-                                {% if booking.status == 'approved' and booking.property.owner and booking.property.owner.email %}
-                                <a href="mailto:{{ booking.property.owner.email }}?subject=Inquiry about booking {{ booking.reference_number }} - {{ booking.property.title|urlencode }}" 
+                                {% if booking.status == 'approved' and booking.property_obj.owner and booking.property_obj.owner.email %}
+                                <a href="mailto:{{ booking.property_obj.owner.email }}?subject=Inquiry about booking {{ booking.reference_number }} - {{ booking.property_obj.title|urlencode }}" 
                                    class="btn-contact-host" title="Contact Host">
                                     <i class="bi bi-chat-dots-fill"></i>
                                 </a>
