@@ -151,7 +151,7 @@ MAX_SLOTS = 9
 
 # ========== UTILITY FUNCTIONS ==========
 def send_verification_email(user):
-    """Send verification email using Resend.com API - FIXED DOMAIN"""
+    """Send verification email with better error handling"""
     print(f"📧 [EMAIL] Starting email send for: {user.email}")
     
     try:
@@ -174,90 +174,81 @@ def send_verification_email(user):
         verification_url = f"{base_url}/verify-email/{token}"
         print(f"🌐 [EMAIL] Verification URL: {verification_url}")
 
-        # ✅ FIXED: Use Resend's working domains
-        from_emails = [
-            'Boardify <onboarding@resend.email>',  # Primary fix
-            'Boardify <hello@resend.dev>',         # Backup option
-            'Boardify <noreply@resend.email>',     # Another backup
-        ]
-
-        # Try different sender addresses
-        for from_email in from_emails:
-            # Prepare email data
-            email_data = {
-                'from': from_email,
-                'to': [user.email],
-                'subject': 'Verify Your Email - Boardify',
-                'html': f"""
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <style>
-                            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                            .header {{ background: #4CAF50; color: white; padding: 20px; text-align: center; }}
-                            .button {{ background: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
-                            .footer {{ margin-top: 20px; padding: 20px; background: #f9f9f9; }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class="container">
-                            <div class="header">
-                                <h1>Welcome to Boardify! 🎉</h1>
-                            </div>
-                            
-                            <p>Hello {user.name},</p>
-                            
-                            <p>Thank you for registering with Boardify! Please verify your email address by clicking the button below:</p>
-                            
-                            <p style="text-align: center;">
-                                <a href="{verification_url}" class="button">Verify Email Address</a>
-                            </p>
-                            
-                            <p>Or copy and paste this link in your browser:<br>
-                            <code>{verification_url}</code></p>
-                            
-                            <p><strong>⚠️ Important:</strong> This verification link will expire in 24 hours.</p>
-                            
-                            <div class="footer">
-                                <p>If you didn't create an account with Boardify, please ignore this email.</p>
-                                <p>Best regards,<br><strong>Boardify Team</strong></p>
-                            </div>
+        # Prepare email data
+        email_data = {
+            'from': 'Boardify <onboarding@resend.dev>',
+            'to': [user.email],
+            'subject': 'Verify Your Email - Boardify',
+            'html': f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background: #4CAF50; color: white; padding: 20px; text-align: center; }}
+                        .button {{ background: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+                        .footer {{ margin-top: 20px; padding: 20px; background: #f9f9f9; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>Welcome to Boardify! 🎉</h1>
                         </div>
-                    </body>
-                    </html>
-                """
-            }
+                        
+                        <p>Hello {user.name},</p>
+                        
+                        <p>Thank you for registering with Boardify! Please verify your email address by clicking the button below:</p>
+                        
+                        <p style="text-align: center;">
+                            <a href="{verification_url}" class="button">Verify Email Address</a>
+                        </p>
+                        
+                        <p>Or copy and paste this link in your browser:<br>
+                        <code>{verification_url}</code></p>
+                        
+                        <p><strong>⚠️ Important:</strong> This verification link will expire in 24 hours.</p>
+                        
+                        <div class="footer">
+                            <p>If you didn't create an account with Boardify, please ignore this email.</p>
+                            <p>Best regards,<br><strong>Boardify Team</strong></p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            """
+        }
 
-            print(f"📤 [EMAIL] Trying sender: {from_email}")
+        # Resend API call
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json'
+            },
+            json=email_data,
+            timeout=15
+        )
+        
+        print(f"📨 [EMAIL] Response Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            print(f"✅ [EMAIL] Verification email sent successfully to {user.email}")
+            print(f"📧 [EMAIL] Email ID: {response_data.get('id', 'Unknown')}")
+            return True
+        else:
+            print(f"❌ [EMAIL] Failed: {response.status_code}")
+            print(f"❌ [EMAIL] Error: {response.text}")
             
-            # Resend API call
-            response = requests.post(
-                'https://api.resend.com/emails',
-                headers={
-                    'Authorization': f'Bearer {api_key}',
-                    'Content-Type': 'application/json'
-                },
-                json=email_data,
-                timeout=15
-            )
-            
-            print(f"📨 [EMAIL] Response Status: {response.status_code}")
-            
-            if response.status_code == 200:
-                response_data = response.json()
-                print(f"✅ [EMAIL] Verification email sent successfully to {user.email}")
-                print(f"📧 [EMAIL] Email ID: {response_data.get('id', 'Unknown')}")
-                print(f"✅ [EMAIL] Used sender: {from_email}")
-                return True
-            else:
-                print(f"❌ [EMAIL] Failed with {from_email}: {response.status_code}")
-                print(f"❌ [EMAIL] Error: {response.text}")
-                continue  # Try next sender
+            # Check if it's an invalid email error
+            error_text = response.text.lower()
+            if any(term in error_text for term in ['invalid', 'not found', 'rejected', 'bounce']):
+                print(f"❌ [EMAIL] Invalid email address: {user.email}")
+                return False
                 
-        # If all senders failed
-        print(f"❌ [EMAIL] All sender attempts failed for {user.email}")
-        return False
+            return False
             
     except requests.exceptions.Timeout:
         print("❌ [EMAIL] Request timeout - email sending took too long")
@@ -645,7 +636,7 @@ def home():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """User registration - ALLOWS ANY GMAIL ADDRESS"""
+    """User registration - REQUIRES EMAIL VERIFICATION"""
     if request.method == 'POST':
         try:
             print("🔍 [REGISTRATION] Starting registration process...")
@@ -670,7 +661,7 @@ def register():
                 flash(f"Missing required fields: {', '.join(missing)}", "danger")
                 return redirect(url_for('register'))
 
-            # 🚨 FIXED: Better email validation - allow ANY valid email
+            # Email format validation
             if not email or '@' not in email or '.' not in email.split('@')[-1]:
                 flash("Please enter a valid email address.", "danger")
                 return redirect(url_for('register'))
@@ -711,7 +702,7 @@ def register():
                     filename = f"license_{int(time.time())}_{original_filename}"
                     license_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-            # 🚨 CRITICAL FIX: Auto-verify ALL users
+            # 🚨 CRITICAL: Create user as UNVERIFIED initially
             new_user = User(
                 name=name,
                 email=email,
@@ -720,15 +711,34 @@ def register():
                 gender=gender,
                 birthdate=birthdate,
                 license_image=filename,
-                is_verified=True,  # 🚨 AUTO VERIFY ALL USERS
-                is_approved_by_admin=role != 'landlord'  # Landlords still need admin approval
+                is_verified=False,  # 🚨 User starts as UNVERIFIED
+                is_approved_by_admin=role != 'landlord'  # Landlords need admin approval
             )
             
             db.session.add(new_user)
             db.session.commit()
-            print(f"✅ [REGISTRATION] User created: {email}")
+            print(f"✅ [REGISTRATION] User created (unverified): {email}")
 
-            flash("🎉 Registration successful! You can login immediately.", "success")
+            # 🚨 Attempt to send verification email
+            if EMAIL_ENABLED:
+                email_sent = send_verification_email(new_user)
+                if email_sent:
+                    flash("🎉 Registration successful! Please check your email to verify your account before logging in.", "success")
+                    print(f"✅ Verification email sent to: {email}")
+                else:
+                    # Email failed to send - this catches non-existent emails
+                    flash("❌ We couldn't send a verification email to this address. Please check if your email address is correct and try again.", "danger")
+                    # Delete the user since email verification failed
+                    db.session.delete(new_user)
+                    db.session.commit()
+                    return redirect(url_for('register'))
+            else:
+                # Email system disabled - auto-verify for development
+                new_user.is_verified = True
+                db.session.commit()
+                flash("🎉 Registration successful! You can login immediately.", "success")
+                print(f"ℹ️ Auto-verified (email disabled): {email}")
+
             return redirect(url_for('login'))
             
         except Exception as e:
@@ -993,7 +1003,7 @@ def resend_verification():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """User login - ALLOWS UNVERIFIED USERS FOR NOW"""
+    """User login - REQUIRES VERIFIED EMAIL"""
     if request.method == 'POST':
         try:
             email = request.form['email'].strip().lower()
@@ -1006,13 +1016,13 @@ def login():
             if user and check_password_hash(user.password_hash, password):
                 print(f"✅ [LOGIN] Password correct for: {email}")
                 
-                # 🚨 TEMPORARY: Allow unverified users to login
-                # if not user.is_verified and EMAIL_ENABLED:
-                #     print(f"⚠️ [LOGIN] User not verified: {email}")
-                #     flash("⚠️ Please verify your email before logging in. Check your inbox for the verification link.", "warning")
-                #     return render_template('login.html', show_resend=True, user_email=email)
+                # 🚨 BLOCK unverified users from logging in
+                if not user.is_verified:
+                    print(f"⚠️ [LOGIN] User not verified: {email}")
+                    flash("❌ Please verify your email before logging in. Check your inbox for the verification link.", "warning")
+                    return render_template('login.html', show_resend=True, user_email=email)
                     
-                # Login successful (even if not verified)
+                # Login successful (only if verified)
                 login_user(user)
                 session['user_id'] = user.id
                 session['user_role'] = user.role
