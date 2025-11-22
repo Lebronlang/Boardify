@@ -181,20 +181,19 @@ def send_verification_email(user):
         
         print(f"🌐 Verification URL: {verification_url}")
 
-        # ✅ CORRECT Flask-Mail 0.9.1 syntax
-        msg = Message(
-            subject="Verify Your Email - Boardify",
-            recipients=[user.email],
-            html=f"""
-                <h2>Welcome to Boardify! 🎉</h2>
-                <p>Please verify your email address by clicking the link below:</p>
-                <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
-                <p>Or copy this link: {verification_url}</p>
-                <p>This link will expire in 24 hours.</p>
-                <br>
-                <p>Best regards,<br>Boardify Team</p>
-            """
-        )
+        # ✅ CORRECT Flask-Mail 0.9.1 syntax - FIXED
+        msg = Message()
+        msg.subject = "Verify Your Email - Boardify"
+        msg.recipients = [user.email]
+        msg.html = f"""
+            <h2>Welcome to Boardify! 🎉</h2>
+            <p>Please verify your email address by clicking the link below:</p>
+            <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
+            <p>Or copy this link: {verification_url}</p>
+            <p>This link will expire in 24 hours.</p>
+            <br>
+            <p>Best regards,<br>Boardify Team</p>
+        """
 
         # Try to send email
         print("📧 Attempting to send email...")
@@ -241,8 +240,9 @@ def test_email():
 def test_gmail():
     """Test Gmail configuration - FIXED FOR Flask-Mail 0.9.1"""
     try:
-        # ✅ OLD syntax for Flask-Mail 0.9.1
-        msg = Message("🎉 Boardify Gmail Test")  # Subject as positional argument
+        # ✅ CORRECT Flask-Mail 0.9.1 syntax
+        msg = Message()
+        msg.subject = "🎉 Boardify Gmail Test"
         msg.recipients = [app.config['MAIL_USERNAME']]
         msg.body = "Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
         
@@ -250,7 +250,6 @@ def test_gmail():
         return "✅ Gmail test email sent successfully! Check your inbox."
     except Exception as e:
         return f"❌ Gmail test failed: {str(e)}"
-
     
 
 def verify_token(token, expiration=86400):
@@ -1202,8 +1201,9 @@ def property_detail(property_id):
 def test_gmail_simple():
     """Simple Gmail test - FIXED FOR Flask-Mail 0.9.1"""
     try:
-        # ✅ OLD syntax for Flask-Mail 0.9.1
-        msg = Message("🎉 Gmail Test Successful!")  # Subject as positional argument
+        # ✅ CORRECT Flask-Mail 0.9.1 syntax
+        msg = Message()
+        msg.subject = "🎉 Gmail Test Successful!"
         msg.recipients = ["lebrontan2004@gmail.com"]
         msg.body = "Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
         
