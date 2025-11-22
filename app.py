@@ -239,13 +239,12 @@ def test_email():
 
 @app.route('/test-gmail')
 def test_gmail():
-    """Test Gmail configuration - FIXED SYNTAX"""
+    """Test Gmail configuration - FIXED FOR Flask-Mail 0.9.1"""
     try:
-        msg = Message(
-            subject="🎉 Boardify Gmail Test",
-            recipients=[app.config['MAIL_USERNAME']],
-            body="Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
-        )
+        # ✅ OLD syntax for Flask-Mail 0.9.1
+        msg = Message("🎉 Boardify Gmail Test")  # Subject as positional argument
+        msg.recipients = [app.config['MAIL_USERNAME']]
+        msg.body = "Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
         
         mail.send(msg)
         return "✅ Gmail test email sent successfully! Check your inbox."
@@ -1201,14 +1200,12 @@ def property_detail(property_id):
 
 @app.route('/test-gmail-simple')
 def test_gmail_simple():
-    """Simple Gmail test - FIXED SYNTAX"""
+    """Simple Gmail test - FIXED FOR Flask-Mail 0.9.1"""
     try:
-        # ✅ CORRECT - Use keyword arguments
-        msg = Message(
-            subject="🎉 Gmail Test Successful!",
-            recipients=["lebrontan2004@gmail.com"],
-            body="Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
-        )
+        # ✅ OLD syntax for Flask-Mail 0.9.1
+        msg = Message("🎉 Gmail Test Successful!")  # Subject as positional argument
+        msg.recipients = ["lebrontan2004@gmail.com"]
+        msg.body = "Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
         
         mail.send(msg)
         return "✅ Gmail test email sent successfully! Check your inbox."
