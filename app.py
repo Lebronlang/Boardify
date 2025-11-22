@@ -174,12 +174,13 @@ def send_verification_email(user):
         token = ts.dumps(user.email, salt='email-verify')
         
         # Generate verification URL
-        if os.environ.get('RENDER'):
-            base_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://boardify-3aop.onrender.com')
-            verification_url = f"{base_url}/verify-email/{token}"
+        # Generate verification URL
+        if os.environ.get('RENDER') == 'true':
+                        base_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://boardify-3aop.onrender.com')
+                        verification_url = f"{base_url}/verify-email/{token}"
         else:
-            verification_url = url_for('verify_email', token=token, _external=True)
-        
+                with app.app_context():
+                          verification_url = url_for('verify_email', token=token, _external=True)
         print(f"🌐 Verification URL: {verification_url}")
 
         # Create email message - IMPROVED VERSION
