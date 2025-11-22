@@ -645,7 +645,7 @@ def home():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """User registration - SAFE VERSION with better error handling"""
+    """User registration - WITH PROPER EMAIL VERIFICATION"""
     if request.method == 'POST':
         try:
             print("🔍 [REGISTRATION] Starting registration process...")
@@ -712,7 +712,7 @@ def register():
                     filename = f"license_{int(time.time())}_{original_filename}"
                     license_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-            # Create user - MINIMAL database operations
+            # Create user - ALWAYS START AS UNVERIFIED for security
             new_user = User(
                 name=name,
                 email=email,
@@ -721,40 +721,38 @@ def register():
                 gender=gender,
                 birthdate=birthdate,
                 license_image=filename,
-                is_verified=not EMAIL_ENABLED,  # Auto-verify if email disabled
+                is_verified=False,  # SECURITY: Always start unverified
                 is_approved_by_admin=role != 'landlord'
             )
             
             db.session.add(new_user)
             db.session.commit()
-            print(f"✅ [REGISTRATION] User created: {email}")
+            print(f"✅ [REGISTRATION] User created (unverified): {email}")
 
-            # Send email (non-blocking)
+            # ALWAYS attempt email verification for security
             if EMAIL_ENABLED:
-                try:
-                    email_sent = send_verification_email(new_user)
-                    if email_sent:
-                        flash("🎉 Registration successful! Please check your email to verify your account.", "success")
-                    else:
-                        flash("✅ Registered! But verification email failed. Use 'Resend Verification' on login page.", "warning")
-                except Exception as email_error:
-                    print(f"⚠️ Email error (non-critical): {email_error}")
-                    flash("✅ Registration successful! You can login now.", "success")
+                email_sent = send_verification_email(new_user)
+                if email_sent:
+                    flash("🎉 Registration successful! Please check your email to verify your account before logging in.", "success")
+                    print(f"✅ Verification email sent to: {email}")
+                else:
+                    # Email failed - user must use resend verification
+                    flash("⚠️ Account created but verification email failed. Please use 'Resend Verification' on the login page.", "warning")
+                    print(f"❌ Verification email failed for: {email}")
             else:
-                flash("✅ Registration successful! You can login now.", "success")
+                # Email system disabled - admin decision for security
+                flash("⚠️ Account created but email verification is currently disabled. Please contact admin for account activation.", "warning")
+                print(f"ℹ️ Email verification disabled for: {email}")
 
             return redirect(url_for('login'))
             
         except Exception as e:
             db.session.rollback()
             print(f"❌ [REGISTRATION] ERROR: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            flash(f"Registration failed. Please try again. Error: {str(e)}", "danger")
+            flash("Registration failed due to server error. Please try again.", "danger")
             return redirect(url_for('register'))
 
     return render_template('register.html')
-
 # @app.route('/test-resend-api-key')
 # def test_resend_api_key():
 #     """Test if Resend API key is valid"""
@@ -1471,6 +1469,65 @@ def debug_email_problem():
         
     except Exception as e:
         return jsonify({'error': str(e)})
+    
+
+@app.route('/deep-email-debug')
+def deep_email_debug():
+    """Deep dive into email sending issues"""
+    try:
+        import requests
+        
+        api_key = os.environ.get('RESEND_API_KEY')
+        
+        # Test 1: Check API key validity
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Test 2: Check domains (this will show if API key is valid)
+        domains_response = requests.get(
+            'https://api.resend.com/domains',
+            headers=headers,
+            timeout=10
+        )
+        
+        # Test 3: Try to send a test email
+        test_email_data = {
+            'from': 'Boardify <onboarding@resend.dev>',
+            'to': ['taynjannbron@gmail.com'],
+            'subject': '🚨 Resend API Test - Boardify',
+            'html': '<h1>Resend Test</h1><p>If you receive this, Resend is working!</p>'
+        }
+        
+        email_response = requests.post(
+            'https://api.resend.com/emails',
+            headers=headers,
+            json=test_email_data,
+            timeout=10
+        )
+        
+        debug_info = {
+            'api_key_check': {
+                'set': bool(api_key),
+                'format': 'Valid' if api_key and api_key.startswith('re_') else 'Invalid format',
+                'preview': api_key[:10] + '...' if api_key else 'None'
+            },
+            'domains_api_check': {
+                'status_code': domains_response.status_code,
+                'response': domains_response.json() if domains_response.status_code == 200 else domains_response.text
+            },
+            'email_send_test': {
+                'status_code': email_response.status_code,
+                'response': email_response.json() if email_response.status_code == 200 else email_response.text
+            },
+            'recommendation': 'Check Resend dashboard for API key status and sending limits'
+        }
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'type': type(e).__name__})
 
  # Test SMTP connection
     try:
