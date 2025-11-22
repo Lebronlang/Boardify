@@ -2142,16 +2142,20 @@ def delete_image():
 @app.route('/delete-property/<int:property_id>', methods=['POST'])
 @login_required
 def delete_property(property_id):
-    """Delete property"""
+    """Delete property with better error handling"""
     user_id = session.get('user_id')
     user = User.query.get(user_id)
     
-    property_obj = Property.query.get_or_404(property_id)
+    property_obj = Property.query.get(property_id)
+    
+    if not property_obj:
+        return jsonify({'success': False, 'message': 'Property not found or already deleted.'}), 404
     
     if user.role != 'landlord' or property_obj.landlord_id != user_id:
         return jsonify({'success': False, 'message': 'You do not have permission to delete this property.'}), 403
     
     try:
+        # Delete related records first
         property_images = PropertyImage.query.filter_by(property_id=property_id).all()
         for img in property_images:
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
@@ -2162,6 +2166,7 @@ def delete_property(property_id):
                     print(f"Error deleting image file {img.filename}: {e}")
             db.session.delete(img)
         
+        # Delete main image
         if property_obj.image:
             main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], property_obj.image)
             if os.path.exists(main_image_path):
@@ -2170,13 +2175,16 @@ def delete_property(property_id):
                 except Exception as e:
                     print(f"Error deleting main image: {e}")
         
+        # Delete related bookings, bills, and reviews
         Booking.query.filter_by(property_id=property_id).delete()
         Billing.query.filter_by(property_id=property_id).delete()
         Review.query.filter_by(property_id=property_id).delete()
         
+        # Delete the property
         db.session.delete(property_obj)
         db.session.commit()
         
+        # Count remaining properties for this landlord
         count_after = Property.query.filter_by(landlord_id=user.id).count()
         
         return jsonify({
@@ -2187,9 +2195,8 @@ def delete_property(property_id):
         
     except Exception as e:
         db.session.rollback()
+        print(f"❌ Error deleting property {property_id}: {e}")
         return jsonify({'success': False, 'message': f'Error deleting property: {str(e)}'}), 500
-    
-
 @app.route('/admin/delete-user/<email>')
 def delete_user_by_email(email):
     """Delete specific user by email"""
