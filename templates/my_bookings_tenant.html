@@ -57,43 +57,47 @@
         
 
         <!-- Pending Bookings Section -->
-        {% if pending_bookings %}
-            <div class="bookings-section mb-5">
-                <div class="section-header-modern">
-                    <div class="section-title-wrapper">
-                        <div class="section-icon-circle bg-warning">
-                            <i class="bi bi-hourglass-split"></i>
-                        </div>
-                        <div>
-                            <h3 class="section-title">Pending Approval</h3>
-                            <p class="section-description">Waiting for landlord response</p>
+        <!-- Pending Bookings Section -->
+{% if pending_bookings %}
+    <div class="bookings-section mb-5">
+        <div class="section-header-modern">
+            <div class="section-title-wrapper">
+                <div class="section-icon-circle bg-warning">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div>
+                    <h3 class="section-title">Pending Approval</h3>
+                    <p class="section-description">Waiting for landlord response</p>
+                </div>
+            </div>
+            <span class="section-count-badge bg-warning">{{ pending_bookings|length }}</span>
+        </div>
+        
+        <div class="row g-4">
+            {% for booking in pending_bookings %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="booking-card-modern pending-card">
+                    <div class="card-status-bar status-pending"></div>
+                    
+                    <div class="card-header-modern">
+                        <div class="property-image-wrapper">
+                            {% if booking.property.images and booking.property.images.count() > 0 %}
+                                {% set first_image = booking.property.images.first() %}
+                                <img src="{{ url_for('static', filename='uploads/' + first_image.filename) }}" 
+                                     alt="{{ booking.property.title }}" class="property-thumbnail">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='uploads/' + (booking.property.image if booking.property.image else 'default.jpg')) }}" 
+                                     alt="{{ booking.property.title }}" class="property-thumbnail">
+                            {% endif %}
+                            <div class="status-overlay">
+                                <span class="status-badge badge-pending">
+                                    <i class="bi bi-clock-history me-1"></i>Pending
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <span class="section-count-badge bg-warning">{{ pending_bookings|length }}</span>
-                </div>
-                
-                <div class="row g-4">
-                    {% for booking in pending_bookings %}
-                    <div class="col-12 col-md-6 col-xl-4">
-                        <div class="booking-card-modern pending-card">
-                            <div class="card-status-bar status-pending"></div>
-                            
-                            <div class="card-header-modern">
-                                <div class="property-image-wrapper">
-                                    {% if booking.property.images and booking.property.images|length > 0 %}
-                                        <img src="{{ url_for('static', filename='uploads/' + booking.property.images[0].filename) }}" 
-                                             alt="{{ booking.property.title }}" class="property-thumbnail">
-                                    {% else %}
-                                        <img src="{{ url_for('static', filename='uploads/' + (booking.property.image if booking.property.image else 'default.jpg')) }}" 
-                                             alt="{{ booking.property.title }}" class="property-thumbnail">
-                                    {% endif %}
-                                    <div class="status-overlay">
-                                        <span class="status-badge badge-pending">
-                                            <i class="bi bi-clock-history me-1"></i>Pending
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                    
+                    <!-- ... rest of the pending booking card content ... -->
                             
                             <div class="card-body-modern">
                                 <!-- Booking Reference Number -->
@@ -193,32 +197,33 @@
                 
                 <div class="row g-4">
                     {% for booking in processed_bookings %}
-                    <div class="col-12 col-md-6 col-xl-4">
-                        <div class="booking-card-modern {% if booking.status == 'approved' %}approved-card{% else %}rejected-card{% endif %}">
-                            <div class="card-status-bar {% if booking.status == 'approved' %}status-approved{% else %}status-rejected{% endif %}"></div>
-                            
-                            <div class="card-header-modern">
-                                <div class="property-image-wrapper">
-                                    {% if booking.property.images and booking.property.images|length > 0 %}
-                                        <img src="{{ url_for('static', filename='uploads/' + booking.property.images[0].filename) }}" 
-                                             alt="{{ booking.property.title }}" class="property-thumbnail">
-                                    {% else %}
-                                        <img src="{{ url_for('static', filename='uploads/' + (booking.property.image if booking.property.image else 'default.jpg')) }}" 
-                                             alt="{{ booking.property.title }}" class="property-thumbnail">
-                                    {% endif %}
-                                    <div class="status-overlay">
-                                        {% if booking.status == 'approved' %}
-                                            <span class="status-badge badge-approved">
-                                                <i class="bi bi-check-circle-fill me-1"></i>Approved
-                                            </span>
-                                        {% else %}
-                                            <span class="status-badge badge-rejected">
-                                                <i class="bi bi-x-circle-fill me-1"></i>Rejected
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
+<div class="col-12 col-md-6 col-xl-4">
+    <div class="booking-card-modern {% if booking.status == 'approved' %}approved-card{% else %}rejected-card{% endif %}">
+        <div class="card-status-bar {% if booking.status == 'approved' %}status-approved{% else %}status-rejected{% endif %}"></div>
+        
+        <div class="card-header-modern">
+            <div class="property-image-wrapper">
+                {% if booking.property.images and booking.property.images.count() > 0 %}
+    {% set first_image = booking.property.images.first() %}
+    <img src="{{ url_for('static', filename='uploads/' + first_image.filename) }}" 
+                         alt="{{ booking.property.title }}" class="property-thumbnail">
+                {% else %}
+                    <img src="{{ url_for('static', filename='uploads/' + (booking.property.image if booking.property.image else 'default.jpg')) }}" 
+                         alt="{{ booking.property.title }}" class="property-thumbnail">
+                {% endif %}
+                <div class="status-overlay">
+                    {% if booking.status == 'approved' %}
+                        <span class="status-badge badge-approved">
+                            <i class="bi bi-check-circle-fill me-1"></i>Approved
+                        </span>
+                    {% else %}
+                        <span class="status-badge badge-rejected">
+                            <i class="bi bi-x-circle-fill me-1"></i>Rejected
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
                             
                             <div class="card-body-modern">
                                 <!-- Booking Reference Number -->

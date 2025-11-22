@@ -1218,17 +1218,20 @@ def dashboard():
                     except Exception as e:
                         print(f"❌ [DASHBOARD] Upload error: {e}")
                         flash("Error uploading trend image.", "danger")
-                return redirect(url_for('dashboard'))
+                    return redirect(url_for('dashboard'))
 
             try:
-                # Landlord data with safe defaults
+                # Landlord data with safe defaults - FIXED QUERIES
                 properties = Property.query.filter_by(landlord_id=user.id).all() or []
-                property_ids = [p.id for p in properties]
                 
-                pending_bookings = Booking.query.filter(
-                    Booking.property_id.in_(property_ids),
-                    Booking.status == 'pending'
-                ).all() if property_ids else []
+                # FIXED: Proper pending bookings query
+                pending_bookings = Booking.query\
+                    .join(Property)\
+                    .filter(
+                        Property.landlord_id == user.id,
+                        Booking.status == 'pending'
+                    )\
+                    .all() or []
                 
                 # Get tenant bills safely
                 tenant_bills = []
@@ -1251,7 +1254,7 @@ def dashboard():
 
                 safe_data.update({
                     'properties': properties,
-                    'pending_bookings': pending_bookings,
+                    'pending_bookings': pending_bookings,  # This should now work
                     'tenant_bills': tenant_bills,
                     'chart_image': getattr(user, 'trend_image', None),
                     'policies': relevant_policies,
@@ -2197,6 +2200,7 @@ def delete_property(property_id):
         db.session.rollback()
         print(f"❌ Error deleting property {property_id}: {e}")
         return jsonify({'success': False, 'message': f'Error deleting property: {str(e)}'}), 500
+    
 @app.route('/admin/delete-user/<email>')
 def delete_user_by_email(email):
     """Delete specific user by email"""
@@ -2355,26 +2359,47 @@ def booking_details(reference_number):
 @login_required
 @verified_landlord_required
 def pending_bookings():
-    """View pending bookings (landlord)"""
+    """View pending bookings (landlord) - FIXED VERSION"""
     user = User.query.get(session['user_id'])
     if user.role != 'landlord':
         flash("Access denied.", "danger")
         return redirect(url_for('dashboard'))
     
-    properties = Property.query.filter_by(landlord_id=user.id).all()
-    property_ids = [p.id for p in properties]
+    try:
+        # Get pending bookings with proper joins
+        bookings = Booking.query\
+            .join(Property)\
+            .join(User, Booking.tenant_id == User.id)\
+            .filter(
+                Property.landlord_id == user.id,
+                Booking.status == 'pending'
+            )\
+            .order_by(Booking.created_at.desc())\
+            .all()
+        
+        # Debug output
+        print(f"🎯 [PENDING_BOOKINGS] Landlord: {user.email}")
+        print(f"🎯 [PENDING_BOOKINGS] Found {len(bookings)} pending bookings")
+        
+        for booking in bookings:
+            print(f"   - Booking {booking.id}: {booking.property.title} by {booking.tenant.email}")
+        
+        if not bookings:
+            flash("No pending bookings found.", "info")
+            
+        return render_template('pending_bookings.html', bookings=bookings, user=user)
+        
+    except Exception as e:
+        print(f"❌ [PENDING_BOOKINGS] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        flash("Error loading pending bookings.", "danger")
+        return render_template('pending_bookings.html', bookings=[], user=user)
     
-    bookings = Booking.query.filter(
-        Booking.property_id.in_(property_ids),
-        Booking.status == 'pending'
-    ).order_by(Booking.created_at.desc()).all()
-    
-    return render_template('pending_bookings.html', bookings=bookings, user=user)
-
 @app.route('/landlord/booking_action/<int:booking_id>/<action>', methods=['POST'])
 @login_required
 def booking_action(booking_id, action):
-    """Approve or reject booking"""
+    """Approve or reject booking - FIXED VERSION"""
     user = User.query.get(session['user_id'])
     
     if user.role != 'landlord':
@@ -2382,6 +2407,11 @@ def booking_action(booking_id, action):
         return redirect(url_for('dashboard'))
 
     booking = Booking.query.get_or_404(booking_id)
+    
+    # Debug info
+    print(f"🎯 [BOOKING_ACTION] Processing booking {booking_id}")
+    print(f"🎯 [BOOKING_ACTION] Property landlord: {booking.property.landlord_id}")
+    print(f"🎯 [BOOKING_ACTION] Current user: {user.id}")
 
     if booking.property.landlord_id != user.id:
         flash("You cannot modify this booking.", "danger")
@@ -2389,22 +2419,6 @@ def booking_action(booking_id, action):
 
     if action == 'approve':
         booking.status = 'approved'
-        booking.property.status = 'booked'
-
-        existing_bill = Billing.query.filter_by(
-            tenant_id=booking.tenant_id,
-            property_id=booking.property_id
-        ).first()
-
-        if not existing_bill:
-            new_bill = Billing(
-                tenant_id=booking.tenant_id,
-                property_id=booking.property_id,
-                amount=booking.total_bill if booking.total_bill else booking.property.price,
-                status='unpaid'
-            )
-            db.session.add(new_bill)
-
         flash(f"Booking for '{booking.property.title}' by {booking.tenant.name} approved.", "success")
 
     elif action == 'reject':
@@ -2451,6 +2465,46 @@ def cancel_booking(booking_id):
         flash("Error cancelling booking. Please try again.", "danger")
     
     return redirect(url_for('my_bookings_tenant'))
+
+@app.route('/debug-bookings/<int:property_id>')
+@login_required
+def debug_bookings(property_id):
+    """Debug bookings for a specific property"""
+    try:
+        property = Property.query.get_or_404(property_id)
+        user = User.query.get(session['user_id'])
+        
+        # Check if user owns the property
+        if property.landlord_id != user.id and user.role != 'admin':
+            return jsonify({'error': 'Access denied'})
+        
+        # Get all bookings for this property
+        all_bookings = Booking.query.filter_by(property_id=property_id).all()
+        
+        booking_data = []
+        for booking in all_bookings:
+            booking_data.append({
+                'id': booking.id,
+                'reference_number': booking.reference_number,
+                'tenant': booking.tenant.email if booking.tenant else 'Unknown',
+                'status': booking.status,
+                'start_date': str(booking.start_date) if booking.start_date else None,
+                'end_date': str(booking.end_date) if booking.end_date else None,
+                'created_at': str(booking.created_at) if hasattr(booking, 'created_at') else None
+            })
+        
+        return jsonify({
+            'property': {
+                'id': property.id,
+                'title': property.title,
+                'landlord': property.owner.email
+            },
+            'bookings': booking_data,
+            'pending_count': len([b for b in all_bookings if b.status == 'pending'])
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 @app.route('/debug-routes')
 def debug_routes():
@@ -2543,10 +2597,21 @@ def my_bookings_tenant():
         flash("Access denied. You must be a tenant to view this page.", "danger")
         return redirect(url_for('dashboard'))
 
-    bookings = Booking.query.filter_by(tenant_id=user.id).order_by(Booking.created_at.desc()).all()
+    # Eager load properties and their images
+    bookings = Booking.query.filter_by(tenant_id=user.id)\
+        .join(Property)\
+        .options(db.joinedload(Property.images))\
+        .order_by(Booking.created_at.desc())\
+        .all()
+
+    # Convert AppenderQuery to list for each booking's property
+    for booking in bookings:
+        if hasattr(booking.property, 'images'):
+            booking.property.images_list = list(booking.property.images)
+        else:
+            booking.property.images_list = []
 
     return render_template('my_bookings_tenant.html', bookings=bookings, user=user)
-
 
 @app.route('/billing')
 @login_required
