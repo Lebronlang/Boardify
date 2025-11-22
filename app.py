@@ -362,13 +362,14 @@ def calculate_final_amount(amount, status, due_date, payment_date=None):
     return amount - discount + penalty, discount, penalty
 
 def get_recent_messages(user_id, limit=3):
-    return (
-        Message.query  # ✅ CORRECT
-        .filter((Message.sender_id == user_id) | (Message.receiver_id == user_id))
-        .order_by(Message.timestamp.desc())
-        .limit(limit)
-        .all()
-    )
+    """Get recent messages for dashboard"""
+    try:
+        return Message.query.filter(
+            (Message.sender_id == user_id) | (Message.receiver_id == user_id)
+        ).order_by(Message.timestamp.desc()).limit(limit).all()
+    except Exception as e:
+        print(f"❌ Error getting messages: {e}")
+        return []
 
 def verified_landlord_required(f):
     """Decorator to require verified landlord status"""
@@ -847,6 +848,13 @@ def debug_dashboard_issue():
         
     except Exception as e:
         return jsonify({'error': str(e), 'type': type(e).__name__})
+    
+
+@app.route('/my-bookings')
+@login_required
+def my_bookings_tenant_page():
+    """Tenant's bookings page - ALIAS for my_bookings_tenant"""
+    return my_bookings_tenant()
 
 @app.route('/debug-login-issue')
 def debug_login_issue():
@@ -913,7 +921,7 @@ def logout():
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
-    """User dashboard - FIXED WITH ERROR HANDLING"""
+    """User dashboard - FIXED WITH ALL REQUIRED VARIABLES"""
     try:
         user_id = session.get('user_id')
         user = User.query.get(user_id)
@@ -924,11 +932,22 @@ def dashboard():
 
         print(f"🔍 [DASHBOARD] Loading dashboard for: {user.email}, Role: {user.role}")
 
+        # COMMON DATA FOR ALL ROLES - WITH SAFE DEFAULTS
+        safe_data = {
+            'user': user,
+            'properties': [],
+            'pending_bookings': [],
+            'tenant_bills': [],
+            'chart_image': None,
+            'policies': [],
+            'messages': []  # Add missing messages variable
+        }
+
         if user.role == 'admin':
             print("🔍 [DASHBOARD] Loading admin dashboard...")
             
-            # Admin statistics with error handling
             try:
+                # Admin data
                 total_users = User.query.count()
                 total_landlords = User.query.filter_by(role='landlord').count()
                 total_tenants = User.query.filter_by(role='tenant').count()
@@ -944,37 +963,47 @@ def dashboard():
                 recent_tickets = HelpSupport.query.order_by(HelpSupport.timestamp.desc()).limit(5).all()
                 recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
                 
-                print(f"✅ [DASHBOARD] Admin stats loaded: {total_users} users, {total_properties} properties")
+                response = make_response(render_template(
+                    'admin_dashboard.html',
+                    user=user,
+                    total_users=total_users,
+                    total_landlords=total_landlords,
+                    total_tenants=total_tenants,
+                    total_properties=total_properties,
+                    pending_verifications=pending_verifications,
+                    pending_tickets=pending_tickets,
+                    total_commission=total_commission,
+                    pending_commission=pending_commission,
+                    recent_tickets=recent_tickets,
+                    recent_users=recent_users,
+                    **safe_data  # Include all safe data
+                ))
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                return response
                 
             except Exception as e:
-                print(f"❌ [DASHBOARD] Error loading admin stats: {e}")
-                # Set default values if queries fail
-                total_users = total_landlords = total_tenants = total_properties = 0
-                pending_verifications = pending_tickets = 0
-                total_commission = pending_commission = 0
-                recent_tickets = []
-                recent_users = []
-
-            response = make_response(render_template(
-                'admin_dashboard.html',
-                user=user,
-                total_users=total_users,
-                total_landlords=total_landlords,
-                total_tenants=total_tenants,
-                total_properties=total_properties,
-                pending_verifications=pending_verifications,
-                pending_tickets=pending_tickets,
-                total_commission=total_commission,
-                pending_commission=pending_commission,
-                recent_tickets=recent_tickets,
-                recent_users=recent_users
-            ))
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            return response
+                print(f"❌ [DASHBOARD] Admin data error: {e}")
+                import traceback
+                traceback.print_exc()
+                flash("Error loading admin dashboard data.", "warning")
+                # Fallback with safe data
+                return render_template('admin_dashboard.html', 
+                                    total_users=0,
+                                    total_landlords=0,
+                                    total_tenants=0,
+                                    total_properties=0,
+                                    pending_verifications=0,
+                                    pending_tickets=0,
+                                    total_commission=0,
+                                    pending_commission=0,
+                                    recent_tickets=[],
+                                    recent_users=[],
+                                    **safe_data)
 
         elif user.role == 'landlord':
             print("🔍 [DASHBOARD] Loading landlord dashboard...")
             
+            # Handle file upload
             if request.method == 'POST':
                 file = request.files.get('trend_image')
                 if file and file.filename != "":
@@ -987,12 +1016,12 @@ def dashboard():
                         db.session.commit()
                         flash("Trend image uploaded successfully!", "success")
                     except Exception as e:
-                        print(f"❌ [DASHBOARD] Error uploading trend image: {e}")
+                        print(f"❌ [DASHBOARD] Upload error: {e}")
                         flash("Error uploading trend image.", "danger")
                 return redirect(url_for('dashboard'))
 
-            # Landlord data with error handling
             try:
+                # Landlord data
                 chart_image = getattr(user, 'trend_image', None)
                 properties = Property.query.filter_by(landlord_id=user.id).all()
                 property_ids = [p.id for p in properties]
@@ -1012,32 +1041,33 @@ def dashboard():
                     (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
                 ).all()
 
+                # Get recent messages for landlord
+                messages = get_recent_messages(user.id, limit=3)
+
                 print(f"✅ [DASHBOARD] Landlord data loaded: {len(properties)} properties, {len(pending_bookings)} pending bookings")
+                
+                safe_data.update({
+                    'properties': properties,
+                    'pending_bookings': pending_bookings,
+                    'tenant_bills': tenant_bills,
+                    'chart_image': chart_image,
+                    'policies': relevant_policies,
+                    'messages': messages
+                })
                 
             except Exception as e:
                 print(f"❌ [DASHBOARD] Error loading landlord data: {e}")
-                chart_image = None
-                properties = []
-                pending_bookings = []
-                tenant_bills = []
-                relevant_policies = []
+                import traceback
+                traceback.print_exc()
+                flash("Error loading dashboard data.", "warning")
 
-            response = make_response(render_template(
-                'dashboard.html',
-                user=user,
-                properties=properties,
-                pending_bookings=pending_bookings,
-                tenant_bills=tenant_bills,
-                chart_image=chart_image,
-                policies=relevant_policies
-            ))
+            response = make_response(render_template('dashboard.html', **safe_data))
             response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
             return response
 
         elif user.role == 'tenant':
             print("🔍 [DASHBOARD] Loading tenant dashboard...")
             
-            # Tenant data with error handling
             try:
                 bookings = Booking.query.filter_by(tenant_id=user.id).all()
                 pending_bookings = [b for b in bookings if b.status == 'pending']
@@ -1052,25 +1082,27 @@ def dashboard():
                     (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
                 ).all()
 
+                # Get recent messages for tenant
+                messages = get_recent_messages(user.id, limit=3)
+
                 print(f"✅ [DASHBOARD] Tenant data loaded: {len(bookings)} bookings, {len(tenant_bills)} bills")
+                
+                safe_data.update({
+                    'properties': bookings,  # For tenants, properties show their bookings
+                    'pending_bookings': pending_bookings,
+                    'tenant_bills': tenant_bills,
+                    'chart_image': chart_image,
+                    'policies': relevant_policies,
+                    'messages': messages
+                })
                 
             except Exception as e:
                 print(f"❌ [DASHBOARD] Error loading tenant data: {e}")
-                bookings = []
-                pending_bookings = []
-                tenant_bills = []
-                chart_image = None
-                relevant_policies = []
+                import traceback
+                traceback.print_exc()
+                flash("Error loading dashboard data.", "warning")
 
-            response = make_response(render_template(
-                'dashboard.html',
-                user=user,
-                properties=bookings,
-                pending_bookings=pending_bookings,
-                tenant_bills=tenant_bills,
-                chart_image=chart_image,
-                policies=relevant_policies
-            ))
+            response = make_response(render_template('dashboard.html', **safe_data))
             response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
             return response
 
@@ -1085,7 +1117,6 @@ def dashboard():
         traceback.print_exc()
         flash("An error occurred while loading the dashboard. Please try again.", "danger")
         return redirect(url_for('login'))
-
     
 # @app.route('/check-resend-config')
 # def check_resend_config():

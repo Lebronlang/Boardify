@@ -185,33 +185,33 @@
                         <div class="activity-feed">
                             {% if pending_bookings %}
                                 {% for booking in pending_bookings[:3] %}
-                                <div class="activity-item">
-                                    <div class="activity-icon booking-icon">
-                                        <i class="bi bi-calendar-plus"></i>
-                                    </div>
-                                    <div class="activity-content">
-                                        <h6 class="activity-title">New Booking Request</h6>
-                                        <p class="activity-description">
-                                            {% if user.role == 'landlord' %}
-                                                {{ booking.tenant.name if booking.tenant else 'A tenant' }} requested to book <strong>{{ booking.property.title }}</strong>
-                                            {% else %}
-                                                You requested to book <strong>{{ booking.property.title }}</strong>
-                                            {% endif %}
-                                        </p>
-                                        <small class="activity-time">
-                                            <i class="bi bi-clock me-1"></i>
-                                            {{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') if booking.created_at else 'Recently' }}
-                                        </small>
-                                    </div>
-                                    <div class="activity-actions">
-                                        {% if user.role == 'landlord' and booking.status == 'pending' %}
-                                            <a href="{{ url_for('approved_bookings') }}" class="btn btn-sm btn-primary">Review</a>
-                                        {% else %}
-                                            <span class="badge status-{{ booking.status }}">{{ booking.status.capitalize() }}</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                {% endfor %}
+    <div class="activity-item">
+        <div class="activity-icon booking-icon">
+            <i class="bi bi-calendar-plus"></i>
+        </div>
+        <div class="activity-content">
+            <h6 class="activity-title">New Booking Request</h6>
+            <p class="activity-description">
+                {% if user.role == 'landlord' %}
+                    {{ booking.tenant.name if booking.tenant and booking.tenant.name else 'A tenant' }} requested to book <strong>{{ booking.property.title if booking.property and booking.property.title else 'a property' }}</strong>
+                {% else %}
+                    You requested to book <strong>{{ booking.property.title if booking.property and booking.property.title else 'a property' }}</strong>
+                {% endif %}
+            </p>
+            <small class="activity-time">
+                <i class="bi bi-clock me-1"></i>
+                {{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') if booking.created_at else 'Recently' }}
+            </small>
+        </div>
+        <div class="activity-actions">
+            {% if user.role == 'landlord' and booking.status == 'pending' %}
+                <a href="{{ url_for('approved_bookings') }}" class="btn btn-sm btn-primary">Review</a>
+            {% else %}
+                <span class="badge status-{{ booking.status }}">{{ booking.status.capitalize() if booking.status else 'Unknown' }}</span>
+            {% endif %}
+        </div>
+    </div>
+{% endfor %}
                             {% endif %}
 
                             {% if tenant_bills %}
@@ -271,30 +271,30 @@
                         <div class="payments-list">
                             {% if tenant_bills %}
                                 {% for bill in tenant_bills %}
-                                    {% if bill.status != 'paid' %}
-                                    <div class="payment-item">
-                                        <div class="payment-info">
-                                            <h6 class="payment-property">{{ bill.property.title }}</h6>
-                                            <p class="payment-amount">₱{{ bill.amount }}</p>
-                                            <small class="payment-due">
-                                                <i class="bi bi-calendar3 me-1"></i>
-                                                {% if bill.due_date %}
-                                                    Due: {{ bill.due_date.strftime('%B %d') }}
-                                                {% else %}
-                                                    Due: Not specified
-                                                {% endif %}
-                                            </small>
-                                        </div>
-                                        {% if user.role != 'landlord' %}
-                                            <form method="POST" action="{{ url_for('pay_bill', bill_id=bill.id) }}" class="d-inline">
-                                                <button class="btn btn-sm btn-success">
-                                                    <i class="bi bi-check-circle me-1"></i>Pay
-                                                </button>
-                                            </form>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                {% endfor %}
+    {% if bill.status != 'paid' %}
+    <div class="payment-item">
+        <div class="payment-info">
+            <h6 class="payment-property">{{ bill.property.title if bill.property and bill.property.title else 'Property' }}</h6>
+            <p class="payment-amount">₱{{ bill.amount if bill.amount else '0.00' }}</p>
+            <small class="payment-due">
+                <i class="bi bi-calendar3 me-1"></i>
+                {% if bill.due_date %}
+                    Due: {{ bill.due_date.strftime('%B %d') }}
+                {% else %}
+                    Due: Not specified
+                {% endif %}
+            </small>
+        </div>
+        {% if user.role != 'landlord' %}
+            <form method="POST" action="{{ url_for('pay_bill', bill_id=bill.id) if bill.id else '#' }}" class="d-inline">
+                <button class="btn btn-sm btn-success" {% if not bill.id %}disabled{% endif %}>
+                    <i class="bi bi-check-circle me-1"></i>Pay
+                </button>
+            </form>
+        {% endif %}
+    </div>
+    {% endif %}
+{% endfor %}
                             {% else %}
                                 <div class="empty-payments">
                                     <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
