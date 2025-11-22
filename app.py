@@ -185,9 +185,9 @@ def send_verification_email(user):
 
         # Create email message - IMPROVED VERSION
         msg = Message(
-            subject="Verify Your Email - Boardify",
-            recipients=[user.email],
-            html=f"""
+            "Verify Your Email - Boardify",  # Remove 'subject='
+             recipients=[user.email],
+             html=f"""
             <h2>Welcome to Boardify! 🎉</h2>
             <p>Please verify your email address by clicking the link below:</p>
             <p><a href="{verification_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
@@ -254,7 +254,7 @@ def test_gmail():
     """Test Gmail configuration"""
     try:
         msg = Message(
-            subject="🎉 Boardify Gmail Test",
+            "🎉 Boardify Gmail Test",  # Remove 'subject='
             recipients=[app.config['MAIL_USERNAME']],
             body="Congratulations! Your Gmail SMTP is working perfectly with Boardify!"
         )
