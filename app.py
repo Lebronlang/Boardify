@@ -1055,10 +1055,6 @@ def debug_dashboard_issue():
         return jsonify({'error': str(e), 'type': type(e).__name__})
     
 
-@app.route('/my_bookings')
-@login_required
-def my_bookings_tenant():
-    user = User.query.get(session['user_id'])
 
     # Only allow tenants to access this page
     if not user or user.role != 'tenant':
