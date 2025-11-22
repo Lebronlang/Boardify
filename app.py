@@ -1689,12 +1689,12 @@ def property_detail(property_id):
             user_id = session['user_id']
             print(f"👤 [PROPERTY_DETAIL] Loading tenant data for user: {user_id}")
             
-            # Get user bookings safely
+            # Get user bookings safely - convert to list first
             try:
                 user_booking = Booking.query.filter_by(
                     property_id=property.id,
                     tenant_id=user_id
-                ).all()
+                ).all()  # This returns a list, not AppenderQuery
                 print(f"📅 [PROPERTY_DETAIL] User bookings: {len(user_booking)}")
             except Exception as e:
                 print(f"⚠️ [PROPERTY_DETAIL] Error getting user bookings: {e}")
@@ -1723,10 +1723,14 @@ def property_detail(property_id):
                 print(f"⚠️ [PROPERTY_DETAIL] Error checking review eligibility: {e}")
                 can_review = False
 
-        # Calculate slots safely
+        # Calculate slots safely - FIXED: Convert AppenderQuery to list first
         try:
             total_slots = property.slots if property.slots is not None else 10
-            approved_bookings_count = sum(1 for booking in property.bookings if getattr(booking, 'status', None) == 'approved')
+            
+            # FIX: Convert property.bookings to list before iterating
+            bookings_list = list(property.bookings)  # Convert AppenderQuery to list
+            approved_bookings_count = sum(1 for booking in bookings_list if getattr(booking, 'status', None) == 'approved')
+            
             slots_left = max(0, total_slots - approved_bookings_count)
             print(f"🎯 [PROPERTY_DETAIL] Slots: {slots_left}/{total_slots} available")
         except Exception as e:
@@ -1753,7 +1757,9 @@ def property_detail(property_id):
         try:
             # Method 1: Check if property.images exists and has images
             if hasattr(property, 'images') and property.images:
-                for img in property.images:
+                # FIX: Convert AppenderQuery to list first
+                images_list = list(property.images)  # Convert to list
+                for img in images_list:
                     if hasattr(img, 'filename') and img.filename:
                         # Check if file actually exists
                         file_path = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)

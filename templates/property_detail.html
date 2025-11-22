@@ -92,9 +92,7 @@ property details:
                 <div class="row g-4">
                     <!-- Left Column: Gallery & Details -->
                     <div class="col-lg-8">
-                        <!-- Image Gallery Section -->
                         <!-- Image Gallery Section - FIXED -->
-<!-- Image Gallery Section - FIXED (No JavaScript) -->
 <div class="gallery-card mb-4">
     {% set total_images = image_urls|length %}
     
@@ -619,57 +617,47 @@ property details:
     </div>
 
     <!-- Fullscreen Gallery Modal -->
-    <div class="modal fade" id="fullscreenGalleryModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-fullscreen">
-            <div class="modal-content modal-gallery-content">
-                <div class="modal-header modal-gallery-header">
-                    <h5 class="modal-title modal-gallery-title">
-                        <i class="bi bi-image-fill me-2"></i>{{ property.title }}
-                    </h5>
-                    <button type="button" class="btn-close-gallery" data-bs-dismiss="modal" aria-label="Close">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-                <div class="modal-body modal-gallery-body">
-                    {% set property_images = property.images if property.images else [] %}
-                    {% set total_images = property_images|length if property_images else 1 %}
+<div class="modal fade" id="fullscreenGalleryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content modal-gallery-content">
+            <div class="modal-header modal-gallery-header">
+                <h5 class="modal-title modal-gallery-title">
+                    <i class="bi bi-image-fill me-2"></i>{{ property.title }}
+                </h5>
+                <button type="button" class="btn-close-gallery" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="modal-body modal-gallery-body">
+                {% set total_images = image_urls|length %}
+                
+                <div class="fullscreen-gallery-container">
+                    {% for image_url in image_urls %}
+                    <img 
+                        src="{{ image_url }}" 
+                        class="fullscreen-gallery-image {% if loop.index0 == 0 %}active{% endif %}" 
+                        alt="{{ property.title }}"
+                        data-index="{{ loop.index0 }}"
+                    >
+                    {% endfor %}
                     
-                    <div class="fullscreen-gallery-container">
-                        {% if property_images %}
-                            {% for image in property_images %}
-                            <img 
-                                src="{{ url_for('static', filename='uploads/' + image.filename) }}" 
-                                class="fullscreen-gallery-image {% if loop.index0 == 0 %}active{% endif %}" 
-                                alt="{{ property.title }}"
-                                data-index="{{ loop.index0 }}"
-                            >
-                            {% endfor %}
-                        {% else %}
-                            <img 
-                                src="{{ url_for('static', filename='uploads/' + (property.image if property.image else 'default.jpg')) }}" 
-                                class="fullscreen-gallery-image active" 
-                                alt="{{ property.title }}"
-                                data-index="0"
-                            >
-                        {% endif %}
-                        
-                        {% if total_images > 1 %}
-                        <button class="fullscreen-arrow-btn fullscreen-prev" data-direction="-1" data-gallery="fullscreen">
-                            <i class="bi bi-chevron-left"></i>
-                        </button>
-                        <button class="fullscreen-arrow-btn fullscreen-next" data-direction="1" data-gallery="fullscreen">
-                            <i class="bi bi-chevron-right"></i>
-                        </button>
-                        
-                        <div class="fullscreen-counter-badge">
-                            <span class="fullscreen-current-num">1</span> / <span class="fullscreen-total-num">{{ total_images }}</span>
-                        </div>
-                        {% endif %}
+                    {% if total_images > 1 %}
+                    <button class="fullscreen-arrow-btn fullscreen-prev" data-direction="-1" data-gallery="fullscreen">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <button class="fullscreen-arrow-btn fullscreen-next" data-direction="1" data-gallery="fullscreen">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                    
+                    <div class="fullscreen-counter-badge">
+                        <span class="fullscreen-current-num">1</span> / <span class="fullscreen-total-num">{{ total_images }}</span>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
+</div>
 
     <!-- Review Modal -->
     <div class="modal fade" id="reviewSubmitModal" tabindex="-1" aria-hidden="true">
