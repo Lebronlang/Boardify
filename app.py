@@ -33,6 +33,7 @@ if not app.secret_key:
     else:
         raise ValueError("SECRET_KEY environment variable is required for production")
 
+app.config['SECURITY_PASSWORD_SALT'] = os.environ.get('SECURITY_PASSWORD_SALT', app.secret_key + '-salt')
 # Database setup with PostgreSQL support for Render
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 database_url = os.environ.get('DATABASE_URL')
@@ -68,16 +69,16 @@ print(f"📧 MAIL_PASSWORD_SET: {bool(os.environ.get('MAIL_PASSWORD'))}")
 print(f"🌐 RENDER_EXTERNAL_URL: {os.environ.get('RENDER_EXTERNAL_URL')}")
 
 # ========== GMAIL SMTP CONFIGURATION ==========
+# ========== GMAIL SMTP CONFIGURATION ==========
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USE_SSL'] = False
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')  # Remove the fallback here
+app.config['MAIL_PORT'] = 465  # Use 465 for SSL
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True  # Enable SSL
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')  # Remove the fallback here
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_TIMEOUT'] = 30
-app.config['MAIL_DEBUG'] = True
-
+app.config['MAIL_DEBUG'] = False
 # Fix for URL generation in Render
 if os.environ.get('RENDER'):
     # Get the Render external URL
@@ -261,6 +262,9 @@ def test_gmail():
         return "✅ Gmail test email sent successfully! Check your inbox."
     except Exception as e:
         return f"❌ Gmail test failed: {str(e)}"
+    
+
+    
 
 def verify_token(token, expiration=86400):
     """Verify the token and return email if valid - ENHANCED"""
@@ -434,6 +438,7 @@ def register():
                 flash("You must agree to the terms and conditions to register.", "danger")
                 return redirect(url_for('register'))
 
+            # Get form data
             name = request.form['name'].strip()
             email = request.form['email'].strip().lower()
             password = request.form['password']
@@ -450,6 +455,7 @@ def register():
                 flash("Email already registered.", "danger")
                 return redirect(url_for('register'))
 
+            # Birthdate validation
             try:
                 birthdate = datetime.strptime(birthdate_str, '%Y-%m-%d').date()
                 today = date.today()
@@ -1012,6 +1018,42 @@ def profile():
         verified=user.is_verified
     )
 
+@app.route('/debug-email-complete')
+def debug_email_complete():
+    """Complete email debugging"""
+    debug_info = {
+        'environment': {
+            'RENDER': bool(os.environ.get('RENDER')),
+            'FLASK_ENV': os.environ.get('FLASK_ENV'),
+            'RENDER_EXTERNAL_URL': os.environ.get('RENDER_EXTERNAL_URL'),
+        },
+        'email_config': {
+            'MAIL_SERVER': app.config.get('MAIL_SERVER'),
+            'MAIL_PORT': app.config.get('MAIL_PORT'),
+            'MAIL_USE_TLS': app.config.get('MAIL_USE_TLS'),
+            'MAIL_USE_SSL': app.config.get('MAIL_USE_SSL'),
+            'MAIL_USERNAME': app.config.get('MAIL_USERNAME'),
+            'MAIL_PASSWORD_SET': bool(app.config.get('MAIL_PASSWORD')),
+            'MAIL_DEFAULT_SENDER': app.config.get('MAIL_DEFAULT_SENDER'),
+        },
+        'gmail_app_password_check': {
+            'username': 'lebrontan2004@gmail.com',
+            'app_password_configured': bool(os.environ.get('MAIL_PASSWORD')),
+            'app_password_length': len(os.environ.get('MAIL_PASSWORD', ''))
+        }
+    }
+    
+    # Test SMTP connection
+    try:
+        import smtplib
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10)
+        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+        server.quit()
+        debug_info['smtp_test'] = 'SUCCESS'
+    except Exception as e:
+        debug_info['smtp_test'] = f'FAILED: {str(e)}'
+    
+    return jsonify(debug_info)
 
     
 # @app.route('/debug-database')
