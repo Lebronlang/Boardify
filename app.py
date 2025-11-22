@@ -2234,6 +2234,52 @@ def booking_action(booking_id, action):
     db.session.commit()
     return redirect(url_for('pending_bookings'))
 
+
+@app.route('/cancel_booking/<int:booking_id>', methods=['POST'])
+@login_required
+def cancel_booking(booking_id):
+    """Cancel a booking"""
+    user = User.query.get(session['user_id'])
+    booking = Booking.query.get_or_404(booking_id)
+    
+    # Check if user owns this booking
+    if booking.tenant_id != user.id:
+        flash("You can only cancel your own bookings.", "danger")
+        return redirect(url_for('my_bookings_tenant'))
+    
+    # Check if booking can be cancelled (only pending bookings)
+    if booking.status != 'pending':
+        flash("Only pending bookings can be cancelled.", "warning")
+        return redirect(url_for('my_bookings_tenant'))
+    
+    try:
+        # Delete associated billing records first
+        Billing.query.filter_by(booking_reference=booking.reference_number).delete()
+        
+        # Delete the booking
+        db.session.delete(booking)
+        db.session.commit()
+        
+        flash("Booking cancelled successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error cancelling booking: {e}")
+        flash("Error cancelling booking. Please try again.", "danger")
+    
+    return redirect(url_for('my_bookings_tenant'))
+
+@app.route('/debug-routes')
+def debug_routes():
+    """Debug all routes to check if my_bookings_tenant exists"""
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': list(rule.methods),
+            'path': rule.rule
+        })
+    return jsonify({'routes': routes})
+
 @app.route('/landlord/approved_bookings')
 @login_required
 @verified_landlord_required 
