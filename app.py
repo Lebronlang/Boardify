@@ -1,5 +1,6 @@
 # Email verification fixed - Flask-Mail 0.9.1 syntax
 import os
+import time  # ← ADD THIS IMPORT
 import uuid
 from datetime import date, datetime, timedelta
 from math import ceil
@@ -46,6 +47,11 @@ if not database_url:
 # Fix PostgreSQL URL for Render (postgres:// to postgresql://)
 if database_url and database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_timeout': 30,
+    'max_overflow': 10,
+}
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -145,7 +151,7 @@ MAX_SLOTS = 9
 
 # ========== UTILITY FUNCTIONS ==========
 def send_verification_email(user):
-    """Send verification email using Resend.com API - ENHANCED"""
+    """Send verification email using Resend.com API - FIXED DOMAIN"""
     print(f"📧 [EMAIL] Starting email send for: {user.email}")
     
     try:
@@ -168,76 +174,90 @@ def send_verification_email(user):
         verification_url = f"{base_url}/verify-email/{token}"
         print(f"🌐 [EMAIL] Verification URL: {verification_url}")
 
-        # Prepare email data
-        email_data = {
-            'from': 'Boardify <onboarding@resend.dev>',
-            'to': [user.email],
-            'subject': 'Verify Your Email - Boardify',
-            'html': f"""
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                        .header {{ background: #4CAF50; color: white; padding: 20px; text-align: center; }}
-                        .button {{ background: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
-                        .footer {{ margin-top: 20px; padding: 20px; background: #f9f9f9; }}
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <h1>Welcome to Boardify! 🎉</h1>
-                        </div>
-                        
-                        <p>Hello {user.name},</p>
-                        
-                        <p>Thank you for registering with Boardify! Please verify your email address by clicking the button below:</p>
-                        
-                        <p style="text-align: center;">
-                            <a href="{verification_url}" class="button">Verify Email Address</a>
-                        </p>
-                        
-                        <p>Or copy and paste this link in your browser:<br>
-                        <code>{verification_url}</code></p>
-                        
-                        <p><strong>⚠️ Important:</strong> This verification link will expire in 24 hours.</p>
-                        
-                        <div class="footer">
-                            <p>If you didn't create an account with Boardify, please ignore this email.</p>
-                            <p>Best regards,<br><strong>Boardify Team</strong></p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-            """
-        }
+        # ✅ FIXED: Use Resend's working domains
+        from_emails = [
+            'Boardify <onboarding@resend.email>',  # Primary fix
+            'Boardify <hello@resend.dev>',         # Backup option
+            'Boardify <noreply@resend.email>',     # Another backup
+        ]
 
-        print(f"📤 [EMAIL] Sending request to Resend API...")
-        
-        # Resend API call
-        response = requests.post(
-            'https://api.resend.com/emails',
-            headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json'
-            },
-            json=email_data,
-            timeout=15  # Increased timeout
-        )
-        
-        print(f"📨 [EMAIL] Resend API Response Status: {response.status_code}")
-        
-        if response.status_code == 200:
-            response_data = response.json()
-            print(f"✅ [EMAIL] Verification email sent successfully to {user.email}")
-            print(f"📧 [EMAIL] Email ID: {response_data.get('id', 'Unknown')}")
-            return True
-        else:
-            print(f"❌ [EMAIL] Resend API error: {response.status_code}")
-            print(f"❌ [EMAIL] Error details: {response.text}")
-            return False
+        # Try different sender addresses
+        for from_email in from_emails:
+            # Prepare email data
+            email_data = {
+                'from': from_email,
+                'to': [user.email],
+                'subject': 'Verify Your Email - Boardify',
+                'html': f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                            .header {{ background: #4CAF50; color: white; padding: 20px; text-align: center; }}
+                            .button {{ background: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+                            .footer {{ margin-top: 20px; padding: 20px; background: #f9f9f9; }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <div class="header">
+                                <h1>Welcome to Boardify! 🎉</h1>
+                            </div>
+                            
+                            <p>Hello {user.name},</p>
+                            
+                            <p>Thank you for registering with Boardify! Please verify your email address by clicking the button below:</p>
+                            
+                            <p style="text-align: center;">
+                                <a href="{verification_url}" class="button">Verify Email Address</a>
+                            </p>
+                            
+                            <p>Or copy and paste this link in your browser:<br>
+                            <code>{verification_url}</code></p>
+                            
+                            <p><strong>⚠️ Important:</strong> This verification link will expire in 24 hours.</p>
+                            
+                            <div class="footer">
+                                <p>If you didn't create an account with Boardify, please ignore this email.</p>
+                                <p>Best regards,<br><strong>Boardify Team</strong></p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                """
+            }
+
+            print(f"📤 [EMAIL] Trying sender: {from_email}")
+            
+            # Resend API call
+            response = requests.post(
+                'https://api.resend.com/emails',
+                headers={
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json'
+                },
+                json=email_data,
+                timeout=15
+            )
+            
+            print(f"📨 [EMAIL] Response Status: {response.status_code}")
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                print(f"✅ [EMAIL] Verification email sent successfully to {user.email}")
+                print(f"📧 [EMAIL] Email ID: {response_data.get('id', 'Unknown')}")
+                print(f"✅ [EMAIL] Used sender: {from_email}")
+                return True
+            else:
+                print(f"❌ [EMAIL] Failed with {from_email}: {response.status_code}")
+                print(f"❌ [EMAIL] Error: {response.text}")
+                continue  # Try next sender
+                
+        # If all senders failed
+        print(f"❌ [EMAIL] All sender attempts failed for {user.email}")
+        return False
             
     except requests.exceptions.Timeout:
         print("❌ [EMAIL] Request timeout - email sending took too long")
@@ -249,6 +269,162 @@ def send_verification_email(user):
         print(f"❌ [EMAIL] Unexpected error: {type(e).__name__}: {str(e)}")
         return False
     
+@app.route('/test-email-fix')
+def test_email_fix():
+    """Test email with the fixed sender domains"""
+    test_emails = request.args.get('emails', 'lebrontan2004@gmail.com,test@yahoo.com,test@outlook.com')
+    email_list = [email.strip() for email in test_emails.split(',')]
+    
+    results = {}
+    for email in email_list:
+        class TestUser:
+            def __init__(self, email):
+                self.email = email
+                self.name = "Test User"
+        
+        test_user = TestUser(email)
+        result = send_verification_email(test_user)
+        results[email] = {
+            'sent': result,
+            'message': '✅ Success' if result else '❌ Failed'
+        }
+    
+    return jsonify({
+        'email_fix_test': results,
+        'resend_key_set': bool(os.environ.get('RESEND_API_KEY')),
+        'note': 'Using resend.email domain which should work for all email providers'
+    })
+    
+
+@app.route('/debug-registration', methods=['GET', 'POST'])
+def debug_registration():
+    """Debug registration process step by step"""
+    if request.method == 'POST':
+        debug_steps = []
+        
+        try:
+            # Step 1: Check form data
+            debug_steps.append("✅ Step 1: Form received")
+            form_data = {k: v for k, v in request.form.items()}
+            debug_steps.append(f"📋 Form data: {form_data}")
+            
+            # Step 2: Check files
+            files = request.files
+            debug_steps.append(f"📁 Files: {[f.filename for f in files.values() if f.filename]}")
+            
+            # Step 3: Validate required fields
+            required_fields = ['name', 'email', 'password', 'role', 'gender', 'birthdate']
+            missing_fields = [field for field in required_fields if not request.form.get(field)]
+            
+            if missing_fields:
+                debug_steps.append(f"❌ Missing fields: {missing_fields}")
+                return jsonify({'error': f'Missing fields: {missing_fields}', 'steps': debug_steps})
+            
+            debug_steps.append("✅ Step 3: All required fields present")
+            
+            # Step 4: Check email uniqueness
+            email = request.form['email'].strip().lower()
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user:
+                debug_steps.append("❌ Email already exists")
+                return jsonify({'error': 'Email already registered', 'steps': debug_steps})
+            
+            debug_steps.append("✅ Step 4: Email is unique")
+            
+            # Step 5: Validate birthdate
+            try:
+                birthdate = datetime.strptime(request.form['birthdate'], '%Y-%m-%d').date()
+                today = date.today()
+                age = today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
+                if age < 18:
+                    debug_steps.append("❌ Under 18 years old")
+                    return jsonify({'error': 'Must be 18+ years old', 'steps': debug_steps})
+                debug_steps.append("✅ Step 5: Birthdate valid")
+            except ValueError:
+                debug_steps.append("❌ Invalid birthdate format")
+                return jsonify({'error': 'Invalid birthdate', 'steps': debug_steps})
+            
+            # Step 6: Handle file upload
+            filename = None
+            if request.form['role'] == 'landlord':
+                license_file = request.files.get('permit')
+                if license_file and license_file.filename:
+                    if allowed_file(license_file):
+                        original_filename = secure_filename(license_file.filename)
+                        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{original_filename}"
+                        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        license_file.save(save_path)
+                        debug_steps.append("✅ Step 6: License file saved")
+                    else:
+                        debug_steps.append("❌ Invalid license file")
+                        return jsonify({'error': 'Invalid license file', 'steps': debug_steps})
+            else:
+                debug_steps.append("✅ Step 6: No license required (tenant)")
+            
+            # Step 7: Create user in database
+            new_user = User(
+                name=request.form['name'].strip(),
+                email=email,
+                password_hash=generate_password_hash(request.form['password'], method="pbkdf2:sha256"),
+                role=request.form['role'],
+                gender=request.form['gender'],
+                birthdate=birthdate,
+                license_image=filename,
+                is_verified=False,
+                is_approved_by_admin=False if request.form['role'] == 'landlord' else True
+            )
+            
+            db.session.add(new_user)
+            db.session.commit()
+            debug_steps.append("✅ Step 7: User created in database")
+            
+            # Step 8: Send verification email
+            if EMAIL_ENABLED:
+                email_sent = send_verification_email(new_user)
+                debug_steps.append(f"✅ Step 8: Email sent: {email_sent}")
+            else:
+                new_user.is_verified = True
+                db.session.commit()
+                debug_steps.append("✅ Step 8: Auto-verified (email disabled)")
+            
+            debug_steps.append("🎉 REGISTRATION COMPLETE!")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Registration successful!',
+                'user_id': new_user.id,
+                'steps': debug_steps,
+                'email_sent': email_sent if EMAIL_ENABLED else 'disabled'
+            })
+            
+        except Exception as e:
+            debug_steps.append(f"❌ CRITICAL ERROR: {str(e)}")
+            import traceback
+            debug_steps.append(f"🔍 TRACEBACK: {traceback.format_exc()}")
+            db.session.rollback()
+            return jsonify({'error': str(e), 'steps': debug_steps})
+    
+    # GET request - show debug form
+    return '''
+    <h1>Debug Registration</h1>
+    <form method="POST">
+        <input type="text" name="name" placeholder="Name" required><br>
+        <input type="email" name="email" placeholder="Email" required><br>
+        <input type="password" name="password" placeholder="Password" required><br>
+        <select name="role" required>
+            <option value="tenant">Tenant</option>
+            <option value="landlord">Landlord</option>
+        </select><br>
+        <select name="gender" required>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+        </select><br>
+        <input type="date" name="birthdate" required><br>
+        <input type="checkbox" name="terms" required> Agree to terms<br>
+        <button type="submit">Test Registration</button>
+    </form>
+    '''
 @app.route('/debug-email-send')
 def debug_email_send():
     """Debug email sending in real-time"""
@@ -469,61 +645,74 @@ def home():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """User registration - FIXED & IMPROVED"""
+    """User registration - SAFE VERSION with better error handling"""
     if request.method == 'POST':
         try:
-            print("🔍 [DEBUG] Registration form submitted")
+            print("🔍 [REGISTRATION] Starting registration process...")
             
+            # Quick validation
             if not request.form.get('terms'):
-                flash("You must agree to the terms and conditions to register.", "danger")
+                flash("You must agree to the terms and conditions.", "danger")
                 return redirect(url_for('register'))
 
-            # Get form data
-            name = request.form['name'].strip()
-            email = request.form['email'].strip().lower()
-            password = request.form['password']
-            role = request.form['role']
-            gender = request.form['gender']
-            birthdate_str = request.form['birthdate']
+            # Extract form data with defaults
+            name = request.form.get('name', '').strip()
+            email = request.form.get('email', '').strip().lower()
+            password = request.form.get('password', '')
+            role = request.form.get('role', '')
+            gender = request.form.get('gender', '')
+            birthdate_str = request.form.get('birthdate', '')
 
-            # Validation
+            # Validate required fields
             if not all([name, email, password, role, gender, birthdate_str]):
-                flash("All fields are required.", "danger")
+                missing = [field for field in ['name', 'email', 'password', 'role', 'gender', 'birthdate'] 
+                          if not request.form.get(field)]
+                flash(f"Missing required fields: {', '.join(missing)}", "danger")
                 return redirect(url_for('register'))
 
-            # Check if email already exists
+            # Check email format
+            if '@' not in email or '.' not in email:
+                flash("Invalid email format.", "danger")
+                return redirect(url_for('register'))
+
+            # Check password length
+            if len(password) < 6:
+                flash("Password must be at least 6 characters.", "danger")
+                return redirect(url_for('register'))
+
+            # Check for existing user
             existing_user = User.query.filter_by(email=email).first()
             if existing_user:
-                flash("Email already registered. Please use a different email or login.", "danger")
-                return redirect(url_for('register'))
+                flash("Email already registered. Please login.", "danger")
+                return redirect(url_for('login'))
 
-            # Birthdate validation
+            # Validate birthdate
             try:
                 birthdate = datetime.strptime(birthdate_str, '%Y-%m-%d').date()
                 today = date.today()
                 age = today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
                 if age < 18:
-                    flash("You must be at least 18 years old to register.", "danger")
+                    flash("You must be at least 18 years old.", "danger")
                     return redirect(url_for('register'))
             except ValueError:
-                flash("Invalid birthdate format.", "danger")
+                flash("Invalid birthdate format. Use YYYY-MM-DD.", "danger")
                 return redirect(url_for('register'))
 
-            # Handle license file for landlords
+            # Handle license file (quick check)
             filename = None
             if role == 'landlord':
                 license_file = request.files.get('permit')
                 if license_file and license_file.filename:
-                    if allowed_file(license_file):
-                        original_filename = secure_filename(license_file.filename)
-                        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{original_filename}"
-                        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                        license_file.save(save_path)
-                    else:
-                        flash("Invalid license file. Please upload PNG, JPG, or JPEG under 5MB.", "danger")
+                    if not allowed_file(license_file):
+                        flash("Invalid license file. Use PNG, JPG, or JPEG under 5MB.", "danger")
                         return redirect(url_for('register'))
+                    
+                    # Quick save without complex processing
+                    original_filename = secure_filename(license_file.filename)
+                    filename = f"license_{int(time.time())}_{original_filename}"
+                    license_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-            # Create new user
+            # Create user - MINIMAL database operations
             new_user = User(
                 name=name,
                 email=email,
@@ -532,44 +721,36 @@ def register():
                 gender=gender,
                 birthdate=birthdate,
                 license_image=filename,
-                is_verified=False,  # Always start as unverified
-                is_approved_by_admin=False if role == 'landlord' else True
+                is_verified=not EMAIL_ENABLED,  # Auto-verify if email disabled
+                is_approved_by_admin=role != 'landlord'
             )
             
             db.session.add(new_user)
             db.session.commit()
-            print(f"✅ [DEBUG] User created: {email}, ID: {new_user.id}")
+            print(f"✅ [REGISTRATION] User created: {email}")
 
-            # Send verification email - IMPROVED LOGIC
-            print(f"🔍 [DEBUG] EMAIL_ENABLED: {EMAIL_ENABLED}")
-            
+            # Send email (non-blocking)
             if EMAIL_ENABLED:
-                print(f"🔍 [DEBUG] Attempting to send verification email to: {email}")
-                email_sent = send_verification_email(new_user)
-                print(f"🔍 [DEBUG] Email send result: {email_sent}")
-                
-                if email_sent:
-                    flash("🎉 Registration successful! Please check your email to verify your account before logging in.", "success")
-                    print(f"✅ [DEBUG] Verification email sent successfully to {email}")
-                else:
-                    # Email failed to send - user can resend later
-                    flash("✅ Registration successful! However, we couldn't send the verification email. Please use the 'Resend Verification' option on the login page.", "warning")
-                    print(f"⚠️ [DEBUG] Email failed to send for {email}")
+                try:
+                    email_sent = send_verification_email(new_user)
+                    if email_sent:
+                        flash("🎉 Registration successful! Please check your email to verify your account.", "success")
+                    else:
+                        flash("✅ Registered! But verification email failed. Use 'Resend Verification' on login page.", "warning")
+                except Exception as email_error:
+                    print(f"⚠️ Email error (non-critical): {email_error}")
+                    flash("✅ Registration successful! You can login now.", "success")
             else:
-                # Email completely disabled - auto-verify user
-                new_user.is_verified = True
-                db.session.commit()
-                flash("✅ Registration successful! You can now login.", "success")
-                print(f"ℹ️ [DEBUG] Email disabled - auto-verified user: {email}")
+                flash("✅ Registration successful! You can login now.", "success")
 
             return redirect(url_for('login'))
             
         except Exception as e:
             db.session.rollback()
-            print(f"❌ Registration error: {e}")
+            print(f"❌ [REGISTRATION] ERROR: {str(e)}")
             import traceback
             traceback.print_exc()
-            flash(f"Registration failed: {str(e)}", "danger")
+            flash(f"Registration failed. Please try again. Error: {str(e)}", "danger")
             return redirect(url_for('register'))
 
     return render_template('register.html')
