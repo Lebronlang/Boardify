@@ -1122,7 +1122,7 @@ def logout():
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
-    """User dashboard - FIXED WITH PROPER ERROR HANDLING"""
+    """User dashboard - FIXED VERSION"""
     try:
         user_id = session.get('user_id')
         user = User.query.get(user_id)
@@ -1133,7 +1133,7 @@ def dashboard():
 
         print(f"🔍 [DASHBOARD] Loading dashboard for: {user.email}, Role: {user.role}")
 
-        # Initialize safe defaults for all required variables
+        # Initialize safe defaults
         safe_data = {
             'user': user,
             'properties': [],
@@ -1142,24 +1142,39 @@ def dashboard():
             'chart_image': None,
             'policies': [],
             'messages': [],
-            'bookings': [],  # Add this for tenant view
-            'recent_tickets': [],  # Add for admin
-            'recent_users': [],  # Add for admin
-            'total_users': 0,  # Add for admin
-            'total_landlords': 0,  # Add for admin
-            'total_tenants': 0,  # Add for admin
-            'total_properties': 0,  # Add for admin
-            'pending_verifications': 0,  # Add for admin
-            'pending_tickets': 0,  # Add for admin
-            'total_commission': 0,  # Add for admin
-            'pending_commission': 0  # Add for admin
+            'bookings': [],
+            'recent_tickets': [],
+            'recent_users': [],
+            'total_users': 0,
+            'total_landlords': 0,
+            'total_tenants': 0,
+            'total_properties': 0,
+            'pending_verifications': 0,
+            'pending_tickets': 0,
+            'total_commission': 0,
+            'pending_commission': 0,
+            # ADD THESE FOR DASHBOARD COUNTS:
+            'total_bookings': 0,
+            'approved_bookings': 0,
+            'pending_bookings_count': 0,
+            'total_bills': 0,
+            'paid_bills': 0,
+            'unpaid_bills': 0
         }
 
         if user.role == 'admin':
             print("🔍 [DASHBOARD] Loading admin dashboard...")
             
             try:
-                # Admin data with safe defaults
+                # Admin data with booking counts
+                total_bookings = Booking.query.count() or 0
+                approved_bookings = Booking.query.filter_by(status='approved').count() or 0
+                pending_bookings_count = Booking.query.filter_by(status='pending').count() or 0
+                
+                total_bills = Billing.query.count() or 0
+                paid_bills = Billing.query.filter_by(status='paid').count() or 0
+                unpaid_bills = Billing.query.filter_by(status='unpaid').count() or 0
+
                 safe_data.update({
                     'total_users': User.query.count() or 0,
                     'total_landlords': User.query.filter_by(role='landlord').count() or 0,
@@ -1175,21 +1190,30 @@ def dashboard():
                     ).limit(5).all() or [],
                     'recent_users': User.query.order_by(
                         User.created_at.desc()
-                    ).limit(5).all() or []
+                    ).limit(5).all() or [],
+                    # ADD BOOKING COUNTS:
+                    'total_bookings': total_bookings,
+                    'approved_bookings': approved_bookings,
+                    'pending_bookings_count': pending_bookings_count,
+                    'total_bills': total_bills,
+                    'paid_bills': paid_bills,
+                    'unpaid_bills': unpaid_bills
                 })
                 
-                # Calculate commissions safely
-                paid_bills = Billing.query.filter_by(status='paid').all() or []
+                # Calculate commissions
+                paid_bills_list = Billing.query.filter_by(status='paid').all() or []
                 safe_data['total_commission'] = sum(
                     getattr(bill, 'admin_commission', 0) or 0 
-                    for bill in paid_bills
+                    for bill in paid_bills_list
                 )
                 
-                unpaid_bills = Billing.query.filter_by(status='unpaid').all() or []
+                unpaid_bills_list = Billing.query.filter_by(status='unpaid').all() or []
                 safe_data['pending_commission'] = sum(
                     getattr(bill, 'amount', 0) * 0.05 
-                    for bill in unpaid_bills
+                    for bill in unpaid_bills_list
                 )
+                
+                print(f"✅ [DASHBOARD-ADMIN] Bookings - Total: {total_bookings}, Approved: {approved_bookings}, Pending: {pending_bookings_count}")
                 
                 return render_template('admin_dashboard.html', **safe_data)
                 
@@ -1221,50 +1245,83 @@ def dashboard():
                     return redirect(url_for('dashboard'))
 
             try:
-                # Landlord data with safe defaults - FIXED QUERIES
+                # Landlord data - SIMPLIFIED AND FIXED
                 properties = Property.query.filter_by(landlord_id=user.id).all() or []
                 
-                # FIXED: Proper pending bookings query - SIMPLIFIED VERSION
-                pending_bookings = []
+                # FIXED: Get all bookings for landlord's properties
+                property_ids = [prop.id for prop in properties]
+                
+                # Total bookings count
+                total_bookings = Booking.query.filter(Booking.property_id.in_(property_ids)).count() if property_ids else 0
+                
+                # Approved bookings count
+                approved_bookings = Booking.query.filter(
+                    Booking.property_id.in_(property_ids),
+                    Booking.status == 'approved'
+                ).count() if property_ids else 0
+                
+                # Pending bookings count
+                pending_bookings_count = Booking.query.filter(
+                    Booking.property_id.in_(property_ids), 
+                    Booking.status == 'pending'
+                ).count() if property_ids else 0
+                
+                # Get pending bookings for display
+                pending_bookings_list = []
                 for prop in properties:
-                    # Get pending bookings for each property
                     prop_pending = Booking.query.filter_by(
                         property_id=prop.id,
                         status='pending'
                     ).all()
-                    pending_bookings.extend(prop_pending)
-                
-                # Get tenant bills safely
+                    pending_bookings_list.extend(prop_pending)
+
+                # Get bills count
+                total_bills = Billing.query.filter(Billing.property_id.in_(property_ids)).count() if property_ids else 0
+                paid_bills = Billing.query.filter(
+                    Billing.property_id.in_(property_ids),
+                    Billing.status == 'paid'
+                ).count() if property_ids else 0
+                unpaid_bills = Billing.query.filter(
+                    Billing.property_id.in_(property_ids),
+                    Billing.status == 'unpaid'
+                ).count() if property_ids else 0
+
+                # Get tenant bills for display
                 tenant_bills = []
                 for prop in properties:
                     try:
-                        # Use the correct relationship name from your models
-                        if hasattr(prop, 'bills'):
-                            bills_list = list(prop.bills)  # Convert to list
-                            tenant_bills.extend(bills_list)
+                        bills = Billing.query.filter_by(property_id=prop.id).all()
+                        tenant_bills.extend(bills)
                     except Exception as e:
                         print(f"⚠️ [DASHBOARD] Error getting bills for property {prop.id}: {e}")
                         continue
 
-                # Get policies safely
+                # Get policies
                 relevant_policies = Policy.query.filter(
                     (Policy.applicable_role == user.role) | 
                     (Policy.applicable_role == 'all')
                 ).all() or []
 
-                # Get recent messages safely
+                # Get recent messages
                 messages = get_recent_messages(user.id, limit=3) or []
 
                 safe_data.update({
                     'properties': properties,
-                    'pending_bookings': pending_bookings,
+                    'pending_bookings': pending_bookings_list,
                     'tenant_bills': tenant_bills,
                     'chart_image': getattr(user, 'trend_image', None),
                     'policies': relevant_policies,
-                    'messages': messages
+                    'messages': messages,
+                    # ADD COUNTS FOR LANDLORD:
+                    'total_bookings': total_bookings,
+                    'approved_bookings': approved_bookings,
+                    'pending_bookings_count': pending_bookings_count,
+                    'total_bills': total_bills,
+                    'paid_bills': paid_bills,
+                    'unpaid_bills': unpaid_bills
                 })
                 
-                print(f"✅ [DASHBOARD] Landlord data loaded: {len(properties)} properties, {len(pending_bookings)} pending bookings")
+                print(f"✅ [DASHBOARD-LANDLORD] Properties: {len(properties)}, Bookings - Total: {total_bookings}, Approved: {approved_bookings}, Pending: {pending_bookings_count}")
                 
             except Exception as e:
                 print(f"❌ [DASHBOARD] Error loading landlord data: {e}")
@@ -1278,16 +1335,24 @@ def dashboard():
             print("🔍 [DASHBOARD] Loading tenant dashboard...")
             
             try:
-                # FIXED: Simple query without complex joins
+                # Tenant data - SIMPLIFIED
                 bookings = Booking.query.filter_by(tenant_id=user.id).all() or []
-                pending_bookings = [b for b in bookings if getattr(b, 'status', None) == 'pending']
+                pending_bookings_list = [b for b in bookings if getattr(b, 'status', None) == 'pending']
                 
+                # Count bookings
+                total_bookings = len(bookings)
+                approved_bookings = len([b for b in bookings if b.status == 'approved'])
+                pending_bookings_count = len(pending_bookings_list)
+                
+                # Bills data
                 tenant_bills = Billing.query.filter_by(tenant_id=user.id).all() or []
-                
-                # Get chart image safely - SIMPLIFIED
+                total_bills = len(tenant_bills)
+                paid_bills = len([b for b in tenant_bills if b.status == 'paid'])
+                unpaid_bills = len([b for b in tenant_bills if b.status == 'unpaid'])
+
+                # Get chart image
                 chart_image = None
                 try:
-                    # Get the first approved booking
                     approved_booking = next((b for b in bookings if b.status == 'approved'), None)
                     if approved_booking and hasattr(approved_booking, 'property_obj'):
                         landlord = approved_booking.property_obj.owner
@@ -1295,26 +1360,33 @@ def dashboard():
                 except Exception as e:
                     print(f"⚠️ [DASHBOARD] Error getting chart image: {e}")
 
-                # Get policies safely
+                # Get policies
                 relevant_policies = Policy.query.filter(
                     (Policy.applicable_role == user.role) | 
                     (Policy.applicable_role == 'all')
                 ).all() or []
 
-                # Get recent messages safely
+                # Get recent messages
                 messages = get_recent_messages(user.id, limit=3) or []
 
                 safe_data.update({
                     'bookings': bookings,
-                    'properties': [],  # Reset this for tenants - don't use bookings as properties
-                    'pending_bookings': pending_bookings,
+                    'properties': [],
+                    'pending_bookings': pending_bookings_list,
                     'tenant_bills': tenant_bills,
                     'chart_image': chart_image,
                     'policies': relevant_policies,
-                    'messages': messages
+                    'messages': messages,
+                    # ADD COUNTS FOR TENANT:
+                    'total_bookings': total_bookings,
+                    'approved_bookings': approved_bookings,
+                    'pending_bookings_count': pending_bookings_count,
+                    'total_bills': total_bills,
+                    'paid_bills': paid_bills,
+                    'unpaid_bills': unpaid_bills
                 })
                 
-                print(f"✅ [DASHBOARD] Tenant data loaded: {len(bookings)} bookings")
+                print(f"✅ [DASHBOARD-TENANT] Bookings - Total: {total_bookings}, Approved: {approved_bookings}, Pending: {pending_bookings_count}")
                 
             except Exception as e:
                 print(f"❌ [DASHBOARD] Error loading tenant data: {e}")

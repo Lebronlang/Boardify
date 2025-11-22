@@ -56,292 +56,496 @@
                 <p class="mb-0">Manage your properties, bookings, billing, and more with ease.</p>
             </div>
 
-            <!-- Statistics Cards -->
-            <div class="row g-4 mb-5">
-                <div class="col-lg-4 col-md-6">
-                    <div class="stats-card text-center">
-                        <div class="stats-icon-wrapper mb-3">
-                            {% if user.role == 'landlord' %}
-                                <i class="bi bi-building-fill stats-icon"></i>
-                            {% else %}
-                                <i class="bi bi-calendar-check-fill stats-icon"></i>
-                            {% endif %}
-                        </div>
-                        <h3 class="stats-number">{{ properties|length }}</h3>
-                        <h6 class="stats-label">{% if user.role == 'landlord' %}Total Properties{% else %}Total Bookings{% endif %}</h6>
-                    </div>
-                </div>
-                <div class="col-lg-4 col-md-6">
-                    <div class="stats-card text-center">
-                        <div class="stats-icon-wrapper mb-3">
-                            <i class="bi bi-clock-history stats-icon-warning"></i>
-                        </div>
-                        <h3 class="stats-number">{{ pending_bookings|length }}</h3>
-                        <h6 class="stats-label">Pending Bookings</h6>
-                    </div>
-                </div>
-                <div class="col-lg-4 col-md-6">
-                    <div class="stats-card text-center">
-                        <div class="stats-icon-wrapper mb-3">
-                            <i class="bi bi-receipt-cutoff stats-icon-success"></i>
-                        </div>
-                        <h3 class="stats-number">{{ tenant_bills|length }}</h3>
-                        <h6 class="stats-label">Total Bills</h6>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions Section -->
-            <div class="mb-5">
-                <h2 class="section-title">
-                    <i class="bi bi-lightning-charge-fill me-2"></i>Quick Actions
-                </h2>
-                <div class="row g-3">
-                    {% if user.role == 'landlord' %}
-                        <div class="col-md-3 col-sm-6">
-                            <a href="{{ url_for('add_property') }}" class="quick-action-card">
-                                <div class="action-icon-wrapper">
-                                    <i class="bi bi-plus-circle-fill"></i>
-                                </div>
-                                <h6>Add Property</h6>
-                                <small>List a new property</small>
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <a href="{{ url_for('approved_bookings') }}" class="quick-action-card">
-                                <div class="action-icon-wrapper">
-                                    <i class="bi bi-check2-square"></i>
-                                </div>
-                                <h6>Review Bookings</h6>
-                                <small>Approve pending requests</small>
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <a href="{{ url_for('billing') }}" class="quick-action-card">
-                                <div class="action-icon-wrapper">
-                                    <i class="bi bi-receipt-cutoff"></i>
-                                </div>
-                                <h6>Create Bill</h6>
-                                <small>Generate tenant bills</small>
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <a href="{{ url_for('inbox') }}" class="quick-action-card">
-                                <div class="action-icon-wrapper">
-                                    <i class="bi bi-chat-dots-fill"></i>
-                                </div>
-                                <h6>Messages</h6>
-                                <small>Chat with tenants</small>
-                            </a>
-                        </div>
-                    {% else %}
-                        <div class="col-md-3 col-sm-6">
-                            <a href="{{ url_for('viewproperties') }}" class="quick-action-card">
-                                <div class="action-icon-wrapper">
-                                    <i class="bi bi-search"></i>
-                                </div>
-                                <h6>Find Properties</h6>
-                                <small>Browse available listings</small>
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <a href="{{ url_for('my_bookings_tenant') }}" class="quick-action-card">
-                                <div class="action-icon-wrapper">
-                                    <i class="bi bi-calendar-check-fill"></i>
-                                </div>
-                                <h6>My Bookings</h6>
-                                <small>View your reservations</small>
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <a href="{{ url_for('billing') }}" class="quick-action-card">
-                                <div class="action-icon-wrapper">
-                                    <i class="bi bi-credit-card-fill"></i>
-                                </div>
-                                <h6>Pay Bills</h6>
-                                <small>Manage your payments</small>
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <a href="{{ url_for('inbox') }}" class="quick-action-card">
-                                <div class="action-icon-wrapper">
-                                    <i class="bi bi-envelope-heart-fill"></i>
-                                </div>
-                                <h6>Messages</h6>
-                                <small>Chat with landlords</small>
-                            </a>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Recent Activity Feed -->
-            <div class="row mb-5">
-                <div class="col-lg-8">
-                    <div class="activity-section">
-                        <h2 class="section-title">
-                            <i class="bi bi-activity me-2"></i>Recent Activity
-                        </h2>
-                        <div class="activity-feed">
-                            {% if pending_bookings %}
-                                {% for booking in pending_bookings[:3] %}
-    <div class="activity-item">
-        <div class="activity-icon booking-icon">
-            <i class="bi bi-calendar-plus"></i>
-        </div>
-        <div class="activity-content">
-            <h6 class="activity-title">New Booking Request</h6>
-            <p class="activity-description">
+            <!-- Statistics Cards - FIXED -->
+<div class="row g-4 mb-5">
+    <div class="col-lg-4 col-md-6">
+        <div class="stats-card text-center">
+            <div class="stats-icon-wrapper mb-3">
                 {% if user.role == 'landlord' %}
-                    {{ booking.tenant.name if booking.tenant and booking.tenant.name else 'A tenant' }} requested to book <strong>{{ booking.property.title if booking.property and booking.property.title else 'a property' }}</strong>
+                    <i class="bi bi-building-fill stats-icon"></i>
                 {% else %}
-                    You requested to book <strong>{{ booking.property.title if booking.property and booking.property.title else 'a property' }}</strong>
+                    <i class="bi bi-calendar-check-fill stats-icon"></i>
                 {% endif %}
-            </p>
-            <small class="activity-time">
-                <i class="bi bi-clock me-1"></i>
-                {{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') if booking.created_at else 'Recently' }}
-            </small>
-        </div>
-        <div class="activity-actions">
-            {% if user.role == 'landlord' and booking.status == 'pending' %}
-                <a href="{{ url_for('approved_bookings') }}" class="btn btn-sm btn-primary">Review</a>
-            {% else %}
-                <span class="badge status-{{ booking.status }}">{{ booking.status.capitalize() if booking.status else 'Unknown' }}</span>
-            {% endif %}
+            </div>
+            <h3 class="stats-number">
+                {% if user.role == 'landlord' %}
+                    {{ properties|length }}
+                {% else %}
+                    {{ total_bookings }}
+                {% endif %}
+            </h3>
+            <h6 class="stats-label">{% if user.role == 'landlord' %}Total Properties{% else %}Total Bookings{% endif %}</h6>
         </div>
     </div>
-{% endfor %}
-                            {% endif %}
-
-                            {% if tenant_bills %}
-                                {% for bill in tenant_bills[:3] %}
-                                <div class="activity-item">
-                                    <div class="activity-icon bill-icon">
-                                        <i class="bi bi-receipt"></i>
-                                    </div>
-                                    <div class="activity-content">
-                                        <h6 class="activity-title">Bill Generated</h6>
-                                        <p class="activity-description">
-                                            {% if user.role == 'landlord' %}
-                                                Bill for <strong>{{ bill.property.title }}</strong> sent to {{ bill.tenant.name if bill.tenant else 'tenant' }}
-                                            {% else %}
-                                                New bill for <strong>{{ bill.property.title }}</strong> - ₱{{ bill.amount }}
-                                            {% endif %}
-                                        </p>
-                                        <small class="activity-time">
-                                            <i class="bi bi-clock me-1"></i>
-                                            {{ bill.created_at.strftime('%B %d, %Y at %I:%M %p') if bill.created_at else 'Recently' }}
-                                        </small>
-                                    </div>
-                                    <div class="activity-actions">
-                                        {% if user.role != 'landlord' and bill.status != 'paid' %}
-                                            <a href="{{ url_for('billing') }}" class="btn btn-sm btn-success">Pay Now</a>
-                                        {% else %}
-                                            <span class="badge status-{{ bill.status }}">{{ bill.status.capitalize() }}</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            {% endif %}
-
-                            {% if not pending_bookings and not tenant_bills %}
-                                <div class="empty-activity">
-                                    <i class="bi bi-inbox"></i>
-                                    <h5>No recent activity</h5>
-                                    <p class="text-muted">Your recent activities will appear here as you use the platform.</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="text-center mt-4">
-                            <button class="btn btn-outline-primary">
-                                <i class="bi bi-arrow-clockwise me-2"></i>View All Activity
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Upcoming Payments Sidebar -->
-                <div class="col-lg-4">
-                    <div class="payments-section">
-                        <h3 class="section-title-small">
-                            <i class="bi bi-wallet2 me-2"></i>Upcoming Payments
-                        </h3>
-                        <div class="payments-list">
-                            {% if tenant_bills %}
-                                {% for bill in tenant_bills %}
-    {% if bill.status != 'paid' %}
-    <div class="payment-item">
-        <div class="payment-info">
-            <h6 class="payment-property">{{ bill.property.title if bill.property and bill.property.title else 'Property' }}</h6>
-            <p class="payment-amount">₱{{ bill.amount if bill.amount else '0.00' }}</p>
-            <small class="payment-due">
-                <i class="bi bi-calendar3 me-1"></i>
-                {% if bill.due_date %}
-                    Due: {{ bill.due_date.strftime('%B %d') }}
-                {% else %}
-                    Due: Not specified
-                {% endif %}
-            </small>
+    <div class="col-lg-4 col-md-6">
+        <div class="stats-card text-center">
+            <div class="stats-icon-wrapper mb-3">
+                <i class="bi bi-clock-history stats-icon-warning"></i>
+            </div>
+            <h3 class="stats-number">{{ pending_bookings_count }}</h3>
+            <h6 class="stats-label">Pending Bookings</h6>
         </div>
-        {% if user.role != 'landlord' %}
-            <form method="POST" action="{{ url_for('pay_bill', bill_id=bill.id) if bill.id else '#' }}" class="d-inline">
-                <button class="btn btn-sm btn-success" {% if not bill.id %}disabled{% endif %}>
-                    <i class="bi bi-check-circle me-1"></i>Pay
-                </button>
-            </form>
-        {% endif %}
+    </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="stats-card text-center">
+            <div class="stats-icon-wrapper mb-3">
+                <i class="bi bi-receipt-cutoff stats-icon-success"></i>
+            </div>
+            <h3 class="stats-number">{{ total_bills }}</h3>
+            <h6 class="stats-label">Total Bills</h6>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Stats Row for Better Visibility -->
+<div class="row g-4 mb-5">
+    {% if user.role == 'landlord' %}
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card text-center">
+            <div class="stats-icon-wrapper mb-3">
+                <i class="bi bi-check-circle-fill stats-icon-success"></i>
+            </div>
+            <h3 class="stats-number">{{ approved_bookings }}</h3>
+            <h6 class="stats-label">Approved Bookings</h6>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card text-center">
+            <div class="stats-icon-wrapper mb-3">
+                <i class="bi bi-currency-dollar stats-icon"></i>
+            </div>
+            <h3 class="stats-number">{{ paid_bills }}</h3>
+            <h6 class="stats-label">Paid Bills</h6>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card text-center">
+            <div class="stats-icon-wrapper mb-3">
+                <i class="bi bi-exclamation-triangle-fill stats-icon-warning"></i>
+            </div>
+            <h3 class="stats-number">{{ unpaid_bills }}</h3>
+            <h6 class="stats-label">Unpaid Bills</h6>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card text-center">
+            <div class="stats-icon-wrapper mb-3">
+                <i class="bi bi-graph-up-arrow stats-icon"></i>
+            </div>
+            <h3 class="stats-number">{{ total_bookings }}</h3>
+            <h6 class="stats-label">All Bookings</h6>
+        </div>
+    </div>
+    {% else %}
+    <!-- Tenant additional stats -->
+    <div class="col-lg-4 col-md-6">
+        <div class="stats-card text-center">
+            <div class="stats-icon-wrapper mb-3">
+                <i class="bi bi-check-circle-fill stats-icon-success"></i>
+            </div>
+            <h3 class="stats-number">{{ approved_bookings }}</h3>
+            <h6 class="stats-label">Approved Bookings</h6>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="stats-card text-center">
+            <div class="stats-icon-wrapper mb-3">
+                <i class="bi bi-currency-dollar stats-icon"></i>
+            </div>
+            <h3 class="stats-number">{{ paid_bills }}</h3>
+            <h6 class="stats-label">Paid Bills</h6>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="stats-card text-center">
+            <div class="stats-icon-wrapper mb-3">
+                <i class="bi bi-exclamation-triangle-fill stats-icon-warning"></i>
+            </div>
+            <h3 class="stats-number">{{ unpaid_bills }}</h3>
+            <h6 class="stats-label">Unpaid Bills</h6>
+        </div>
     </div>
     {% endif %}
-{% endfor %}
+</div>
+
+<!-- Quick Actions Section -->
+<div class="mb-5">
+    <h2 class="section-title">
+        <i class="bi bi-lightning-charge-fill me-2"></i>Quick Actions
+    </h2>
+    <div class="row g-3">
+        {% if user.role == 'landlord' %}
+            <div class="col-md-3 col-sm-6">
+                <a href="{{ url_for('add_property') }}" class="quick-action-card">
+                    <div class="action-icon-wrapper">
+                        <i class="bi bi-plus-circle-fill"></i>
+                    </div>
+                    <h6>Add Property</h6>
+                    <small>List a new property</small>
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <a href="{{ url_for('pending_bookings') }}" class="quick-action-card">
+                    <div class="action-icon-wrapper">
+                        <i class="bi bi-check2-square"></i>
+                    </div>
+                    <h6>Review Bookings</h6>
+                    <small>Approve pending requests</small>
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <a href="{{ url_for('billing') }}" class="quick-action-card">
+                    <div class="action-icon-wrapper">
+                        <i class="bi bi-receipt-cutoff"></i>
+                    </div>
+                    <h6>Create Bill</h6>
+                    <small>Generate tenant bills</small>
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <a href="{{ url_for('inbox') }}" class="quick-action-card">
+                    <div class="action-icon-wrapper">
+                        <i class="bi bi-chat-dots-fill"></i>
+                    </div>
+                    <h6>Messages</h6>
+                    <small>Chat with tenants</small>
+                </a>
+            </div>
+        {% else %}
+            <div class="col-md-3 col-sm-6">
+                <a href="{{ url_for('viewproperties') }}" class="quick-action-card">
+                    <div class="action-icon-wrapper">
+                        <i class="bi bi-search"></i>
+                    </div>
+                    <h6>Find Properties</h6>
+                    <small>Browse available listings</small>
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <a href="{{ url_for('my_bookings_tenant') }}" class="quick-action-card">
+                    <div class="action-icon-wrapper">
+                        <i class="bi bi-calendar-check-fill"></i>
+                    </div>
+                    <h6>My Bookings</h6>
+                    <small>View your reservations</small>
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <a href="{{ url_for('billing') }}" class="quick-action-card">
+                    <div class="action-icon-wrapper">
+                        <i class="bi bi-credit-card-fill"></i>
+                    </div>
+                    <h6>Pay Bills</h6>
+                    <small>Manage your payments</small>
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <a href="{{ url_for('inbox') }}" class="quick-action-card">
+                    <div class="action-icon-wrapper">
+                        <i class="bi bi-envelope-heart-fill"></i>
+                    </div>
+                    <h6>Messages</h6>
+                    <small>Chat with landlords</small>
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+        <!-- Recent Activity Feed - FIXED -->
+<div class="row mb-5">
+    <div class="col-lg-8">
+        <div class="activity-section">
+            <h2 class="section-title">
+                <i class="bi bi-activity me-2"></i>Recent Activity
+            </h2>
+            <div class="activity-feed">
+                {% if pending_bookings %}
+                    {% for booking in pending_bookings[:3] %}
+                    <div class="activity-item">
+                        <div class="activity-icon booking-icon">
+                            <i class="bi bi-calendar-plus"></i>
+                        </div>
+                        <div class="activity-content">
+                            <h6 class="activity-title">
+                                {% if booking.status == 'pending' %}
+                                    New Booking Request
+                                {% elif booking.status == 'approved' %}
+                                    Booking Approved
+                                {% elif booking.status == 'rejected' %}
+                                    Booking Rejected
+                                {% else %}
+                                    Booking Update
+                                {% endif %}
+                            </h6>
+                            <p class="activity-description">
+                                {% if user.role == 'landlord' %}
+                                    {{ booking.tenant.name if booking.tenant else 'A tenant' }} requested to book 
+                                    <strong>{{ booking.property_obj.title if booking.property_obj else 'your property' }}</strong>
+                                {% else %}
+                                    You requested to book <strong>{{ booking.property_obj.title if booking.property_obj else 'a property' }}</strong>
+                                {% endif %}
+                            </p>
+                            <small class="activity-time">
+                                <i class="bi bi-clock me-1"></i>
+                                {% if booking.created_at %}
+                                    {{ booking.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                {% else %}
+                                    Recently
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="activity-actions">
+                            {% if user.role == 'landlord' and booking.status == 'pending' %}
+                                <a href="{{ url_for('pending_bookings') }}" class="btn btn-sm btn-primary">Review</a>
                             {% else %}
-                                <div class="empty-payments">
-                                    <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
-                                    <p class="text-muted mt-3 mb-0">All bills are up to date!</p>
-                                </div>
+                                <span class="badge status-{{ booking.status }}">
+                                    {{ booking.status.capitalize() if booking.status else 'Unknown' }}
+                                </span>
                             {% endif %}
                         </div>
                     </div>
+                    {% endfor %}
+                {% endif %}
 
-                    <!-- Recent Messages -->
-                    <div class="messages-section mt-4">
-                        <h3 class="section-title-small">
-                            <i class="bi bi-chat-left-text-fill me-2"></i>Recent Messages
-                        </h3>
-                        <div class="messages-preview">
-                            {% if messages %}
-                                {% for message in messages[:3] %}
-                                <div class="message-preview-item">
-                                    <div class="message-avatar">
-                                        {{ message.sender_name[0] if message.sender_name else 'U' }}
-                                    </div>
-                                    <div class="message-preview-content">
-                                        <h6>{{ message.sender_name or 'Unknown User' }}</h6>
-                                        <p>{{ message.content[:50] }}...</p>
-                                        <small>
-                                            <i class="bi bi-clock me-1"></i>
-                                            {{ message.timestamp.strftime('%I:%M %p') if message.timestamp else 'Recently' }}
-                                        </small>
-                                    </div>
-                                </div>
-                                {% endfor %}
+                {% if tenant_bills %}
+                    {% for bill in tenant_bills[:3] %}
+                    <div class="activity-item">
+                        <div class="activity-icon bill-icon">
+                            <i class="bi bi-receipt"></i>
+                        </div>
+                        <div class="activity-content">
+                            <h6 class="activity-title">
+                                {% if bill.status == 'paid' %}
+                                    Payment Completed
+                                {% else %}
+                                    Bill Generated
+                                {% endif %}
+                            </h6>
+                            <p class="activity-description">
+                                {% if user.role == 'landlord' %}
+                                    Bill for <strong>{{ bill.property.title if bill.property else 'Property' }}</strong> 
+                                    sent to {{ bill.tenant.name if bill.tenant else 'tenant' }}
+                                {% else %}
+                                    {% if bill.status == 'paid' %}
+                                        You paid bill for <strong>{{ bill.property.title if bill.property else 'Property' }}</strong>
+                                    {% else %}
+                                        New bill for <strong>{{ bill.property.title if bill.property else 'Property' }}</strong>
+                                    {% endif %}
+                                    - ₱{{ "%.2f"|format(bill.amount) if bill.amount else '0.00' }}
+                                {% endif %}
+                            </p>
+                            <small class="activity-time">
+                                <i class="bi bi-clock me-1"></i>
+                                {% if bill.created_at %}
+                                    {{ bill.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                {% else %}
+                                    Recently
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="activity-actions">
+                            {% if user.role != 'landlord' and bill.status != 'paid' %}
+                                <a href="{{ url_for('billing') }}" class="btn btn-sm btn-success">Pay Now</a>
                             {% else %}
-                                <div class="empty-messages">
-                                    <i class="bi bi-chat-square-dots text-muted" style="font-size: 2.5rem;"></i>
-                                    <p class="text-muted mt-3 mb-0">No recent messages</p>
-                                </div>
+                                <span class="badge status-{{ bill.status }}">
+                                    {{ bill.status.capitalize() if bill.status else 'Unknown' }}
+                                </span>
                             {% endif %}
-                            
-                            <div class="text-center mt-3">
-                                <a href="{{ url_for('inbox') }}" class="btn btn-sm btn-outline-primary w-100">
-                                    <i class="bi bi-envelope me-1"></i>View All Messages
-                                </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Show approved bookings if no pending bookings -->
+                {% if not pending_bookings and bookings %}
+                    {% for booking in bookings[:3] %}
+                        {% if booking.status == 'approved' %}
+                        <div class="activity-item">
+                            <div class="activity-icon booking-icon" style="background: rgba(49, 162, 76, 0.1); color: var(--success);">
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h6 class="activity-title">Booking Confirmed</h6>
+                                <p class="activity-description">
+                                    Your booking for <strong>{{ booking.property_obj.title if booking.property_obj else 'a property' }}</strong> has been approved
+                                </p>
+                                <small class="activity-time">
+                                    <i class="bi bi-clock me-1"></i>
+                                    {% if booking.created_at %}
+                                        {{ booking.created_at.strftime('%B %d, %Y') }}
+                                    {% else %}
+                                        Recently
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="activity-actions">
+                                <span class="badge status-approved">Approved</span>
                             </div>
                         </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+
+                {% if not pending_bookings and not tenant_bills and (not bookings or bookings|selectattr('status', 'equalto', 'approved')|list|length == 0) %}
+                    <div class="empty-activity">
+                        <i class="bi bi-inbox"></i>
+                        <h5>No recent activity</h5>
+                        <p class="text-muted">
+                            {% if user.role == 'landlord' %}
+                                You'll see booking requests and bill activities here when tenants interact with your properties.
+                            {% else %}
+                                You'll see your bookings, bills, and messages here once you start using the platform.
+                            {% endif %}
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="text-center mt-4">
+                {% if user.role == 'landlord' %}
+                    <a href="{{ url_for('pending_bookings') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-list-check me-2"></i>View All Bookings
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('my_bookings_tenant') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-calendar-check me-2"></i>View My Bookings
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Payments Sidebar - FIXED -->
+    <div class="col-lg-4">
+        <div class="payments-section">
+            <h3 class="section-title-small">
+                <i class="bi bi-wallet2 me-2"></i>Upcoming Payments
+            </h3>
+            <div class="payments-list">
+                {% if tenant_bills %}
+                    {% set unpaid_bills_displayed = 0 %}
+                    {% for bill in tenant_bills %}
+                        {% if bill.status != 'paid' and unpaid_bills_displayed < 3 %}
+                            {% set unpaid_bills_displayed = unpaid_bills_displayed + 1 %}
+                            <div class="payment-item">
+                                <div class="payment-info">
+                                    <h6 class="payment-property">
+                                        {{ bill.property.title if bill.property and bill.property.title else 'Property' }}
+                                    </h6>
+                                    <p class="payment-amount">
+                                        ₱{{ "%.2f"|format(bill.amount) if bill.amount else '0.00' }}
+                                    </p>
+                                    <small class="payment-due">
+                                        <i class="bi bi-calendar3 me-1"></i>
+                                        {% if bill.due_date %}
+                                            Due: {{ bill.due_date.strftime('%B %d, %Y') }}
+                                        {% else %}
+                                            Due: Not specified
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% if user.role != 'landlord' %}
+                                    <a href="{{ url_for('billing') }}" class="btn btn-sm btn-success">
+                                        <i class="bi bi-credit-card me-1"></i>Pay
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if unpaid_bills_displayed == 0 %}
+                        <div class="empty-payments">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
+                            <p class="text-muted mt-3 mb-0">All bills are paid! 🎉</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="empty-payments">
+                        <i class="bi bi-wallet2 text-muted" style="font-size: 2.5rem;"></i>
+                        <p class="text-muted mt-3 mb-0">
+                            {% if user.role == 'landlord' %}
+                                No bills to display
+                            {% else %}
+                                No pending payments
+                            {% endif %}
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            {% if tenant_bills and user.role != 'landlord' %}
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('billing') }}" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-receipt me-1"></i>View All Bills
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Messages - FIXED FOR PURE FLASK -->
+<div class="messages-section mt-4">
+    <h3 class="section-title-small">
+        <i class="bi bi-chat-left-text-fill me-2"></i>Recent Messages
+    </h3>
+    <div class="messages-preview">
+        {% if messages %}
+            {% for message in messages[:3] %}
+            {% set chat_partner_id = message.sender_id if message.sender_id != user.id else message.receiver_id %}
+            <a href="{{ url_for('messages', user_id=chat_partner_id) }}" class="message-preview-link">
+                <div class="message-preview-item">
+                    <div class="message-avatar">
+                        {% if message.sender_id == user.id %}
+                            {{ message.receiver.name[0] if message.receiver and message.receiver.name else 'U' }}
+                        {% else %}
+                            {{ message.sender.name[0] if message.sender and message.sender.name else 'U' }}
+                        {% endif %}
+                    </div>
+                    <div class="message-preview-content">
+                        <h6>
+                            {% if message.sender_id == user.id %}
+                                {{ message.receiver.name if message.receiver else 'Unknown User' }}
+                            {% else %}
+                                {{ message.sender.name if message.sender else 'Unknown User' }}
+                            {% endif %}
+                        </h6>
+                        <p>
+                            {% if message.sender_id == user.id %}
+                                You: {{ message.content[:40] }}{% if message.content|length > 40 %}...{% endif %}
+                            {% else %}
+                                {{ message.content[:40] }}{% if message.content|length > 40 %}...{% endif %}
+                            {% endif %}
+                        </p>
+                        <small>
+                            <i class="bi bi-clock me-1"></i>
+                            {% if message.timestamp %}
+                                {{ message.timestamp.strftime('%I:%M %p') }}
+                            {% else %}
+                                Recently
+                            {% endif %}
+                        </small>
                     </div>
                 </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-messages">
+                <i class="bi bi-chat-square-dots text-muted" style="font-size: 2.5rem;"></i>
+                <p class="text-muted mt-3 mb-0">No recent messages</p>
+                <small class="text-muted">Start a conversation with other users</small>
             </div>
+        {% endif %}
+        
+        <div class="text-center mt-3">
+            <a href="{{ url_for('inbox') }}" class="btn btn-sm btn-outline-primary w-100">
+                <i class="bi bi-envelope me-1"></i>View All Messages
+            </a>
+        </div>
+    </div>
+</div>>
+        </div>
+    </div>
+</div>
 
             <!-- Policies Section -->
             <div class="policies-section">
@@ -791,6 +995,33 @@
         font-size: 1rem;
         flex-shrink: 0;
     }
+
+    .message-preview-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.message-preview-link:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
+.message-preview-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--divider-color);
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.message-preview-link:hover .message-preview-item {
+    background: var(--bg-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-1);
+}
 
     .message-preview-content {
         flex-grow: 1;
