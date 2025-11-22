@@ -431,7 +431,7 @@
                         <div class="property-stats">
                             <div class="stat">
                                 <i class="bi bi-calendar-check"></i>
-                                <span>{{ item.property.bookings|length }} Booking{{ 's' if item.property.bookings|length != 1 else '' }}</span>
+                                <span>{{ item.property.bookings.count() }} Booking{{ 's' if item.property.bookings.count() != 1 else '' }}</span>
                             </div>
                             <div class="stat">
                                 <i class="bi bi-star-fill"></i>
