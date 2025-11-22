@@ -12,3 +12,4 @@ gunicorn==21.2.0
 greenlet==3.2.4
 cryptography==42.0.5
 SQLAlchemy==2.0.44
+requests==2.31.0

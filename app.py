@@ -138,6 +138,13 @@ def send_verification_email(user):
     print(f"📧 Attempting to send verification email to: {user.email}")
     
     try:
+        # Check if requests is available
+        try:
+            import requests
+        except ImportError:
+            print("❌ 'requests' library not installed")
+            return False
+            
         # Generate token
         token = ts.dumps(user.email, salt='email-verify')
         
@@ -147,14 +154,16 @@ def send_verification_email(user):
         
         print(f"🌐 Verification URL: {verification_url}")
 
-        # Import requests
-        import requests
-        
+        api_key = os.environ.get('RESEND_API_KEY')
+        if not api_key:
+            print("❌ RESEND_API_KEY not set")
+            return False
+
         # Resend API call
         response = requests.post(
             'https://api.resend.com/emails',
             headers={
-                'Authorization': f'Bearer {os.environ.get("RESEND_API_KEY")}',
+                'Authorization': f'Bearer {api_key}',
                 'Content-Type': 'application/json'
             },
             json={
@@ -171,7 +180,7 @@ def send_verification_email(user):
                     <p>Best regards,<br>Boardify Team</p>
                 """
             },
-            timeout=10  # 10 second timeout
+            timeout=10
         )
         
         if response.status_code == 200:
@@ -184,7 +193,6 @@ def send_verification_email(user):
     except Exception as e:
         print(f"❌ Email sending failed: {type(e).__name__}: {str(e)}")
         return False
-
 
 
 def verify_token(token, expiration=86400):
@@ -502,30 +510,47 @@ def register():
 def test_resend():
     """Test Resend.com email sending"""
     try:
-        import requests
+        # Check if requests is available
+        try:
+            import requests
+        except ImportError:
+            return "❌ 'requests' library not installed. Run: pip install requests"
+        
+        api_key = os.environ.get('RESEND_API_KEY')
+        if not api_key:
+            return "❌ RESEND_API_KEY environment variable not set"
+        
+        # Test the API key format
+        if not api_key.startswith('re_'):
+            return f"❌ API key format looks wrong. Should start with 're_'. Got: {api_key[:10]}..."
         
         response = requests.post(
             'https://api.resend.com/emails',
             headers={
-                'Authorization': f'Bearer {os.environ.get("RESEND_API_KEY")}',
+                'Authorization': f'Bearer {api_key}',
                 'Content-Type': 'application/json'
             },
             json={
                 'from': 'Boardify <onboarding@resend.dev>',
-                'to': ['lebrontan2004@gmail.com'],  # Send to yourself first
+                'to': ['lebrontan2004@gmail.com'],
                 'subject': '🎉 Resend Test - Boardify Email Working!',
                 'html': '<h2>Congratulations! 🎉</h2><p>Your Boardify email system is now working perfectly with Resend!</p><p>Users will receive verification emails instantly.</p>'
-            }
+            },
+            timeout=10
         )
         
         if response.status_code == 200:
-            return "✅ Resend test email sent! Check your inbox."
+            return "✅ Resend test email sent! Check your inbox (and spam folder)."
         else:
-            return f"❌ Resend test failed: {response.status_code} - {response.text}"
+            error_detail = response.json() if response.text else "No error details"
+            return f"❌ Resend test failed: {response.status_code} - {error_detail}"
             
+    except requests.exceptions.Timeout:
+        return "❌ Resend API timeout - request took too long"
+    except requests.exceptions.ConnectionError:
+        return "❌ Connection error - check your internet connection"
     except Exception as e:
-        return f"❌ Resend test error: {str(e)}"
-
+        return f"❌ Resend test error: {type(e).__name__}: {str(e)}"
 
 
 # @app.route('/debug-email-setup')
