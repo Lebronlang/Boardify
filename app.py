@@ -636,7 +636,7 @@ def home():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """User registration - REQUIRES EMAIL VERIFICATION"""
+    """User registration - AUTO-VERIFY until Resend is fixed"""
     if request.method == 'POST':
         try:
             print("🔍 [REGISTRATION] Starting registration process...")
@@ -702,7 +702,7 @@ def register():
                     filename = f"license_{int(time.time())}_{original_filename}"
                     license_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-            # 🚨 CRITICAL: Create user as UNVERIFIED initially
+            # 🚨 TEMPORARY FIX: AUTO-VERIFY ALL USERS (Remove this later!)
             new_user = User(
                 name=name,
                 email=email,
@@ -711,34 +711,15 @@ def register():
                 gender=gender,
                 birthdate=birthdate,
                 license_image=filename,
-                is_verified=False,  # 🚨 User starts as UNVERIFIED
-                is_approved_by_admin=role != 'landlord'  # Landlords need admin approval
+                is_verified=True,  # 🚨 AUTO-VERIFY FOR NOW
+                is_approved_by_admin=role != 'landlord'
             )
             
             db.session.add(new_user)
             db.session.commit()
-            print(f"✅ [REGISTRATION] User created (unverified): {email}")
+            print(f"✅ [REGISTRATION] User created (AUTO-VERIFIED): {email}")
 
-            # 🚨 Attempt to send verification email
-            if EMAIL_ENABLED:
-                email_sent = send_verification_email(new_user)
-                if email_sent:
-                    flash("🎉 Registration successful! Please check your email to verify your account before logging in.", "success")
-                    print(f"✅ Verification email sent to: {email}")
-                else:
-                    # Email failed to send - this catches non-existent emails
-                    flash("❌ We couldn't send a verification email to this address. Please check if your email address is correct and try again.", "danger")
-                    # Delete the user since email verification failed
-                    db.session.delete(new_user)
-                    db.session.commit()
-                    return redirect(url_for('register'))
-            else:
-                # Email system disabled - auto-verify for development
-                new_user.is_verified = True
-                db.session.commit()
-                flash("🎉 Registration successful! You can login immediately.", "success")
-                print(f"ℹ️ Auto-verified (email disabled): {email}")
-
+            flash("🎉 Registration successful! You can login immediately.", "success")
             return redirect(url_for('login'))
             
         except Exception as e:
@@ -1003,7 +984,7 @@ def resend_verification():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """User login - REQUIRES VERIFIED EMAIL"""
+    """User login - ALLOWS ALL USERS (temporary)"""
     if request.method == 'POST':
         try:
             email = request.form['email'].strip().lower()
@@ -1016,13 +997,13 @@ def login():
             if user and check_password_hash(user.password_hash, password):
                 print(f"✅ [LOGIN] Password correct for: {email}")
                 
-                # 🚨 BLOCK unverified users from logging in
-                if not user.is_verified:
-                    print(f"⚠️ [LOGIN] User not verified: {email}")
-                    flash("❌ Please verify your email before logging in. Check your inbox for the verification link.", "warning")
-                    return render_template('login.html', show_resend=True, user_email=email)
+                # 🚨 TEMPORARY: Allow ALL users to login (remove verification check)
+                # if not user.is_verified:
+                #     print(f"⚠️ [LOGIN] User not verified: {email}")
+                #     flash("❌ Please verify your email before logging in.", "warning")
+                #     return render_template('login.html', show_resend=True, user_email=email)
                     
-                # Login successful (only if verified)
+                # Login successful
                 login_user(user)
                 session['user_id'] = user.id
                 session['user_role'] = user.role
@@ -1032,10 +1013,6 @@ def login():
                 print(f"🎉 [LOGIN] Login successful for: {user.name}")
                 flash(f"Welcome back, {user.name}!", "success")
                 
-                # Redirect to intended page or dashboard
-                next_page = request.args.get('next')
-                if next_page:
-                    return redirect(next_page)
                 return redirect(url_for('dashboard'))
 
             else:
@@ -1049,7 +1026,6 @@ def login():
             return redirect(url_for('login'))
 
     return render_template('login.html')
-
 
 @app.route('/debug-dashboard-issue')
 @login_required
