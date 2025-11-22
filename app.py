@@ -529,14 +529,15 @@ def calculate_final_amount(amount, status, due_date, payment_date=None):
     return amount - discount + penalty, discount, penalty
 
 def get_recent_messages(user_id, limit=3):
-    """Get recent messages for dashboard"""
+    """Get recent messages for dashboard - FIXED"""
     try:
-        return Message.query.filter(
+        messages = Message.query.filter(
             (Message.sender_id == user_id) | (Message.receiver_id == user_id)
         ).order_by(Message.timestamp.desc()).limit(limit).all()
+        return messages or []  # Ensure we return empty list if None
     except Exception as e:
         print(f"❌ Error getting messages: {e}")
-        return []
+        return []  # Always return a list
 
 def verified_landlord_required(f):
     """Decorator to require verified landlord status"""
@@ -1131,7 +1132,7 @@ def logout():
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
-    """User dashboard - FIXED WITH ALL REQUIRED VARIABLES"""
+    """User dashboard - FIXED WITH PROPER ERROR HANDLING"""
     try:
         user_id = session.get('user_id')
         user = User.query.get(user_id)
@@ -1142,7 +1143,7 @@ def dashboard():
 
         print(f"🔍 [DASHBOARD] Loading dashboard for: {user.email}, Role: {user.role}")
 
-        # COMMON DATA FOR ALL ROLES - WITH SAFE DEFAULTS
+        # Initialize safe defaults for all required variables
         safe_data = {
             'user': user,
             'properties': [],
@@ -1150,65 +1151,64 @@ def dashboard():
             'tenant_bills': [],
             'chart_image': None,
             'policies': [],
-            'messages': []  # Add missing messages variable
+            'messages': [],
+            'bookings': [],  # Add this for tenant view
+            'recent_tickets': [],  # Add for admin
+            'recent_users': [],  # Add for admin
+            'total_users': 0,  # Add for admin
+            'total_landlords': 0,  # Add for admin
+            'total_tenants': 0,  # Add for admin
+            'total_properties': 0,  # Add for admin
+            'pending_verifications': 0,  # Add for admin
+            'pending_tickets': 0,  # Add for admin
+            'total_commission': 0,  # Add for admin
+            'pending_commission': 0  # Add for admin
         }
 
         if user.role == 'admin':
             print("🔍 [DASHBOARD] Loading admin dashboard...")
             
             try:
-                # Admin data
-                total_users = User.query.count()
-                total_landlords = User.query.filter_by(role='landlord').count()
-                total_tenants = User.query.filter_by(role='tenant').count()
-                total_properties = Property.query.count()
-                pending_verifications = User.query.filter_by(role='landlord', is_approved_by_admin=False).count()
-                pending_tickets = HelpSupport.query.filter_by(status='pending').count()
+                # Admin data with safe defaults
+                safe_data.update({
+                    'total_users': User.query.count() or 0,
+                    'total_landlords': User.query.filter_by(role='landlord').count() or 0,
+                    'total_tenants': User.query.filter_by(role='tenant').count() or 0,
+                    'total_properties': Property.query.count() or 0,
+                    'pending_verifications': User.query.filter_by(
+                        role='landlord', 
+                        is_approved_by_admin=False
+                    ).count() or 0,
+                    'pending_tickets': HelpSupport.query.filter_by(status='pending').count() or 0,
+                    'recent_tickets': HelpSupport.query.order_by(
+                        HelpSupport.timestamp.desc()
+                    ).limit(5).all() or [],
+                    'recent_users': User.query.order_by(
+                        User.created_at.desc()
+                    ).limit(5).all() or []
+                })
                 
-                paid_bills = Billing.query.filter_by(status='paid').all()
-                total_commission = sum(bill.admin_commission or 0 for bill in paid_bills)
-                unpaid_bills = Billing.query.filter_by(status='unpaid').all()
-                pending_commission = sum(bill.amount * 0.05 for bill in unpaid_bills)
+                # Calculate commissions safely
+                paid_bills = Billing.query.filter_by(status='paid').all() or []
+                safe_data['total_commission'] = sum(
+                    getattr(bill, 'admin_commission', 0) or 0 
+                    for bill in paid_bills
+                )
                 
-                recent_tickets = HelpSupport.query.order_by(HelpSupport.timestamp.desc()).limit(5).all()
-                recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
+                unpaid_bills = Billing.query.filter_by(status='unpaid').all() or []
+                safe_data['pending_commission'] = sum(
+                    getattr(bill, 'amount', 0) * 0.05 
+                    for bill in unpaid_bills
+                )
                 
-                response = make_response(render_template(
-                    'admin_dashboard.html',
-                    user=user,
-                    total_users=total_users,
-                    total_landlords=total_landlords,
-                    total_tenants=total_tenants,
-                    total_properties=total_properties,
-                    pending_verifications=pending_verifications,
-                    pending_tickets=pending_tickets,
-                    total_commission=total_commission,
-                    pending_commission=pending_commission,
-                    recent_tickets=recent_tickets,
-                    recent_users=recent_users,
-                    **safe_data  # Include all safe data
-                ))
-                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-                return response
+                return render_template('admin_dashboard.html', **safe_data)
                 
             except Exception as e:
                 print(f"❌ [DASHBOARD] Admin data error: {e}")
                 import traceback
                 traceback.print_exc()
-                flash("Error loading admin dashboard data.", "warning")
-                # Fallback with safe data
-                return render_template('admin_dashboard.html', 
-                                    total_users=0,
-                                    total_landlords=0,
-                                    total_tenants=0,
-                                    total_properties=0,
-                                    pending_verifications=0,
-                                    pending_tickets=0,
-                                    total_commission=0,
-                                    pending_commission=0,
-                                    recent_tickets=[],
-                                    recent_users=[],
-                                    **safe_data)
+                flash("Error loading admin dashboard data. Showing limited view.", "warning")
+                return render_template('admin_dashboard.html', **safe_data)
 
         elif user.role == 'landlord':
             print("🔍 [DASHBOARD] Loading landlord dashboard...")
@@ -1231,36 +1231,39 @@ def dashboard():
                 return redirect(url_for('dashboard'))
 
             try:
-                # Landlord data
-                chart_image = getattr(user, 'trend_image', None)
-                properties = Property.query.filter_by(landlord_id=user.id).all()
+                # Landlord data with safe defaults
+                properties = Property.query.filter_by(landlord_id=user.id).all() or []
                 property_ids = [p.id for p in properties]
+                
                 pending_bookings = Booking.query.filter(
                     Booking.property_id.in_(property_ids),
                     Booking.status == 'pending'
-                ).all()
+                ).all() if property_ids else []
                 
+                # Get tenant bills safely
                 tenant_bills = []
                 for prop in properties:
-                    # Safely get bills attribute
-                    bills = getattr(prop, 'bills', [])
-                    if bills:
-                        tenant_bills.extend(bills)
+                    try:
+                        if hasattr(prop, 'bills') and prop.bills:
+                            tenant_bills.extend(prop.bills)
+                    except Exception as e:
+                        print(f"⚠️ [DASHBOARD] Error getting bills for property {prop.id}: {e}")
+                        continue
 
+                # Get policies safely
                 relevant_policies = Policy.query.filter(
-                    (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
-                ).all()
+                    (Policy.applicable_role == user.role) | 
+                    (Policy.applicable_role == 'all')
+                ).all() or []
 
-                # Get recent messages for landlord
-                messages = get_recent_messages(user.id, limit=3)
+                # Get recent messages safely
+                messages = get_recent_messages(user.id, limit=3) or []
 
-                print(f"✅ [DASHBOARD] Landlord data loaded: {len(properties)} properties, {len(pending_bookings)} pending bookings")
-                
                 safe_data.update({
                     'properties': properties,
                     'pending_bookings': pending_bookings,
                     'tenant_bills': tenant_bills,
-                    'chart_image': chart_image,
+                    'chart_image': getattr(user, 'trend_image', None),
                     'policies': relevant_policies,
                     'messages': messages
                 })
@@ -1269,35 +1272,42 @@ def dashboard():
                 print(f"❌ [DASHBOARD] Error loading landlord data: {e}")
                 import traceback
                 traceback.print_exc()
-                flash("Error loading dashboard data.", "warning")
+                flash("Error loading dashboard data. Showing limited view.", "warning")
 
-            response = make_response(render_template('dashboard.html', **safe_data))
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            return response
+            return render_template('dashboard.html', **safe_data)
 
         elif user.role == 'tenant':
             print("🔍 [DASHBOARD] Loading tenant dashboard...")
             
             try:
-                bookings = Booking.query.filter_by(tenant_id=user.id).all()
-                pending_bookings = [b for b in bookings if b.status == 'pending']
-                tenant_bills = Billing.query.filter_by(tenant_id=user.id).all()
+                bookings = Booking.query.filter_by(tenant_id=user.id).all() or []
+                pending_bookings = [b for b in bookings if getattr(b, 'status', None) == 'pending']
                 
+                tenant_bills = Billing.query.filter_by(tenant_id=user.id).all() or []
+                
+                # Get chart image safely
                 chart_image = None
-                approved_booking = Booking.query.filter_by(tenant_id=user.id, status='approved').first()
-                if approved_booking and approved_booking.property and approved_booking.property.owner:
-                    chart_image = getattr(approved_booking.property.owner, 'trend_image', None)
+                try:
+                    approved_booking = Booking.query.filter_by(
+                        tenant_id=user.id, 
+                        status='approved'
+                    ).first()
+                    if approved_booking and approved_booking.property:
+                        chart_image = getattr(approved_booking.property.owner, 'trend_image', None)
+                except Exception as e:
+                    print(f"⚠️ [DASHBOARD] Error getting chart image: {e}")
 
+                # Get policies safely
                 relevant_policies = Policy.query.filter(
-                    (Policy.applicable_role == user.role) | (Policy.applicable_role == 'all')
-                ).all()
+                    (Policy.applicable_role == user.role) | 
+                    (Policy.applicable_role == 'all')
+                ).all() or []
 
-                # Get recent messages for tenant
-                messages = get_recent_messages(user.id, limit=3)
+                # Get recent messages safely
+                messages = get_recent_messages(user.id, limit=3) or []
 
-                print(f"✅ [DASHBOARD] Tenant data loaded: {len(bookings)} bookings, {len(tenant_bills)} bills")
-                
                 safe_data.update({
+                    'bookings': bookings,  # Important for tenant view
                     'properties': bookings,  # For tenants, properties show their bookings
                     'pending_bookings': pending_bookings,
                     'tenant_bills': tenant_bills,
@@ -1310,11 +1320,9 @@ def dashboard():
                 print(f"❌ [DASHBOARD] Error loading tenant data: {e}")
                 import traceback
                 traceback.print_exc()
-                flash("Error loading dashboard data.", "warning")
+                flash("Error loading dashboard data. Showing limited view.", "warning")
 
-            response = make_response(render_template('dashboard.html', **safe_data))
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            return response
+            return render_template('dashboard.html', **safe_data)
 
         else:
             print(f"❌ [DASHBOARD] Unknown user role: {user.role}")
@@ -1327,7 +1335,6 @@ def dashboard():
         traceback.print_exc()
         flash("An error occurred while loading the dashboard. Please try again.", "danger")
         return redirect(url_for('login'))
-    
 # @app.route('/check-resend-config')
 # def check_resend_config():
 #     """Check Resend configuration"""
