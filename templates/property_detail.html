@@ -2683,6 +2683,21 @@ html, body {
         z-index: 1 !important;
     }
 
+/* NUCLEAR OPTION - Remove all forced scrolling */
+* {
+    overflow: visible !important;
+}
+
+.main-content,
+.container-fluid,
+.row,
+.col-lg-8,
+.col-lg-4,
+.d-flex {
+    overflow: visible !important;
+    max-height: none !important;
+}
+
     /* CRITICAL FIX: Active image must have higher z-index */
     .gallery-main-image.active {
         opacity: 1 !important;
