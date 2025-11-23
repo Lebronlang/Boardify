@@ -2683,19 +2683,24 @@ html, body {
         z-index: 1 !important;
     }
 
-/* NUCLEAR OPTION - Remove all forced scrolling */
-* {
+/* SAFE FIX - Only target the problem areas */
+.main-content {
+    overflow-y: visible !important;
+}
+
+.container-fluid.p-4 {
     overflow: visible !important;
 }
 
-.main-content,
-.container-fluid,
-.row,
-.col-lg-8,
-.col-lg-4,
-.d-flex {
-    overflow: visible !important;
-    max-height: none !important;
+/* Keep natural body scrolling */
+body {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Debug - add red outline to scrolling elements */
+* {
+    outline: 1px solid red !important;
 }
 
     /* CRITICAL FIX: Active image must have higher z-index */
