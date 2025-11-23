@@ -1,67 +1,6 @@
  {% extends "base.html" %}
 
-    {% block content %}
-    <div class="d-flex" style="min-height: 100vh;">
-        <!-- Sidebar (Same as Dashboard) -->
-        <nav class="sidebar text-white p-4 d-flex flex-column">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="mb-0">
-                    <i class="bi bi-house-heart-fill me-2"></i>Boardify
-                </h3>
-                  
-            </div>
-
-            <div class="nav-links flex-grow-1">
-                <a href="{{ url_for('dashboard') }}" class="nav-link d-flex align-items-center">
-                    <i class="bi bi-speedometer2 me-3"></i> Dashboard
-                </a>
-                <a href="{{ url_for('viewproperties') }}" class="nav-link d-flex align-items-center active">
-                    <i class="bi bi-building me-3"></i> Properties
-                </a>
-                {% if current_user.is_authenticated and current_user.role == 'landlord' %}
-                <a href="{{ url_for('add_property') }}" class="nav-link d-flex align-items-center">
-                    <i class="bi bi-plus-circle me-3"></i> Add Property
-                </a>
-                <a href="{{ url_for('approved_bookings') }}" class="nav-link d-flex align-items-center">
-                    <i class="bi bi-check2-square me-3"></i> Approvals
-                </a>
-                {% elif current_user.is_authenticated %}
-                <a href="{{ url_for('my_bookings_tenant') }}" class="nav-link d-flex align-items-center">
-                    <i class="bi bi-calendar-check me-3"></i> My Bookings
-                </a>
-                {% endif %}
-                <a href="{{ url_for('billing') }}" class="nav-link d-flex align-items-center">
-                    <i class="bi bi-receipt me-3"></i> Bills
-                </a>
-                <a href="{{ url_for('policies') }}" class="nav-link d-flex align-items-center">
-                    <i class="bi bi-file-text me-3"></i> Policies
-                </a>
-            </div>
-
-            <!-- Profile Section - FIXED (No Scroll) -->
-<div class="mt-auto">
-    <div class="profile-dropdown-container">
-        <button class="profile-dropdown-btn" id="profileDropdownBtn">
-            <div class="profile-avatar-small">{{ current_user.name[0] }}</div>
-            <span class="profile-name">{{ current_user.name }}</span>
-            <i class="bi bi-chevron-down profile-arrow"></i>
-        </button>
-        
-        <div class="profile-dropdown-menu" id="profileDropdown">
-            <a href="{{ url_for('profile') }}" class="dropdown-item">
-                <i class="bi bi-person me-2"></i>My Profile
-            </a>
-            <a href="{{ url_for('help_support') }}" class="dropdown-item">
-                <i class="bi bi-question-circle me-2"></i>Help & Support
-            </a>
-            <div class="dropdown-divider"></div>
-            <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
-                <i class="bi bi-box-arrow-right me-2"></i>Logout
-            </a>
-        </div>
-    </div>
-</div>
-
+{% block content %}
         <!-- Main Content -->
         <div class="flex-grow-1 main-content">
             <!-- Back Navigation -->
@@ -623,9 +562,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Fullscreen Gallery Modal -->
 <div class="modal fade" id="fullscreenGalleryModal" tabindex="-1" aria-hidden="true">
@@ -986,9 +922,7 @@
         color: var(--fb-primary) !important;
     }
 
-    body.dark-theme .sidebar .nav-link:hover {
-        background: var(--bg-hover);
-    }
+    
 
     .sidebar .nav-link.text-danger {
         color: var(--danger) !important;
@@ -1034,9 +968,7 @@
         transform: translateX(-4px);
     }
 
-    body.dark-theme .back-link-btn:hover {
-        background: rgba(24, 119, 242, 0.2);
-    }
+    
 
     /* ===== PROPERTY HEADER CARD ===== */
     .property-header-card {
@@ -1070,9 +1002,7 @@
         font-size: 0.9rem;
     }
 
-    body.dark-theme .location-badge {
-        background: rgba(24, 119, 242, 0.2);
-    }
+   
 
     .price-tag-display {
         display: flex;
@@ -1169,10 +1099,7 @@
         box-shadow: var(--shadow-3);
     }
 
-    body.dark-theme .gallery-arrow-btn {
-        background: rgba(24, 24, 26, 0.95);
-        color: var(--fb-primary);
-    }
+    
 
     .gallery-arrow-btn:hover {
         background: var(--fb-primary);
@@ -1222,10 +1149,7 @@
         box-shadow: var(--shadow-3);
     }
 
-    body.dark-theme .fullscreen-btn {
-        background: rgba(24, 24, 26, 0.95);
-        color: var(--fb-primary);
-    }
+    
 
     .fullscreen-btn:hover {
         background: var(--fb-primary);
@@ -1406,9 +1330,7 @@
         flex-shrink: 0;
     }
 
-    body.dark-theme .stat-icon-wrapper {
-        background: rgba(24, 119, 242, 0.2);
-    }
+    
 
     .stat-icon-wrapper i {
         font-size: 1.5rem;
@@ -1467,9 +1389,7 @@
         flex-shrink: 0;
     }
 
-    body.dark-theme .amenity-icon-circle {
-        background: rgba(24, 119, 242, 0.2);
-    }
+    
 
     .amenity-icon-circle i {
         font-size: 1.5rem;
@@ -1561,9 +1481,7 @@
         border: 1px solid var(--fb-primary);
     }
 
-    body.dark-theme .gender-badge-both {
-        background: rgba(24, 119, 242, 0.2);
-    }
+   
 
     /* ===== LOCATION MAP CARD ===== */
     .map-card {
@@ -1681,9 +1599,7 @@
         margin-top: 1rem;
     }
 
-    body.dark-theme .user-review-alert {
-        background: rgba(24, 119, 242, 0.15);
-    }
+   
 
     .user-review-alert strong {
         color: var(--text-primary);
@@ -2130,10 +2046,7 @@
         border: 2px solid var(--fb-primary);
     }
 
-    body.dark-theme .availability-badge.badge-good {
-        background: rgba(24, 119, 242, 0.2);
-    }
-
+    
     /* ===== FULLY BOOKED STATE ===== */
     .fully-booked-display {
         text-align: center;
@@ -2273,9 +2186,7 @@
         transform: translateX(5px);
     }
 
-    body.dark-theme .contact-info-link:hover {
-        background: rgba(24, 119, 242, 0.2);
-    }
+    
 
     .contact-info-link i {
         color: var(--fb-primary);
@@ -2802,10 +2713,7 @@ html, body {
         box-shadow: var(--shadow-3);
     }
 
-    body.dark-theme .gallery-arrow-btn {
-        background: rgba(24, 24, 26, 0.95);
-        color: var(--fb-primary);
-    }
+    
 
     .gallery-arrow-btn:hover {
         background: var(--fb-primary);
@@ -2855,10 +2763,7 @@ html, body {
         box-shadow: var(--shadow-3);
     }
 
-    body.dark-theme .fullscreen-btn {
-        background: rgba(24, 24, 26, 0.95);
-        color: var(--fb-primary);
-    }
+   
 
     .fullscreen-btn:hover {
         background: var(--fb-primary);
@@ -3464,6 +3369,332 @@ html, body {
         }
     }
 
+
+    /* ===== ADD PROPERTY FORM STYLES ===== */
+.add-property-container {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: var(--shadow-2);
+    margin: 2rem auto;
+    max-width: 800px;
+}
+
+.form-section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid var(--fb-primary);
+    padding-bottom: 0.5rem;
+}
+
+.form-section-title i {
+    color: var(--fb-primary);
+    margin-right: 0.75rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.form-label.required::after {
+    content: " *";
+    color: var(--danger);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.875rem;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--fb-primary);
+    box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+    background: var(--bg-primary);
+}
+
+.form-control::placeholder {
+    color: var(--text-tertiary);
+}
+
+.form-text {
+    display: block;
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+}
+
+/* Form grid layouts */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-full-width {
+    grid-column: 1 / -1;
+}
+
+/* File upload styles */
+.file-upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: var(--bg-secondary);
+    cursor: pointer;
+}
+
+.file-upload-area:hover {
+    border-color: var(--fb-primary);
+    background: var(--fb-light-blue);
+}
+
+.file-upload-area.dragover {
+    border-color: var(--fb-primary);
+    background: var(--fb-light-blue);
+    transform: scale(1.02);
+}
+
+.file-upload-icon {
+    font-size: 3rem;
+    color: var(--fb-primary);
+    margin-bottom: 1rem;
+}
+
+.file-upload-text {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.file-input {
+    display: none;
+}
+
+/* Checkbox and radio styles */
+.checkbox-group, .radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-check-input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+}
+
+.form-check-label {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Button styles */
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-submit {
+    background: var(--fb-primary);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-submit:hover {
+    background: var(--fb-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.btn-cancel {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-cancel:hover {
+    background: var(--bg-hover);
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+}
+
+/* Image preview styles */
+.image-preview-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.image-preview-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid var(--border-color);
+}
+
+.image-preview {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+}
+
+.remove-image {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .add-property-container {
+        padding: 1rem;
+        margin: 1rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn-submit, .btn-cancel {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Select dropdown styles */
+.form-select {
+    width: 100%;
+    padding: 0.875rem;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--fb-primary);
+    box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+}
+
+/* Textarea specific styles */
+.form-textarea {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+/* Price input specific styles */
+.price-input-container {
+    position: relative;
+}
+
+.price-prefix {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.price-input {
+    padding-left: 2.5rem !important;
+}
+
+/* Character counter */
+.char-counter {
+    text-align: right;
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.char-counter.warning {
+    color: var(--warning);
+}
+
+.char-counter.danger {
+    color: var(--danger);
+}
+
     /* ===== CUSTOM SCROLLBAR ===== */
     .sidebar::-webkit-scrollbar,
     .thumbnail-wrapper::-webkit-scrollbar,
@@ -3619,6 +3850,183 @@ function initializeTabs() {
 }
 
 
+// ===== ADD PROPERTY FORM FUNCTIONALITY =====
+function initializeAddPropertyForm() {
+    console.log('🏠 Initializing Add Property Form...');
+    
+    // File upload functionality
+    const fileInput = document.getElementById('propertyImages');
+    const fileUploadArea = document.querySelector('.file-upload-area');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    
+    if (fileUploadArea && fileInput) {
+        // Click to upload
+        fileUploadArea.addEventListener('click', () => fileInput.click());
+        
+        // Drag and drop functionality
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragover');
+        });
+        
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.classList.remove('dragover');
+        });
+        
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelection();
+            }
+        });
+        
+        // File selection change
+        fileInput.addEventListener('change', handleFileSelection);
+    }
+    
+    // Price formatting
+    const priceInput = document.getElementById('price');
+    if (priceInput) {
+        priceInput.addEventListener('input', formatPrice);
+    }
+    
+    // Character counters
+    const descriptionTextarea = document.getElementById('description');
+    if (descriptionTextarea) {
+        descriptionTextarea.addEventListener('input', updateCharCounter);
+    }
+    
+    // Form validation
+    const addPropertyForm = document.getElementById('addPropertyForm');
+    if (addPropertyForm) {
+        addPropertyForm.addEventListener('submit', validateForm);
+    }
+}
+
+function handleFileSelection() {
+    const fileInput = document.getElementById('propertyImages');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    
+    if (!fileInput || !imagePreviewContainer) return;
+    
+    // Clear existing previews
+    imagePreviewContainer.innerHTML = '';
+    
+    if (fileInput.files.length > 0) {
+        Array.from(fileInput.files).forEach((file, index) => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'image-preview-item';
+                    previewItem.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview ${index + 1}" class="image-preview">
+                        <button type="button" class="remove-image" data-index="${index}">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    `;
+                    
+                    imagePreviewContainer.appendChild(previewItem);
+                    
+                    // Add remove functionality
+                    const removeBtn = previewItem.querySelector('.remove-image');
+                    removeBtn.addEventListener('click', function() {
+                        removeImage(index);
+                    });
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+}
+
+function removeImage(index) {
+    const fileInput = document.getElementById('propertyImages');
+    const dt = new DataTransfer();
+    const files = Array.from(fileInput.files);
+    
+    // Remove the file at the specified index
+    files.splice(index, 1);
+    
+    // Update the file input
+    files.forEach(file => dt.items.add(file));
+    fileInput.files = dt.files;
+    
+    // Refresh preview
+    handleFileSelection();
+}
+
+function formatPrice(e) {
+    let value = e.target.value.replace(/[^\d]/g, '');
+    
+    if (value) {
+        value = parseInt(value, 10).toLocaleString('en-PH');
+        e.target.value = value;
+    }
+}
+
+function updateCharCounter(e) {
+    const textarea = e.target;
+    const maxLength = textarea.getAttribute('maxlength') || 1000;
+    const currentLength = textarea.value.length;
+    const counter = textarea.parentNode.querySelector('.char-counter');
+    
+    if (counter) {
+        counter.textContent = `${currentLength}/${maxLength}`;
+        
+        counter.classList.remove('warning', 'danger');
+        if (currentLength > maxLength * 0.8) {
+            counter.classList.add('warning');
+        }
+        if (currentLength > maxLength * 0.95) {
+            counter.classList.add('danger');
+        }
+    }
+}
+
+function validateForm(e) {
+    const form = e.target;
+    let isValid = true;
+    
+    // Basic required field validation
+    const requiredFields = form.querySelectorAll('[required]');
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add('error');
+            isValid = false;
+            
+            // Add error message if not exists
+            if (!field.parentNode.querySelector('.error-message')) {
+                const errorMsg = document.createElement('small');
+                errorMsg.className = 'error-message';
+                errorMsg.style.color = 'var(--danger)';
+                errorMsg.style.display = 'block';
+                errorMsg.style.marginTop = '0.25rem';
+                errorMsg.textContent = 'This field is required';
+                field.parentNode.appendChild(errorMsg);
+            }
+        } else {
+            field.classList.remove('error');
+            const errorMsg = field.parentNode.querySelector('.error-message');
+            if (errorMsg) errorMsg.remove();
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        showToast('Please fill in all required fields.', 'danger');
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    initializeAddPropertyForm();
+});
 // ===== MOBILE-SPECIFIC JAVASCRIPT =====
 document.addEventListener('DOMContentLoaded', function() {
     // Detect mobile device
