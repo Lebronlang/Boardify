@@ -3404,6 +3404,26 @@ html, body {
         background: var(--fb-primary-hover);
     }
 
+
+
+   
+
+    /* ===== HIDE TOP HEADER BAR FROM BASE TEMPLATE ===== */
+    body > .container-fluid:first-child,
+    body > header:first-child,
+    body > nav.navbar:first-child,
+    .top-header,
+    header.navbar {
+        display: none !important;
+    }
+
+    /* Adjust main content to start from top */
+    .d-flex[style*="min-height: 100vh"] {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+
+
     /* ===== SMOOTH TRANSITIONS ===== */
 
 
