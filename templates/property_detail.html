@@ -42,57 +42,57 @@
                 <div class="row g-4">
                     <!-- Left Column: Gallery & Details -->
                     <div class="col-lg-8">
-                        <!-- Image Gallery Section - FIXED -->
-<div class="gallery-card mb-4">
-    {% set total_images = image_urls|length %}
-    
-    <!-- Main Image Display -->
-    <div class="main-gallery-container">
-        {% for image_url in image_urls %}
-        <img 
-            src="{{ image_url }}" 
-            class="gallery-main-image {% if loop.index0 == 0 %}active{% endif %}" 
-            alt="{{ property.title }} - Image {{ loop.index }}"
-            data-index="{{ loop.index0 }}"
-        >
-        {% endfor %}
-        
-        {% if total_images > 1 %}
-        <button class="gallery-arrow-btn prev-arrow" data-direction="-1">
-            <i class="bi bi-chevron-left"></i>
-        </button>
-        <button class="gallery-arrow-btn next-arrow" data-direction="1">
-            <i class="bi bi-chevron-right"></i>
-        </button>
-        
-        <div class="image-count-badge">
-            <span class="current-image-num">1</span> / <span class="total-image-num">{{ total_images }}</span>
-        </div>
-        {% endif %}
-        
-        <button class="fullscreen-btn" data-action="fullscreen">
-            <i class="bi bi-arrows-fullscreen"></i>
-        </button>
-    </div>
+                        <!-- Image Gallery Section -->
+                        <div class="gallery-card mb-4">
+                            {% set total_images = image_urls|length %}
+                            
+                            <!-- Main Image Display -->
+                            <div class="main-gallery-container">
+                                {% for image_url in image_urls %}
+                                <img 
+                                    src="{{ image_url }}" 
+                                    class="gallery-main-image {% if loop.index0 == 0 %}active{% endif %}" 
+                                    alt="{{ property.title }} - Image {{ loop.index }}"
+                                    data-index="{{ loop.index0 }}"
+                                >
+                                {% endfor %}
+                                
+                                {% if total_images > 1 %}
+                                <button class="gallery-arrow-btn prev-arrow" data-direction="-1">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="gallery-arrow-btn next-arrow" data-direction="1">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                                
+                                <div class="image-count-badge">
+                                    <span class="current-image-num">1</span> / <span class="total-image-num">{{ total_images }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                <button class="fullscreen-btn" data-action="fullscreen">
+                                    <i class="bi bi-arrows-fullscreen"></i>
+                                </button>
+                            </div>
 
-    <!-- Thumbnail Strip -->
-    {% if total_images > 1 %}
-    <div class="thumbnail-strip">
-        <div class="thumbnail-wrapper">
-            {% for image_url in image_urls %}
-            <div class="thumbnail-box {% if loop.index0 == 0 %}active{% endif %}" 
-                data-index="{{ loop.index0 }}">
-                <img 
-                    src="{{ image_url }}" 
-                    alt="Thumbnail {{ loop.index }}"
-                    class="thumbnail-image"
-                >
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-</div>
+                            <!-- Thumbnail Strip -->
+                            {% if total_images > 1 %}
+                            <div class="thumbnail-strip">
+                                <div class="thumbnail-wrapper">
+                                    {% for image_url in image_urls %}
+                                    <div class="thumbnail-box {% if loop.index0 == 0 %}active{% endif %}" 
+                                        data-index="{{ loop.index0 }}">
+                                        <img 
+                                            src="{{ image_url }}" 
+                                            alt="Thumbnail {{ loop.index }}"
+                                            class="thumbnail-image"
+                                        >
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
 
                         <!-- Property Information Tabs -->
                         <div class="info-tabs-card mb-4">
@@ -297,10 +297,10 @@
                         <div class="map-card mb-4">
                             {% set map_query = (property.location ~ ', Surigao City, Philippines') if property.location else 'Surigao City, Philippines' %}
                             <h3 class="content-section-title">
-                                <i class="bi bi-geo-alt-fill me-2"></i>Explore Surigao City
+                                <i class="bi bi-geo-alt-fill me-2"></i>Location
                             </h3>
                             <p class="map-description">
-                                Automatically pinned to this boarding house’s location within Surigao City, so you can quickly navigate and explore nearby landmarks.
+                                Explore the property's location within Surigao City and discover nearby landmarks.
                             </p>
                             <div class="map-frame-wrapper">
                                 <iframe
@@ -562,49 +562,51 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
     <!-- Fullscreen Gallery Modal -->
-<div class="modal fade" id="fullscreenGalleryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen">
-        <div class="modal-content modal-gallery-content">
-            <div class="modal-header modal-gallery-header">
-                <h5 class="modal-title modal-gallery-title">
-                    <i class="bi bi-image-fill me-2"></i>{{ property.title }}
-                </h5>
-                <button type="button" class="btn-close-gallery" data-bs-dismiss="modal" aria-label="Close">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-            <div class="modal-body modal-gallery-body">
-                {% set total_images = image_urls|length %}
-                
-                <div class="fullscreen-gallery-container">
-                    {% for image_url in image_urls %}
-                    <img 
-                        src="{{ image_url }}" 
-                        class="fullscreen-gallery-image {% if loop.index0 == 0 %}active{% endif %}" 
-                        alt="{{ property.title }}"
-                        data-index="{{ loop.index0 }}"
-                    >
-                    {% endfor %}
-                    
-                    {% if total_images > 1 %}
-                    <button class="fullscreen-arrow-btn fullscreen-prev" data-direction="-1" data-gallery="fullscreen">
-                        <i class="bi bi-chevron-left"></i>
+    <div class="modal fade" id="fullscreenGalleryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content modal-gallery-content">
+                <div class="modal-header modal-gallery-header">
+                    <h5 class="modal-title modal-gallery-title">
+                        <i class="bi bi-image-fill me-2"></i>{{ property.title }}
+                    </h5>
+                    <button type="button" class="btn-close-gallery" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="bi bi-x-lg"></i>
                     </button>
-                    <button class="fullscreen-arrow-btn fullscreen-next" data-direction="1" data-gallery="fullscreen">
-                        <i class="bi bi-chevron-right"></i>
-                    </button>
+                </div>
+                <div class="modal-body modal-gallery-body">
+                    {% set total_images = image_urls|length %}
                     
-                    <div class="fullscreen-counter-badge">
-                        <span class="fullscreen-current-num">1</span> / <span class="fullscreen-total-num">{{ total_images }}</span>
+                    <div class="fullscreen-gallery-container">
+                        {% for image_url in image_urls %}
+                        <img 
+                            src="{{ image_url }}" 
+                            class="fullscreen-gallery-image {% if loop.index0 == 0 %}active{% endif %}" 
+                            alt="{{ property.title }}"
+                            data-index="{{ loop.index0 }}"
+                        >
+                        {% endfor %}
+                        
+                        {% if total_images > 1 %}
+                        <button class="fullscreen-arrow-btn fullscreen-prev" data-direction="-1" data-gallery="fullscreen">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button class="fullscreen-arrow-btn fullscreen-next" data-direction="1" data-gallery="fullscreen">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                        
+                        <div class="fullscreen-counter-badge">
+                            <span class="fullscreen-current-num">1</span> / <span class="fullscreen-total-num">{{ total_images }}</span>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-</div>
 
     <!-- Review Modal -->
     <div class="modal fade" id="reviewSubmitModal" tabindex="-1" aria-hidden="true">
@@ -697,128 +699,6 @@
 
     <style>
 
-/* ===== PROFILE DROPDOWN STYLES - FIXED ===== */
-.profile-dropdown-container {
-    position: relative;
-    margin-top: 1rem;
-}
-
-.profile-dropdown-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    width: 100%;
-    padding: 0.75rem 1rem;
-    background: var(--fb-light-blue);
-    border: 2px solid var(--fb-primary);
-    border-radius: 12px;
-    color: var(--fb-primary);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-}
-
-.profile-dropdown-btn:hover {
-    background: var(--fb-primary);
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-hover);
-}
-
-.profile-avatar-small {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    background: var(--fb-primary);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 0.9rem;
-    flex-shrink: 0;
-}
-
-.profile-name {
-    flex: 1;
-    text-align: left;
-    font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.profile-arrow {
-    font-size: 0.8rem;
-    transition: transform 0.3s ease;
-    flex-shrink: 0;
-}
-
-.profile-dropdown-container.active .profile-arrow {
-    transform: rotate(180deg);
-}
-
-
-.profile-dropdown-menu {
-    position: fixed; /* Changed from absolute to fixed */
-    top: auto;
-    left: 1rem;
-    right: auto;
-    width: 248px; /* Match sidebar width minus padding */
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    padding: 0.5rem;
-    margin-top: 0.5rem;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-    z-index: 10000; /* Very high to appear above everything */
-    max-height: 300px; /* Reasonable max height */
-    overflow-y: auto; /* Only scroll dropdown items if needed */
-}
-
-.profile-dropdown-container.active .profile-dropdown-menu {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.dropdown-item {
-    display: flex;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    color: var(--text-primary);
-    text-decoration: none;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    font-weight: 500;
-    font-size: 0.9rem;
-    white-space: nowrap; /* Prevent text wrapping */
-}
-
-.dropdown-item:hover {
-    background: var(--fb-light-blue);
-    color: var(--fb-primary);
-}
-
-.dropdown-item.text-danger {
-    color: var(--danger);
-}
-
-.dropdown-item.text-danger:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--danger);
-}
-
-.dropdown-divider {
-    height: 1px;
-    background: var(--border-color);
-    margin: 0.5rem 0;
-}
     /* ===== FACEBOOK BLUE THEME VARIABLES ===== */
     :root {
         --fb-primary: #1877f2;
@@ -3761,51 +3641,8 @@ body {
     <script>
     // ===== THEME TOGGLE FUNCTIONALITY =====
     
-// ===== PROFILE DROPDOWN FUNCTIONALITY =====
-// ===== PROFILE DROPDOWN FUNCTIONALITY =====
-function initializeProfileDropdown() {
-    const profileBtn = document.getElementById('profileDropdownBtn');
-    const profileDropdown = document.getElementById('profileDropdown');
-    const profileContainer = document.querySelector('.profile-dropdown-container');
-    
-    if (profileBtn && profileDropdown) {
-        // Toggle dropdown on click
-        profileBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            
-            // Calculate position to appear below button
-            const rect = profileBtn.getBoundingClientRect();
-            profileDropdown.style.top = (rect.bottom + 5) + 'px';
-            profileDropdown.style.left = rect.left + 'px';
-            
-            profileContainer.classList.toggle('active');
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!profileContainer.contains(e.target)) {
-                profileContainer.classList.remove('active');
-            }
-        });
-        
-        // Close dropdown when clicking on dropdown items
-        const dropdownItems = profileDropdown.querySelectorAll('.dropdown-item');
-        dropdownItems.forEach(item => {
-            item.addEventListener('click', function() {
-                profileContainer.classList.remove('active');
-            });
-        });
-        
-        // Reposition dropdown on window resize
-        window.addEventListener('resize', function() {
-            if (profileContainer.classList.contains('active')) {
-                const rect = profileBtn.getBoundingClientRect();
-                profileDropdown.style.top = (rect.bottom + 5) + 'px';
-                profileDropdown.style.left = rect.left + 'px';
-            }
-        });
-    }
-}
+
+
 
 // ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', function() {
@@ -3817,7 +3654,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeBookingForm();
     initializeModals();
     initializeFavorites();
-    initializeProfileDropdown(); // Only called once here
     
     console.log('✨ All features initialized successfully!');
 });
