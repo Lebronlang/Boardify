@@ -698,6 +698,7 @@
     <style>
 
     /* ===== PROFILE DROPDOWN STYLES ===== */
+/* ===== PROFILE DROPDOWN STYLES - FIXED ===== */
 .profile-dropdown-container {
     position: relative;
     margin-top: 1rem;
@@ -761,7 +762,7 @@
 
 .profile-dropdown-menu {
     position: absolute;
-    bottom: 100%;
+    top: 100%; /* CHANGED: Opens downward instead of upward */
     left: 0;
     right: 0;
     background: var(--bg-primary);
@@ -769,10 +770,10 @@
     border-radius: 12px;
     box-shadow: var(--shadow-4);
     padding: 0.5rem;
-    margin-bottom: 0.75rem;
+    margin-top: 0.5rem; /* CHANGED: Margin on top instead of bottom */
     opacity: 0;
     visibility: hidden;
-    transform: translateY(10px);
+    transform: translateY(-10px); /* CHANGED: Animation direction */
     transition: all 0.3s ease;
     z-index: 1000;
 }
