@@ -759,25 +759,26 @@
     transform: rotate(180deg);
 }
 
+
 .profile-dropdown-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
+    position: fixed; /* Changed from absolute to fixed */
+    top: auto;
+    left: 1rem;
+    right: auto;
+    width: 248px; /* Match sidebar width minus padding */
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    box-shadow: var(--shadow-4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
     padding: 0.5rem;
     margin-top: 0.5rem;
     opacity: 0;
     visibility: hidden;
     transform: translateY(-10px);
     transition: all 0.3s ease;
-    z-index: 1000;
-    /* REMOVED overflow properties that cause scrollbars */
-    max-height: none; /* Remove any max-height restrictions */
-    overflow: visible; /* Ensure no scrollbars */
+    z-index: 10000; /* Very high to appear above everything */
+    max-height: 300px; /* Reasonable max height */
+    overflow-y: auto; /* Only scroll dropdown items if needed */
 }
 
 .profile-dropdown-container.active .profile-dropdown-menu {
@@ -3761,9 +3762,6 @@ body {
     // ===== THEME TOGGLE FUNCTIONALITY =====
     
 // ===== PROFILE DROPDOWN FUNCTIONALITY =====
-// ===== THEME TOGGLE FUNCTIONALITY =====
-// Add your theme toggle functionality here if needed
-
 // ===== PROFILE DROPDOWN FUNCTIONALITY =====
 function initializeProfileDropdown() {
     const profileBtn = document.getElementById('profileDropdownBtn');
@@ -3774,6 +3772,12 @@ function initializeProfileDropdown() {
         // Toggle dropdown on click
         profileBtn.addEventListener('click', function(e) {
             e.stopPropagation();
+            
+            // Calculate position to appear below button
+            const rect = profileBtn.getBoundingClientRect();
+            profileDropdown.style.top = (rect.bottom + 5) + 'px';
+            profileDropdown.style.left = rect.left + 'px';
+            
             profileContainer.classList.toggle('active');
         });
         
@@ -3790,6 +3794,15 @@ function initializeProfileDropdown() {
             item.addEventListener('click', function() {
                 profileContainer.classList.remove('active');
             });
+        });
+        
+        // Reposition dropdown on window resize
+        window.addEventListener('resize', function() {
+            if (profileContainer.classList.contains('active')) {
+                const rect = profileBtn.getBoundingClientRect();
+                profileDropdown.style.top = (rect.bottom + 5) + 'px';
+                profileDropdown.style.left = rect.left + 'px';
+            }
         });
     }
 }
