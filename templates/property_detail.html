@@ -697,7 +697,6 @@
 
     <style>
 
-    /* ===== PROFILE DROPDOWN STYLES ===== */
 /* ===== PROFILE DROPDOWN STYLES - FIXED ===== */
 .profile-dropdown-container {
     position: relative;
@@ -762,7 +761,7 @@
 
 .profile-dropdown-menu {
     position: absolute;
-    top: 100%; /* CHANGED: Opens downward instead of upward */
+    top: 100%;
     left: 0;
     right: 0;
     background: var(--bg-primary);
@@ -770,12 +769,15 @@
     border-radius: 12px;
     box-shadow: var(--shadow-4);
     padding: 0.5rem;
-    margin-top: 0.5rem; /* CHANGED: Margin on top instead of bottom */
+    margin-top: 0.5rem;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-10px); /* CHANGED: Animation direction */
+    transform: translateY(-10px);
     transition: all 0.3s ease;
     z-index: 1000;
+    /* REMOVED overflow properties that cause scrollbars */
+    max-height: none; /* Remove any max-height restrictions */
+    overflow: visible; /* Ensure no scrollbars */
 }
 
 .profile-dropdown-container.active .profile-dropdown-menu {
@@ -794,6 +796,7 @@
     transition: all 0.2s ease;
     font-weight: 500;
     font-size: 0.9rem;
+    white-space: nowrap; /* Prevent text wrapping */
 }
 
 .dropdown-item:hover {
@@ -3758,6 +3761,10 @@ body {
     // ===== THEME TOGGLE FUNCTIONALITY =====
     
 // ===== PROFILE DROPDOWN FUNCTIONALITY =====
+// ===== THEME TOGGLE FUNCTIONALITY =====
+// Add your theme toggle functionality here if needed
+
+// ===== PROFILE DROPDOWN FUNCTIONALITY =====
 function initializeProfileDropdown() {
     const profileBtn = document.getElementById('profileDropdownBtn');
     const profileDropdown = document.getElementById('profileDropdown');
@@ -3787,23 +3794,17 @@ function initializeProfileDropdown() {
     }
 }
 
-// Initialize profile dropdown when DOM loads
-document.addEventListener('DOMContentLoaded', function() {
-    initializeProfileDropdown();
-});
-// ===== MAIN INITIALIZATION =====
 // ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🏠 Boardify Property Detail Page Loading...');
     
-   
     // Initialize all event listeners
     initializeTabs();
     initializeGallery();
     initializeBookingForm();
     initializeModals();
     initializeFavorites();
-    initializeProfileDropdown();
+    initializeProfileDropdown(); // Only called once here
     
     console.log('✨ All features initialized successfully!');
 });
