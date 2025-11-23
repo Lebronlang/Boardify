@@ -2445,23 +2445,32 @@ def pending_bookings():
         return redirect(url_for('dashboard'))
     
     try:
-        # Get pending bookings with proper joins - using correct relationship names
-        bookings = Booking.query\
-            .join(Property)\
-            .join(User, Booking.tenant_id == User.id)\
-            .filter(
-                Property.landlord_id == user.id,
-                Booking.status == 'pending'
-            )\
-            .order_by(Booking.created_at.desc())\
-            .all()
+        # FIXED: Get pending bookings with proper relationship access
+        # Get all properties owned by this landlord
+        properties = Property.query.filter_by(landlord_id=user.id).all()
+        property_ids = [prop.id for prop in properties]
+        
+        # Get pending bookings for these properties
+        if property_ids:
+            bookings = Booking.query\
+                .join(Property)\
+                .join(User, Booking.tenant_id == User.id)\
+                .filter(
+                    Booking.property_id.in_(property_ids),
+                    Booking.status == 'pending'
+                )\
+                .order_by(Booking.created_at.desc())\
+                .all()
+        else:
+            bookings = []
         
         # Debug output
         print(f"🎯 [PENDING_BOOKINGS] Landlord: {user.email}")
+        print(f"🎯 [PENDING_BOOKINGS] Properties: {len(properties)}")
         print(f"🎯 [PENDING_BOOKINGS] Found {len(bookings)} pending bookings")
         
         for booking in bookings:
-            print(f"   - Booking {booking.id}: {booking.property_obj.title} by {booking.tenant.email}")
+            print(f"   - Booking {booking.id}: {booking.property.title} by {booking.tenant.name}")
         
         if not bookings:
             flash("No pending bookings found.", "info")
@@ -2475,6 +2484,61 @@ def pending_bookings():
         flash("Error loading pending bookings.", "danger")
         return render_template('pending_bookings.html', bookings=[], user=user)
     
+@app.route('/debug-landlord-bookings')
+@login_required
+def debug_landlord_bookings():
+    """Debug landlord bookings"""
+    user = User.query.get(session['user_id'])
+    
+    debug_info = {
+        'landlord': {
+            'id': user.id,
+            'email': user.email,
+            'role': user.role
+        },
+        'properties': [],
+        'all_bookings': [],
+        'pending_bookings': []
+    }
+    
+    # Get all properties
+    properties = Property.query.filter_by(landlord_id=user.id).all()
+    for prop in properties:
+        debug_info['properties'].append({
+            'id': prop.id,
+            'title': prop.title,
+            'landlord_id': prop.landlord_id
+        })
+    
+    # Get all bookings for these properties
+    property_ids = [p.id for p in properties]
+    if property_ids:
+        all_bookings = Booking.query.filter(Booking.property_id.in_(property_ids)).all()
+        for booking in all_bookings:
+            debug_info['all_bookings'].append({
+                'id': booking.id,
+                'property_id': booking.property_id,
+                'tenant_id': booking.tenant_id,
+                'status': booking.status,
+                'start_date': str(booking.start_date),
+                'end_date': str(booking.end_date)
+            })
+        
+        # Get pending bookings
+        pending = Booking.query.filter(
+            Booking.property_id.in_(property_ids),
+            Booking.status == 'pending'
+        ).all()
+        for booking in pending:
+            debug_info['pending_bookings'].append({
+                'id': booking.id,
+                'property_id': booking.property_id,
+                'tenant_id': booking.tenant_id,
+                'status': booking.status
+            })
+    
+    return jsonify(debug_info)
+    
 @app.route('/landlord/booking_action/<int:booking_id>/<action>', methods=['POST'])
 @login_required
 def booking_action(booking_id, action):
@@ -2487,22 +2551,18 @@ def booking_action(booking_id, action):
 
     booking = Booking.query.get_or_404(booking_id)
     
-    # Debug info
-    print(f"🎯 [BOOKING_ACTION] Processing booking {booking_id}")
-    print(f"🎯 [BOOKING_ACTION] Property landlord: {booking.property_obj.landlord_id}")
-    print(f"🎯 [BOOKING_ACTION] Current user: {user.id}")
-
-    if booking.property_obj.landlord_id != user.id:
+    # Verify this booking belongs to the landlord's property
+    if booking.property.landlord_id != user.id:
         flash("You cannot modify this booking.", "danger")
         return redirect(url_for('pending_bookings'))
 
     if action == 'approve':
         booking.status = 'approved'
-        flash(f"Booking for '{booking.property_obj.title}' by {booking.tenant.name} approved.", "success")
+        flash(f"Booking for '{booking.property.title}' by {booking.tenant.name} approved.", "success")
 
     elif action == 'reject':
         booking.status = 'rejected'
-        flash(f"Booking for '{booking.property_obj.title}' by {booking.tenant.name} rejected.", "danger")
+        flash(f"Booking for '{booking.property.title}' by {booking.tenant.name} rejected.", "danger")
 
     else:
         flash("Invalid action.", "danger")

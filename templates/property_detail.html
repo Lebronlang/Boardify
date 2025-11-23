@@ -8,9 +8,7 @@
                 <h3 class="mb-0">
                     <i class="bi bi-house-heart-fill me-2"></i>Boardify
                 </h3>
-                <button class="theme-toggle-btn" id="themeToggle" onclick="toggleTheme()">
-                    <i class="bi bi-sun-fill" id="themeIcon"></i>
-                </button>
+                  
             </div>
 
             <div class="nav-links flex-grow-1">
@@ -40,15 +38,29 @@
                 </a>
             </div>
 
-            <div class="mt-auto">
-                <a href="{{ url_for('help_support') }}" class="nav-link d-flex align-items-center">
-                    <i class="bi bi-question-circle me-3"></i> Help & Support
-                </a>
-                <a href="{{ url_for('logout') }}" class="nav-link d-flex align-items-center text-danger">
-                    <i class="bi bi-box-arrow-right me-3"></i> Logout
-                </a>
-            </div>
-        </nav>
+            <!-- Profile Section - FIXED (No Scroll) -->
+<div class="mt-auto">
+    <div class="profile-dropdown-container">
+        <button class="profile-dropdown-btn" id="profileDropdownBtn">
+            <div class="profile-avatar-small">{{ current_user.name[0] }}</div>
+            <span class="profile-name">{{ current_user.name }}</span>
+            <i class="bi bi-chevron-down profile-arrow"></i>
+        </button>
+        
+        <div class="profile-dropdown-menu" id="profileDropdown">
+            <a href="{{ url_for('profile') }}" class="dropdown-item">
+                <i class="bi bi-person me-2"></i>My Profile
+            </a>
+            <a href="{{ url_for('help_support') }}" class="dropdown-item">
+                <i class="bi bi-question-circle me-2"></i>Help & Support
+            </a>
+            <div class="dropdown-divider"></div>
+            <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
+                <i class="bi bi-box-arrow-right me-2"></i>Logout
+            </a>
+        </div>
+    </div>
+</div>
 
         <!-- Main Content -->
         <div class="flex-grow-1 main-content">
@@ -748,6 +760,124 @@
     </div>
 
     <style>
+
+    /* ===== PROFILE DROPDOWN STYLES ===== */
+.profile-dropdown-container {
+    position: relative;
+    margin-top: 1rem;
+}
+
+.profile-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--fb-light-blue);
+    border: 2px solid var(--fb-primary);
+    border-radius: 12px;
+    color: var(--fb-primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.profile-dropdown-btn:hover {
+    background: var(--fb-primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.profile-avatar-small {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: var(--fb-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.profile-name {
+    flex: 1;
+    text-align: left;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-arrow {
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+}
+
+.profile-dropdown-container.active .profile-arrow {
+    transform: rotate(180deg);
+}
+
+.profile-dropdown-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow-4);
+    padding: 0.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.profile-dropdown-container.active .profile-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.dropdown-item:hover {
+    background: var(--fb-light-blue);
+    color: var(--fb-primary);
+}
+
+.dropdown-item.text-danger {
+    color: var(--danger);
+}
+
+.dropdown-item.text-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 0.5rem 0;
+}
     /* ===== FACEBOOK BLUE THEME VARIABLES ===== */
     :root {
         --fb-primary: #1877f2;
@@ -783,21 +913,7 @@
         --info: #3498db;
     }
 
-    body.dark-theme {
-        --bg-primary: #18191a;
-        --bg-secondary: #242526;
-        --bg-tertiary: #3a3b3c;
-        --bg-hover: #4e4f50;
-        --text-primary: #e4e6eb;
-        --text-secondary: #b0b3b8;
-        --text-tertiary: #8a8d91;
-        --border-color: #3e4042;
-        --divider-color: #3e4042;
-        --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
-        --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.3);
-        --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.3);
-        --shadow-4: 0 8px 16px rgba(0, 0, 0, 0.4);
-    }
+    
 
     body {
         font-family: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
@@ -863,9 +979,7 @@
         color: var(--fb-primary) !important;
     }
 
-    body.dark-theme .sidebar .nav-link.active {
-        background: rgba(24, 119, 242, 0.2);
-    }
+    
 
     .sidebar .nav-link:hover {
         background: var(--fb-light-blue);
@@ -3410,39 +3524,54 @@ body {
 
     <script>
     // ===== THEME TOGGLE FUNCTIONALITY =====
-    // ===== THEME TOGGLE FUNCTIONALITY =====
-function toggleTheme() {
-    const body = document.body;
-    const themeIcon = document.getElementById('themeIcon');
     
-    body.classList.toggle('dark-theme');
+// ===== PROFILE DROPDOWN FUNCTIONALITY =====
+function initializeProfileDropdown() {
+    const profileBtn = document.getElementById('profileDropdownBtn');
+    const profileDropdown = document.getElementById('profileDropdown');
+    const profileContainer = document.querySelector('.profile-dropdown-container');
     
-    if (body.classList.contains('dark-theme')) {
-        themeIcon.className = 'bi bi-moon-fill';
-        localStorage.setItem('boardify_theme', 'dark');
-    } else {
-        themeIcon.className = 'bi bi-sun-fill';
-        localStorage.setItem('boardify_theme', 'light');
+    if (profileBtn && profileDropdown) {
+        // Toggle dropdown on click
+        profileBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            profileContainer.classList.toggle('active');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!profileContainer.contains(e.target)) {
+                profileContainer.classList.remove('active');
+            }
+        });
+        
+        // Close dropdown when clicking on dropdown items
+        const dropdownItems = profileDropdown.querySelectorAll('.dropdown-item');
+        dropdownItems.forEach(item => {
+            item.addEventListener('click', function() {
+                profileContainer.classList.remove('active');
+            });
+        });
     }
 }
 
+// Initialize profile dropdown when DOM loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeProfileDropdown();
+});
 // ===== MAIN INITIALIZATION =====
 // ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🏠 Boardify Property Detail Page Loading...');
     
-    // Load saved theme
-    initializeTheme();
-    
-    // Initialize mobile menu
-    initializeMobileMenu();
-    
+   
     // Initialize all event listeners
     initializeTabs();
     initializeGallery();
     initializeBookingForm();
     initializeModals();
     initializeFavorites();
+    initializeProfileDropdown();
     
     console.log('✨ All features initialized successfully!');
 });
