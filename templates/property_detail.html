@@ -28,7 +28,7 @@
                     <i class="bi bi-check2-square me-3"></i> Approvals
                 </a>
                 {% elif current_user.is_authenticated %}
-                <a href="{{ url_for('my_bookings_tenant') }}" class="nav-link d-flex align-items-center">
+                <a href="{{ url_for('my_bookings_tenant_page') }}" class="nav-link d-flex align-items-center">
                     <i class="bi bi-calendar-check me-3"></i> My Bookings
                 </a>
                 {% endif %}
@@ -91,48 +91,59 @@
                 <div class="row g-4">
                     <!-- Left Column: Gallery & Details -->
                     <div class="col-lg-8">
-                        <!-- Image Gallery Section - FIXED -->
-<div class="gallery-card mb-4">
-    {% set total_images = image_urls|length %}
-    
-    <!-- Main Image Display -->
-    <div class="main-gallery-container">
-        {% for image_url in image_urls %}
-        <img 
-            src="{{ image_url }}" 
-            class="gallery-main-image {% if loop.index0 == 0 %}active{% endif %}" 
-            alt="{{ property.title }} - Image {{ loop.index }}"
-            data-index="{{ loop.index0 }}"
-        >
-        {% endfor %}
-        
-        {% if total_images > 1 %}
-        <button class="gallery-arrow-btn prev-arrow" data-direction="-1">
-            <i class="bi bi-chevron-left"></i>
-        </button>
-        <button class="gallery-arrow-btn next-arrow" data-direction="1">
-            <i class="bi bi-chevron-right"></i>
-        </button>
-        
-        <div class="image-count-badge">
-            <span class="current-image-num">1</span> / <span class="total-image-num">{{ total_images }}</span>
-        </div>
-        {% endif %}
-        
-        <button class="fullscreen-btn" data-action="fullscreen">
-            <i class="bi bi-arrows-fullscreen"></i>
-        </button>
-    </div>
+                        <!-- Image Gallery Section -->
+                        <div class="gallery-card mb-4">
+                            {% set property_images = property.images if property.images else [] %}
+                            {% set total_images = property_images|length if property_images else 1 %}
+                           
+                            <!-- Main Image Display -->
+                            <div class="main-gallery-container">
+                                {% if property_images %}
+                                    {% for image in property_images %}
+                                    <img
+                                        src="{{ url_for('static', filename='uploads/' + image.filename) }}"
+                                        class="gallery-main-image {% if loop.index0 == 0 %}active{% endif %}"
+                                        alt="{{ property.title }} - Image {{ loop.index }}"
+                                        data-index="{{ loop.index0 }}"
+                                    >
+                                    {% endfor %}
+                                {% else %}
+                                    <img
+                                        src="{{ url_for('static', filename='uploads/' + (property.image if property.image else 'default.jpg')) }}"
+                                        class="gallery-main-image active"
+                                        alt="{{ property.title }}"
+                                        data-index="0"
+                                    >
+                                {% endif %}
+                               
+                                {% if total_images > 1 %}
+                                <button class="gallery-arrow-btn prev-arrow" data-direction="-1">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="gallery-arrow-btn next-arrow" data-direction="1">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                               
+                                <div class="image-count-badge">
+                                    <span class="current-image-num">1</span> / <span class="total-image-num">{{ total_images }}</span>
+                                </div>
+                                {% endif %}
+                               
+                                <button class="fullscreen-btn" data-action="fullscreen">
+                                    <i class="bi bi-arrows-fullscreen"></i>
+                                </button>
+                            </div>
 
-    <!-- Thumbnail Strip -->
+                            <!-- Thumbnail Strip -->
+                            <!-- Thumbnail Strip -->
     {% if total_images > 1 %}
     <div class="thumbnail-strip">
         <div class="thumbnail-wrapper">
-            {% for image_url in image_urls %}
-            <div class="thumbnail-box {% if loop.index0 == 0 %}active{% endif %}" 
+            {% for image in property_images %}
+            <div class="thumbnail-box {% if loop.index0 == 0 %}active{% endif %}"
                 data-index="{{ loop.index0 }}">
-                <img 
-                    src="{{ image_url }}" 
+                <img
+                    src="{{ url_for('static', filename='uploads/' + image.filename) }}"
                     alt="Thumbnail {{ loop.index }}"
                     class="thumbnail-image"
                 >
@@ -141,7 +152,7 @@
         </div>
     </div>
     {% endif %}
-</div>
+                        </div>
 
                         <!-- Property Information Tabs -->
                         <div class="info-tabs-card mb-4">
@@ -170,7 +181,7 @@
                                         <i class="bi bi-file-text me-2"></i>Property Overview
                                     </h3>
                                     <p class="property-description">{{ property.description }}</p>
-                                    
+                                   
                                     <!-- Property Stats Grid -->
                                     <div class="property-stats-grid">
                                         {% if property.bedrooms %}
@@ -184,7 +195,7 @@
                                             </div>
                                         </div>
                                         {% endif %}
-                                        
+                                       
                                         {% if property.bathrooms %}
                                         <div class="stat-box">
                                             <div class="stat-icon-wrapper">
@@ -196,7 +207,7 @@
                                             </div>
                                         </div>
                                         {% endif %}
-                                        
+                                       
                                         <div class="stat-box">
                                             <div class="stat-icon-wrapper">
                                                 <i class="bi bi-building-fill"></i>
@@ -206,7 +217,7 @@
                                                 <span class="stat-label">Property Type</span>
                                             </div>
                                         </div>
-                                        
+                                       
                                         <div class="stat-box">
                                             <div class="stat-icon-wrapper">
                                                 <i class="bi bi-people-fill"></i>
@@ -216,7 +227,7 @@
                                                 <span class="stat-label">Available Slots</span>
                                             </div>
                                         </div>
-                                        
+                                       
                                         <div class="stat-box">
                                             <div class="stat-icon-wrapper">
                                                 <i class="bi bi-gender-ambiguous"></i>
@@ -253,7 +264,7 @@
                                         'pool': ('water', 'Swimming Pool'),
                                         'security': ('shield-check', '24/7 Security')
                                     } %}
-                                    
+                                   
                                     {% if amenities_list|length > 0 %}
                                     <div class="amenities-showcase-grid">
                                         {% for amenity in amenities_list %}
@@ -286,26 +297,26 @@
                                             <span class="detail-label-text">Property Type</span>
                                             <span class="detail-value-text">{{ property.property_type|title }}</span>
                                         </div>
-                                        
+                                       
                                         {% if property.bedrooms %}
                                         <div class="detail-info-row">
                                             <span class="detail-label-text">Bedrooms</span>
                                             <span class="detail-value-text">{{ property.bedrooms }}</span>
                                         </div>
                                         {% endif %}
-                                        
+                                       
                                         {% if property.bathrooms %}
                                         <div class="detail-info-row">
                                             <span class="detail-label-text">Bathrooms</span>
                                             <span class="detail-value-text">{{ property.bathrooms }}</span>
                                         </div>
                                         {% endif %}
-                                        
+                                       
                                         <div class="detail-info-row">
                                             <span class="detail-label-text">Total Capacity</span>
                                             <span class="detail-value-text">{{ total_slots }} slots</span>
                                         </div>
-                                        
+                                       
                                         <div class="detail-info-row">
                                             <span class="detail-label-text">Available Slots</span>
                                             <span class="detail-value-text">
@@ -314,7 +325,7 @@
                                                 </span>
                                             </span>
                                         </div>
-                                        
+                                       
                                         <div class="detail-info-row">
                                             <span class="detail-label-text">Gender Preference</span>
                                             <span class="detail-value-text">
@@ -327,12 +338,12 @@
                                                 {% endif %}
                                             </span>
                                         </div>
-                                        
+                                       
                                         <div class="detail-info-row">
                                             <span class="detail-label-text">Monthly Price</span>
                                             <span class="detail-value-text price-highlight-text">₱{{ "{:,}".format(property.price) }}</span>
                                         </div>
-                                        
+                                       
                                         <div class="detail-info-row">
                                             <span class="detail-label-text">Location</span>
                                             <span class="detail-value-text">{{ property.location if property.location else 'Not specified' }}</span>
@@ -367,7 +378,7 @@
                             <h3 class="content-section-title mb-4">
                                 <i class="bi bi-star-fill me-2"></i>Reviews & Ratings
                             </h3>
-                            
+                           
                             <!-- Rating Summary Box -->
                             <div class="rating-summary-box mb-4">
                                 <div class="row align-items-center">
@@ -390,7 +401,7 @@
                                             <i class="bi bi-pencil-square me-2"></i>Write a Review
                                         </button>
                                         {% endif %}
-                                        
+                                       
                                         {% if user_review %}
                                         <div class="user-review-alert">
                                             <strong>Your Review:</strong>
@@ -403,9 +414,9 @@
                                             <p class="mt-2 mb-2">{{ user_review.comment }}</p>
                                             {% endif %}
                                             <div class="mt-2">
-                                                <a href="{{ url_for('edit_review', review_id=user_review.id) }}" 
+                                                <a href="{{ url_for('edit_review', review_id=user_review.id) }}"
                                                 class="btn-review-action-edit">Edit</a>
-                                                <form method="POST" action="{{ url_for('delete_review', review_id=user_review.id) }}" 
+                                                <form method="POST" action="{{ url_for('delete_review', review_id=user_review.id) }}"
                                                     class="d-inline" onsubmit="return confirm('Are you sure you want to delete this review?');">
                                                     <button type="submit" class="btn-review-action-delete">Delete</button>
                                                 </form>
@@ -463,7 +474,7 @@
                                     <i class="bi bi-calendar-check-fill me-2"></i>Book This Property
                                 </h3>
                             </div>
-                            
+                           
                             <div class="booking-card-body">
                                 {% if current_user.is_authenticated and current_user.role == 'tenant' %}
                                     {% if user_booking %}
@@ -587,7 +598,7 @@
                                         <small class="owner-role-text">Landlord</small>
                                     </div>
                                 </div>
-                                
+                               
                                 <div class="owner-contact-info">
                                     {% if property.owner.email %}
                                     <a href="mailto:{{ property.owner.email }}" class="contact-info-link">
@@ -595,7 +606,7 @@
                                         <span>{{ property.owner.email }}</span>
                                     </a>
                                     {% endif %}
-                                    
+                                   
                                     {% if property.owner.phone %}
                                     <a href="tel:{{ property.owner.phone }}" class="contact-info-link">
                                         <i class="bi bi-telephone-fill me-2"></i>
@@ -603,7 +614,7 @@
                                     </a>
                                     {% endif %}
                                 </div>
-                                
+                               
                                 <button class="btn-message-owner w-100 mt-3">
                                     <i class="bi bi-chat-dots-fill me-2"></i>Send Message
                                 </button>
@@ -616,47 +627,57 @@
     </div>
 
     <!-- Fullscreen Gallery Modal -->
-<div class="modal fade" id="fullscreenGalleryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen">
-        <div class="modal-content modal-gallery-content">
-            <div class="modal-header modal-gallery-header">
-                <h5 class="modal-title modal-gallery-title">
-                    <i class="bi bi-image-fill me-2"></i>{{ property.title }}
-                </h5>
-                <button type="button" class="btn-close-gallery" data-bs-dismiss="modal" aria-label="Close">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-            <div class="modal-body modal-gallery-body">
-                {% set total_images = image_urls|length %}
-                
-                <div class="fullscreen-gallery-container">
-                    {% for image_url in image_urls %}
-                    <img 
-                        src="{{ image_url }}" 
-                        class="fullscreen-gallery-image {% if loop.index0 == 0 %}active{% endif %}" 
-                        alt="{{ property.title }}"
-                        data-index="{{ loop.index0 }}"
-                    >
-                    {% endfor %}
-                    
-                    {% if total_images > 1 %}
-                    <button class="fullscreen-arrow-btn fullscreen-prev" data-direction="-1" data-gallery="fullscreen">
-                        <i class="bi bi-chevron-left"></i>
+    <div class="modal fade" id="fullscreenGalleryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content modal-gallery-content">
+                <div class="modal-header modal-gallery-header">
+                    <h5 class="modal-title modal-gallery-title">
+                        <i class="bi bi-image-fill me-2"></i>{{ property.title }}
+                    </h5>
+                    <button type="button" class="btn-close-gallery" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="bi bi-x-lg"></i>
                     </button>
-                    <button class="fullscreen-arrow-btn fullscreen-next" data-direction="1" data-gallery="fullscreen">
-                        <i class="bi bi-chevron-right"></i>
-                    </button>
-                    
-                    <div class="fullscreen-counter-badge">
-                        <span class="fullscreen-current-num">1</span> / <span class="fullscreen-total-num">{{ total_images }}</span>
+                </div>
+                <div class="modal-body modal-gallery-body">
+                    {% set property_images = property.images if property.images else [] %}
+                    {% set total_images = property_images|length if property_images else 1 %}
+                   
+                    <div class="fullscreen-gallery-container">
+                        {% if property_images %}
+                            {% for image in property_images %}
+                            <img
+                                src="{{ url_for('static', filename='uploads/' + image.filename) }}"
+                                class="fullscreen-gallery-image {% if loop.index0 == 0 %}active{% endif %}"
+                                alt="{{ property.title }}"
+                                data-index="{{ loop.index0 }}"
+                            >
+                            {% endfor %}
+                        {% else %}
+                            <img
+                                src="{{ url_for('static', filename='uploads/' + (property.image if property.image else 'default.jpg')) }}"
+                                class="fullscreen-gallery-image active"
+                                alt="{{ property.title }}"
+                                data-index="0"
+                            >
+                        {% endif %}
+                       
+                        {% if total_images > 1 %}
+                        <button class="fullscreen-arrow-btn fullscreen-prev" data-direction="-1" data-gallery="fullscreen">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button class="fullscreen-arrow-btn fullscreen-next" data-direction="1" data-gallery="fullscreen">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                       
+                        <div class="fullscreen-counter-badge">
+                            <span class="fullscreen-current-num">1</span> / <span class="fullscreen-total-num">{{ total_images }}</span>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-</div>
 
     <!-- Review Modal -->
     <div class="modal fade" id="reviewSubmitModal" tabindex="-1" aria-hidden="true">
@@ -679,10 +700,10 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        
+                       
                         <div class="review-form-group">
                             <label for="reviewComment" class="review-form-label">Comment (Optional)</label>
-                            <textarea class="review-form-textarea" id="reviewComment" name="comment" rows="4" 
+                            <textarea class="review-form-textarea" id="reviewComment" name="comment" rows="4"
                                     placeholder="Share your experience with this property..."></textarea>
                         </div>
                     </div>
@@ -757,26 +778,26 @@
         --fb-secondary-hover: #36a420;
         --fb-light-blue: #e7f3ff;
         --fb-lighter-blue: #f0f8ff;
-        
+       
         --bg-primary: #ffffff;
         --bg-secondary: #f0f2f5;
         --bg-tertiary: #e4e6eb;
         --bg-hover: #f2f3f5;
-        
+       
         --text-primary: #050505;
         --text-secondary: #65676b;
         --text-tertiary: #8a8d91;
         --text-white: #ffffff;
-        
+       
         --border-color: #ced0d4;
         --divider-color: #e4e6eb;
-        
+       
         --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.1);
         --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.1);
         --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.1);
         --shadow-4: 0 8px 16px rgba(0, 0, 0, 0.15);
         --shadow-hover: 0 8px 24px rgba(24, 119, 242, 0.2);
-        
+       
         --success: #31a24c;
         --danger: #e74c3c;
         --warning: #f39c12;
@@ -2208,74 +2229,39 @@
     }
 
     /* ===== MOBILE RESPONSIVE FIXES ===== */
-@media (max-width: 992px) {
+@media (max-width: 768px) {
+    /* Main layout fixes */
+    .d-flex {
+        flex-direction: column;
+    }
+   
     .sidebar {
-        position: fixed;
         width: 100%;
-        height: 100vh;
-        z-index: 1050;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
+        height: auto;
+        min-height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
     }
-
-       /* Mobile menu toggle button */
-    .mobile-menu-toggle {
-        position: fixed;
-        top: 1rem;
-        left: 1rem;
-        z-index: 1060;
-        background: var(--fb-primary);
-        color: white;
-        border: none;
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
+   
+    .sidebar .nav-links {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        box-shadow: var(--shadow-3);
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
-
-    
-
-.sidebar {
-    background: var(--bg-primary);
-    width: 280px;
-    min-width: 280px;
-    box-shadow: var(--shadow-2);
-    border-right: 1px solid var(--border-color);
-    transition: all 0.3s ease;
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    overflow-y: auto;
-    z-index: 1000;
-}
-
-.main-content {
-    background: var(--bg-secondary);
-    min-height: 100vh;
-    margin-left: 280px; /* Match sidebar width */
-    width: calc(100% - 280px);
-    transition: all 0.3s ease;
-    position: relative;
-}
-
-/* ===== BACK NAVIGATION FIX ===== */
-.back-navigation-bar {
-    background: var(--bg-primary);
-    border-bottom: 1px solid var(--border-color);
-    padding: 1rem 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: var(--shadow-1);
-    margin-left: 0;
-}
-
-    
+   
+    .sidebar .nav-link {
+        flex: 1;
+        min-width: 140px;
+        text-align: center;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+    }
+   
+    .main-content {
+        width: 100%;
+    }
+   
     /* Property header fixes */
     .property-header-card {
         padding: 1rem;
@@ -2284,60 +2270,58 @@
         border-left: none;
         border-right: none;
     }
-    
+   
     .property-title {
         font-size: 1.5rem;
         line-height: 1.3;
     }
-    
+   
     .price-tag-display {
         justify-content: flex-start;
         margin-top: 1rem;
     }
-    
+   
     .price-amount {
         font-size: 2rem;
     }
-    
+   
     /* Gallery fixes */
     .main-gallery-container {
         height: 300px;
     }
-    
+   
     .gallery-arrow-btn {
         width: 40px;
         height: 40px;
         font-size: 1rem;
     }
-    
+   
     .prev-arrow {
         left: 10px;
     }
-    
+   
     .next-arrow {
         right: 10px;
     }
-    
+   
     .thumbnail-box {
         width: 80px;
         height: 60px;
     }
-    
+   
     /* Content layout fixes */
     .container-fluid.p-4 {
-    padding: 1.5rem !important;
-    max-width: 100%;
-    margin: 0;
-}
-    
+        padding: 1rem !important;
+    }
+   
     .row.g-4 {
         margin: 0;
     }
-    
+   
     .col-lg-8, .col-lg-4 {
         padding: 0;
     }
-    
+   
     /* Cards and spacing */
     .gallery-card,
     .info-tabs-card,
@@ -2348,53 +2332,53 @@
         margin: 1rem 0;
         border-radius: 12px;
     }
-    
+   
     /* Tabs fixes */
     .custom-nav-tabs {
         flex-wrap: nowrap;
         overflow-x: auto;
         padding-bottom: 0.5rem;
     }
-    
+   
     .custom-nav-item {
         flex-shrink: 0;
     }
-    
+   
     .custom-tab-btn {
         padding: 0.75rem 1rem;
         font-size: 0.85rem;
         white-space: nowrap;
     }
-    
+   
     /* Stats grid fixes */
     .property-stats-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 0.75rem;
     }
-    
+   
     .stat-box {
         padding: 0.75rem;
     }
-    
+   
     .stat-icon-wrapper {
         width: 40px;
         height: 40px;
     }
-    
+   
     .stat-icon-wrapper i {
         font-size: 1.2rem;
     }
-    
+   
     /* Amenities grid fixes */
     .amenities-showcase-grid {
         grid-template-columns: 1fr;
         gap: 0.75rem;
     }
-    
+   
     .amenity-item-card {
         padding: 1rem;
     }
-    
+   
     /* Details list fixes */
     .detail-info-row {
         flex-direction: column;
@@ -2402,57 +2386,57 @@
         gap: 0.5rem;
         padding: 1rem;
     }
-    
+   
     .detail-value-text {
         text-align: left;
     }
-    
+   
     /* Map fixes */
     .map-frame-wrapper {
         padding-top: 70%;
     }
-    
+   
     /* Reviews fixes */
     .rating-summary-box .row {
         flex-direction: column;
         text-align: center;
     }
-    
+   
     .rating-summary-box .col-md-4 {
         margin-bottom: 1.5rem;
     }
-    
+   
     /* Booking card fixes */
     .booking-info-card {
         position: relative;
         top: 0;
         margin-top: 2rem;
     }
-    
+   
     .booking-card-body {
         max-height: none;
     }
-    
+   
     /* Owner card fixes */
     .owner-contact-card {
         margin-top: 1rem;
     }
-    
+   
     .owner-profile-section {
         flex-direction: column;
         text-align: center;
     }
-    
+   
     /* Modal fixes */
     .modal-dialog {
         margin: 1rem;
     }
-    
+   
     .confirm-modal-footer {
         flex-direction: column;
         gap: 0.75rem;
     }
-    
+   
     .btn-cancel-booking,
     .btn-confirm-booking {
         width: 100%;
@@ -2465,65 +2449,65 @@
     .property-title {
         font-size: 1.3rem;
     }
-    
+   
     .price-amount {
         font-size: 1.75rem;
     }
-    
+   
     .main-gallery-container {
         height: 250px;
     }
-    
+   
     .gallery-arrow-btn {
         width: 35px;
         height: 35px;
     }
-    
+   
     .property-stats-grid {
         grid-template-columns: 1fr;
     }
-    
+   
     .stat-box {
         justify-content: flex-start;
     }
-    
+   
     .custom-tab-btn {
         padding: 0.6rem 0.8rem;
         font-size: 0.8rem;
     }
-    
+   
     .content-section-title {
         font-size: 1.2rem;
     }
-    
+   
     /* Back navigation */
     .back-navigation-bar {
         padding: 0.75rem 0;
     }
-    
+   
     .back-link-btn {
         font-size: 0.9rem;
         padding: 0.4rem 0.8rem;
     }
-    
+   
     /* Save property button */
     .save-property-btn {
         width: 100%;
         justify-content: center;
         margin-top: 1rem;
     }
-    
+   
     /* Booking form */
     .form-input-field {
         padding: 0.75rem;
         font-size: 16px; /* Prevents zoom on iOS */
     }
-    
+   
     /* Price breakdown */
     .price-breakdown-row {
         font-size: 0.9rem;
     }
-    
+   
     .total-price-text {
         font-size: 1.1rem;
     }
@@ -2541,13 +2525,13 @@
     .contact-info-link {
         min-height: 44px;
     }
-    
+   
     .gallery-arrow-btn,
     .fullscreen-btn {
         width: 44px;
         height: 44px;
     }
-    
+   
     /* Reduce hover effects on touch devices */
     .gallery-arrow-btn:hover,
     .fullscreen-btn:hover,
@@ -2557,9 +2541,9 @@
     .detail-info-row:hover {
         transform: none;
     }
-    
+   
     /* Improve button touch targets */
-    button, 
+    button,
     .btn-book-now,
     .btn-login-now,
     .btn-message-owner,
@@ -2576,7 +2560,7 @@
     .main-gallery-container {
         height: 250px;
     }
-    
+   
     .sidebar {
         max-height: 80vh;
         overflow-y: auto;
@@ -2600,11 +2584,11 @@ html, body {
         font-size: 14px;
         line-height: 1.5;
     }
-    
+   
     h1, h2, h3, h4, h5, h6 {
         line-height: 1.3;
     }
-    
+   
     .property-description,
     .review-comment-text,
     .map-description {
@@ -2618,7 +2602,7 @@ html, body {
     .gallery-main-image {
         transition: opacity 0.3s ease;
     }
-    
+   
     /* Reduce animations on mobile for performance */
     .property-header-card,
     .gallery-card,
@@ -2634,7 +2618,7 @@ html, body {
         height: 60vh;
         max-height: 500px;
     }
-    
+   
     .booking-info-card {
         position: -webkit-sticky;
     }
@@ -3153,37 +3137,6 @@ html, body {
         }
     }
 
-
-
-    /* ===== MOBILE OVERLAY ===== */
-.mobile-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1040;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-}
-
-.mobile-overlay.active {
-    opacity: 1;
-    visibility: visible;
-}
-
-.mobile-menu-toggle {
-    display: none;
-}
-
-@media (max-width: 992px) {
-    .mobile-menu-toggle {
-        display: flex;
-    }
-}
-
     /* ===== RESPONSIVE DESIGN ===== */
     @media (max-width: 992px) {
         .sidebar {
@@ -3194,26 +3147,26 @@ html, body {
             border-bottom: 1px solid var(--border-color);
             position: relative;
         }
-        
+       
         .property-header-card .col-lg-4 {
             margin-top: 1.5rem;
             text-align: left !important;
         }
-        
+       
         .price-tag-display {
             justify-content: flex-start;
         }
-        
+       
         .booking-info-card {
             position: relative;
             top: 0;
             margin-top: 2rem;
         }
-        
+       
         .booking-card-body {
             max-height: none;
         }
-        
+       
         .owner-contact-card {
             margin-top: 2rem;
         }
@@ -3223,67 +3176,67 @@ html, body {
         .property-title {
             font-size: 1.5rem;
         }
-        
+       
         .price-amount {
             font-size: 2rem;
         }
-        
+       
         .main-gallery-container {
             height: 350px;
         }
-        
+       
         .gallery-arrow-btn {
             width: 40px;
             height: 40px;
             font-size: 1.2rem;
         }
-        
+       
         .prev-arrow {
             left: 10px;
         }
-        
+       
         .next-arrow {
             right: 10px;
         }
-        
+       
         .thumbnail-box {
             width: 80px;
             height: 60px;
         }
-        
+       
         .property-stats-grid {
             grid-template-columns: repeat(2, 1fr);
         }
-        
+       
         .amenities-showcase-grid {
             grid-template-columns: 1fr;
         }
-        
+       
         .custom-tab-btn {
             padding: 0.75rem 1rem;
             font-size: 0.85rem;
         }
-        
+       
         .detail-info-row {
             flex-direction: column;
             align-items: flex-start;
             gap: 0.5rem;
         }
-        
+       
         .detail-value-text {
             text-align: left;
         }
-        
+       
         .fullscreen-arrow-btn {
             width: 50px;
             height: 50px;
             font-size: 1.5rem;
         }
-        
+       
         .fullscreen-prev {
             left: 15px;
         }
-        
+       
         .fullscreen-next {
             right: 15px;
         }
@@ -3293,56 +3246,56 @@ html, body {
         .property-header-card {
             padding: 1rem;
         }
-        
+       
         .main-gallery-container {
             height: 300px;
         }
-        
+       
         .gallery-arrow-btn {
             width: 35px;
             height: 35px;
             font-size: 1rem;
         }
-        
+       
         .thumbnail-box {
             width: 70px;
             height: 50px;
         }
-        
+       
         .info-tabs-card {
             padding: 1rem;
         }
-        
+       
         .custom-nav-tabs {
             overflow-x: auto;
             flex-wrap: nowrap;
         }
-        
+       
         .content-section-title {
             font-size: 1.2rem;
         }
-        
+       
         .booking-card-body,
         .owner-card-body {
             padding: 1rem;
         }
-        
+       
         .confirm-modal-body {
             padding: 1.5rem;
         }
-        
+       
         .confirm-question {
             font-size: 1.2rem;
         }
-        
+       
         .confirm-icon-wrapper i {
             font-size: 4rem;
         }
-        
+       
         .confirm-modal-footer {
             flex-direction: column;
         }
-        
+       
         .btn-cancel-booking,
         .btn-confirm-booking {
             width: 100%;
@@ -3379,16 +3332,6 @@ html, body {
     }
 
     /* ===== SMOOTH TRANSITIONS ===== */
-
-
-    html {
-    scroll-behavior: smooth;
-}
-
-body {
-    overflow-x: hidden;
-}
-
     * {
         transition-property: background-color, border-color, color, fill, stroke;
         transition-duration: 0.3s;
@@ -3414,9 +3357,9 @@ body {
 function toggleTheme() {
     const body = document.body;
     const themeIcon = document.getElementById('themeIcon');
-    
+   
     body.classList.toggle('dark-theme');
-    
+   
     if (body.classList.contains('dark-theme')) {
         themeIcon.className = 'bi bi-moon-fill';
         localStorage.setItem('boardify_theme', 'dark');
@@ -3427,23 +3370,19 @@ function toggleTheme() {
 }
 
 // ===== MAIN INITIALIZATION =====
-// ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🏠 Boardify Property Detail Page Loading...');
-    
+   
     // Load saved theme
     initializeTheme();
-    
-    // Initialize mobile menu
-    initializeMobileMenu();
-    
+   
     // Initialize all event listeners
     initializeTabs();
     initializeGallery();
     initializeBookingForm();
     initializeModals();
     initializeFavorites();
-    
+   
     console.log('✨ All features initialized successfully!');
 });
 
@@ -3452,7 +3391,7 @@ function initializeTheme() {
     const savedTheme = localStorage.getItem('boardify_theme');
     const body = document.body;
     const themeIcon = document.getElementById('themeIcon');
-    
+   
     if (savedTheme === 'dark') {
         body.classList.add('dark-theme');
         if (themeIcon) themeIcon.className = 'bi bi-moon-fill';
@@ -3465,20 +3404,20 @@ function initializeTheme() {
 function initializeTabs() {
     const tabButtons = document.querySelectorAll('.custom-tab-btn');
     const tabPanels = document.querySelectorAll('.tab-panel');
-    
+   
     console.log(`📑 Found ${tabButtons.length} tab buttons and ${tabPanels.length} tab panels`);  // ✅ FIXED: Added backticks
-    
+   
     tabButtons.forEach(button => {
         button.addEventListener('click', function() {
             const targetTab = this.getAttribute('data-tab');
-            
+           
             // Remove active class from all buttons and panels
             tabButtons.forEach(btn => btn.classList.remove('active'));
             tabPanels.forEach(panel => panel.classList.remove('active'));
-            
+           
             // Add active class to clicked button
             this.classList.add('active');
-            
+           
             // Show corresponding panel
             const targetPanel = document.getElementById(targetTab + '-tab');
             if (targetPanel) {
@@ -3494,14 +3433,14 @@ function initializeTabs() {
 document.addEventListener('DOMContentLoaded', function() {
     // Detect mobile device
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
+   
     if (isMobile) {
         // Add mobile class to body for CSS targeting
         document.body.classList.add('mobile-device');
-        
+       
         // Improve touch scrolling
         document.documentElement.style.scrollBehavior = 'smooth';
-        
+       
         // Prevent zoom on double tap (for iOS)
         let lastTouchEnd = 0;
         document.addEventListener('touchend', function (event) {
@@ -3511,25 +3450,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             lastTouchEnd = now;
         }, false);
-        
+       
         // Fix for iOS viewport height
         function setVH() {
             let vh = window.innerHeight * 0.01;
             document.documentElement.style.setProperty('--vh', `${vh}px`);
         }
-        
+       
         setVH();
         window.addEventListener('resize', setVH);
         window.addEventListener('orientationchange', setVH);
     }
-    
+   
     // Handle orientation changes
     window.addEventListener('orientationchange', function() {
         setTimeout(() => {
             window.scrollTo(0, 0);
         }, 100);
     });
-    
+   
     // Improve touch interactions
     const touchElements = document.querySelectorAll('button, a, .thumbnail-box, .custom-tab-btn');
     touchElements.forEach(el => {
@@ -3537,81 +3476,45 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-
-// ===== MOBILE MENU FUNCTIONALITY =====
-function initializeMobileMenu() {
-    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-    const sidebar = document.getElementById('mainSidebar');
-    const mobileOverlay = document.getElementById('mobileOverlay');
-    
-    if (mobileMenuToggle && sidebar) {
-        mobileMenuToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('mobile-open');
-            mobileOverlay.classList.toggle('active');
-            document.body.style.overflow = sidebar.classList.contains('mobile-open') ? 'hidden' : '';
-        });
-        
-        mobileOverlay.addEventListener('click', function() {
-            sidebar.classList.remove('mobile-open');
-            mobileOverlay.classList.remove('active');
-            document.body.style.overflow = '';
-        });
-        
-        // Close menu when clicking on nav links
-        const navLinks = sidebar.querySelectorAll('.nav-link');
-        navLinks.forEach(link => {
-            link.addEventListener('click', function() {
-                sidebar.classList.remove('mobile-open');
-                mobileOverlay.classList.remove('active');
-                document.body.style.overflow = '';
-            });
-        });
-    }
-}
-
-// Initialize mobile menu when DOM loads
-document.addEventListener('DOMContentLoaded', function() {
-    initializeMobileMenu();
-});
 // ===== SIMPLE GALLERY FUNCTIONALITY =====
 function initializeGallery() {
     const mainImages = document.querySelectorAll('.gallery-main-image');
     const thumbnails = document.querySelectorAll('.thumbnail-box');
     const prevBtn = document.querySelector('.prev-arrow');
     const nextBtn = document.querySelector('.next-arrow');
-    
+   
     let currentIndex = 0;
-    
+   
     function showImage(index) {
         // Hide all images
         mainImages.forEach(img => {
             img.classList.remove('active');
             img.style.opacity = '0';
         });
-        
+       
         // Show selected image
         mainImages[index].classList.add('active');
         mainImages[index].style.opacity = '1';
-        
+       
         // Update thumbnails
         thumbnails.forEach((thumb, i) => {
             thumb.classList.toggle('active', i === index);
         });
-        
+       
         // Update counter
         const currentNum = document.querySelector('.current-image-num');
         if (currentNum) {
             currentNum.textContent = index + 1;
         }
-        
+       
         currentIndex = index;
     }
-    
+   
     // Thumbnail click events
     thumbnails.forEach((thumb, index) => {
         thumb.addEventListener('click', () => showImage(index));
     });
-    
+   
     // Navigation arrows
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
@@ -3620,7 +3523,7 @@ function initializeGallery() {
             showImage(newIndex);
         });
     }
-    
+   
     if (nextBtn) {
         nextBtn.addEventListener('click', () => {
             let newIndex = currentIndex + 1;
@@ -3628,7 +3531,7 @@ function initializeGallery() {
             showImage(newIndex);
         });
     }
-    
+   
     // Fullscreen button
     const fullscreenBtn = document.querySelector('.fullscreen-btn');
     if (fullscreenBtn) {
@@ -3645,12 +3548,12 @@ function initializeBookingForm() {
     const endDateInput = document.getElementById('end_date');
     const totalPriceDisplay = document.getElementById('calculatedTotal');
     const bookNowBtn = document.querySelector('[data-action="confirm-booking"]');
-    
+   
     if (!startDateInput || !endDateInput || !bookNowBtn) {
         console.log('❌ Booking form elements not found');
         return;
     }
-    
+   
     // Get monthly price
     const priceElement = document.querySelector('.price-amount');
     let monthlyPrice = 0;
@@ -3658,21 +3561,21 @@ function initializeBookingForm() {
         const priceText = priceElement.textContent.replace(/[₱,]/g, '');
         monthlyPrice = parseFloat(priceText) || 0;
     }
-    
+   
     const dailyRate = monthlyPrice / 30;
-    
+   
     // Set minimum date to today
     const today = new Date().toISOString().split('T')[0];
     startDateInput.min = today;
     endDateInput.min = today;
-    
+   
     // Update end date min when start date changes
     startDateInput.addEventListener('change', function() {
         if (this.value) {
             const nextDay = new Date(this.value);
             nextDay.setDate(nextDay.getDate() + 1);
             endDateInput.min = nextDay.toISOString().split('T')[0];
-            
+           
             // If end date is before new min, clear it
             if (endDateInput.value && new Date(endDateInput.value) < nextDay) {
                 endDateInput.value = '';
@@ -3680,84 +3583,84 @@ function initializeBookingForm() {
         }
         calculateTotal();
     });
-    
+   
     endDateInput.addEventListener('change', calculateTotal);
-    
+   
     // Book Now button
     bookNowBtn.addEventListener('click', function(e) {
         e.preventDefault();
-        
+       
         // Basic validation
         if (!startDateInput.value || !endDateInput.value) {
             showToast('Please select both check-in and check-out dates.', 'danger');
             return;
         }
-        
+       
         const startDate = new Date(startDateInput.value);
         const endDate = new Date(endDateInput.value);
-        
+       
         if (endDate <= startDate) {
             showToast('Check-out date must be after check-in date.', 'danger');
             return;
         }
-        
+       
         confirmBooking();
     });
-    
+   
     function calculateTotal() {
         const startDate = startDateInput.value;
         const endDate = endDateInput.value;
-        
+       
         if (!startDate || !endDate) {
             totalPriceDisplay.textContent = '₱0';
             return;
         }
-        
+       
         const start = new Date(startDate);
         const end = new Date(endDate);
-        
+       
         if (end <= start) {
             totalPriceDisplay.textContent = '₱0';
             return;
         }
-        
+       
         const diffTime = Math.abs(end - start);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         const total = diffDays * dailyRate;
-        
+       
         totalPriceDisplay.textContent = '₱' + total.toLocaleString('en-PH', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
     }
-    
+   
     function confirmBooking() {
         const startDate = new Date(startDateInput.value);
         const endDate = new Date(endDateInput.value);
         const totalPrice = totalPriceDisplay.textContent;
-        
+       
         // Format dates for display
-        const startFormatted = startDate.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+        const startFormatted = startDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
-        
-        const endFormatted = endDate.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+       
+        const endFormatted = endDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
-        
+       
         // Update confirmation modal
         const confirmCheckin = document.getElementById('confirmCheckin');
         const confirmCheckout = document.getElementById('confirmCheckout');
         const confirmTotal = document.getElementById('confirmTotal');
-        
+       
         if (confirmCheckin) confirmCheckin.textContent = startFormatted;
         if (confirmCheckout) confirmCheckout.textContent = endFormatted;
         if (confirmTotal) confirmTotal.textContent = totalPrice;
-        
+       
         // Show confirmation modal
         const modalElement = document.getElementById('bookingConfirmModal');
         if (modalElement) {
@@ -3765,7 +3668,7 @@ function initializeBookingForm() {
             confirmModal.show();
         }
     }
-    
+   
     // Initialize calculation
     calculateTotal();
 }
@@ -3780,7 +3683,7 @@ function initializeModals() {
             modal.show();
         });
     }
-    
+   
     // Booking confirmation submit
     const confirmBookingBtn = document.querySelector('[data-action="submit-booking"]');
     if (confirmBookingBtn) {
@@ -3800,7 +3703,7 @@ function initializeFavorites() {
     if (savePropertyBtn) {
         savePropertyBtn.addEventListener('click', function() {
             const icon = this.querySelector('i');
-            
+           
             if (icon.classList.contains('bi-heart')) {
                 icon.classList.remove('bi-heart');
                 icon.classList.add('bi-heart-fill');
@@ -3823,28 +3726,28 @@ function showToast(message, type = 'info') {
     // Remove existing toasts
     const existingToasts = document.querySelectorAll('.custom-toast');
     existingToasts.forEach(toast => toast.remove());
-    
+   
     const toast = document.createElement('div');
     toast.className = `custom-toast toast-${type}`;  // ✅ FIXED: Added backticks
-    
+   
     const icons = {
         success: 'check-circle-fill',
         danger: 'x-circle-fill',
         warning: 'exclamation-circle-fill',
         info: 'info-circle-fill'
     };
-    
+   
     toast.innerHTML = `
         <i class="bi bi-${icons[type] || 'info-circle-fill'} me-2"></i>
         <span>${message}</span>
     `;
-    
+   
     Object.assign(toast.style, {
         position: 'fixed',
         top: '20px',
         right: '20px',
-        background: type === 'success' ? 'var(--success)' : 
-                   type === 'danger' ? 'var(--danger)' : 
+        background: type === 'success' ? 'var(--success)' :
+                   type === 'danger' ? 'var(--danger)' :
                    type === 'warning' ? 'var(--warning)' : 'var(--fb-primary)',
         color: 'white',
         padding: '1rem 1.5rem',
@@ -3857,9 +3760,9 @@ function showToast(message, type = 'info') {
         fontSize: '0.95rem',
         animation: 'slideInRight 0.3s ease-out'
     });
-    
+   
     document.body.appendChild(toast);
-    
+   
     setTimeout(() => {
         toast.style.animation = 'slideOutRight 0.3s ease-out';
         setTimeout(() => {
@@ -3885,7 +3788,7 @@ if (!document.querySelector('#toast-animations')) {
                 opacity: 1;
             }
         }
-        
+       
         @keyframes slideOutRight {
             from {
                 transform: translateX(0);
@@ -3903,23 +3806,23 @@ if (!document.querySelector('#toast-animations')) {
     // ===== LAZY LOADING FOR IMAGES =====
     window.addEventListener('load', function() {
         const images = document.querySelectorAll('img');
-        
+       
         const imageObserver = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const img = entry.target;
                     img.style.opacity = '0';
                     img.style.transition = 'opacity 0.5s ease';
-                    
+                   
                     img.onload = function() {
                         img.style.opacity = '1';
                     };
-                    
+                   
                     observer.unobserve(img);
                 }
             });
         });
-        
+       
         images.forEach(img => {
             if (img.complete) {
                 img.style.opacity = '1';
@@ -3937,15 +3840,15 @@ if (!document.querySelector('#toast-animations')) {
     // ===== FORM VALIDATION =====
     document.addEventListener('DOMContentLoaded', function() {
         const bookingForm = document.getElementById('bookingForm');
-        
+       
         if (bookingForm) {
             const inputs = bookingForm.querySelectorAll('input[required]');
-            
+           
             inputs.forEach(input => {
                 input.addEventListener('invalid', function(e) {
                     e.preventDefault();
                     this.classList.add('error');
-                    
+                   
                     if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('error-message')) {
                         const errorMsg = document.createElement('small');
                         errorMsg.className = 'error-message';
@@ -3957,7 +3860,7 @@ if (!document.querySelector('#toast-animations')) {
                         this.parentNode.appendChild(errorMsg);
                     }
                 });
-                
+               
                 input.addEventListener('input', function() {
                     this.classList.remove('error');
                     const errorMsg = this.parentNode.querySelector('.error-message');
