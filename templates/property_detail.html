@@ -52,14 +52,7 @@
 
         <!-- Main Content -->
         <div class="flex-grow-1 main-content">
-            <!-- Back Navigation -->
-            <div class="back-navigation-bar">
-                <div class="container-fluid">
-                    <a href="{{ url_for('viewproperties') }}" class="back-link-btn">
-                        <i class="bi bi-arrow-left me-2"></i>Back to Properties
-                    </a>
-                </div>
-            </div>
+        
 
             <div class="container-fluid p-4">
                 <!-- Property Header Card -->
@@ -748,6 +741,64 @@
     </div>
 
     <style>
+
+
+        /* ================================================
+   HIDE BASE TEMPLATE NAVBAR - COMPLETE FIX
+   ================================================ */
+
+/* Hide all possible navbar variations from base.html */
+header,
+.navbar,
+nav.navbar,
+.top-navbar,
+.main-header,
+.site-header,
+body > nav:first-of-type,
+body > header:first-of-type,
+.container-fluid > .navbar,
+.fixed-top,
+.navbar-fixed-top {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Remove all top spacing that was for the navbar */
+body {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+html {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+.main-content {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.container-fluid {
+    margin-top: 0 !important;
+}
+
+/* Ensure full height layout without navbar */
+.d-flex {
+    min-height: 100vh !important;
+}
+
+/* Fix sidebar to start from top */
+.sidebar {
+    top: 0 !important;
+    height: 100vh !important;
+}
+
+/* ================================================
+   END OF NAVBAR HIDING FIX
+   ================================================ */
     /* ===== FACEBOOK BLUE THEME VARIABLES ===== */
     :root {
         --fb-primary: #1877f2;
@@ -913,38 +964,7 @@
         overflow-y: auto;
     }
 
-    /* ===== BACK NAVIGATION ===== */
-    .back-navigation-bar {
-        background: var(--bg-primary);
-        border-bottom: 1px solid var(--border-color);
-        padding: 1rem 0;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        box-shadow: var(--shadow-1);
-    }
-
-    .back-link-btn {
-        display: inline-flex;
-        align-items: center;
-        color: var(--fb-primary);
-        text-decoration: none;
-        font-weight: 600;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-    }
-
-    .back-link-btn:hover {
-        background: var(--fb-light-blue);
-        color: var(--fb-primary);
-        transform: translateX(-4px);
-    }
-
-    body.dark-theme .back-link-btn:hover {
-        background: rgba(24, 119, 242, 0.2);
-    }
-
+    
     /* ===== PROPERTY HEADER CARD ===== */
     .property-header-card {
         background: var(--bg-primary);
@@ -2285,17 +2305,7 @@
     position: relative;
 }
 
-/* ===== BACK NAVIGATION FIX ===== */
-.back-navigation-bar {
-    background: var(--bg-primary);
-    border-bottom: 1px solid var(--border-color);
-    padding: 1rem 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: var(--shadow-1);
-    margin-left: 0;
-}
+
 
     
     /* Property header fixes */
@@ -2518,15 +2528,9 @@
         font-size: 1.2rem;
     }
     
-    /* Back navigation */
-    .back-navigation-bar {
-        padding: 0.75rem 0;
-    }
     
-    .back-link-btn {
-        font-size: 0.9rem;
-        padding: 0.4rem 0.8rem;
-    }
+    
+    
     
     /* Save property button */
     .save-property-btn {
@@ -3994,5 +3998,58 @@ if (!document.querySelector('#toast-animations')) {
     // ===== CONSOLE LOG FOR DEBUGGING =====
     console.log('🏠 Boardify Property Detail Page Loaded - Facebook Blue Theme');
     console.log('✨ All features initialized successfully!');
+
+    // ===== FORCE REMOVE BASE NAVBAR ON PAGE LOAD =====
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🗑️ Removing base template navbar...');
+    
+    // List of all possible navbar selectors
+    const navbarSelectors = [
+        'header',
+        '.navbar',
+        'nav.navbar',
+        '.top-navbar',
+        '.main-header',
+        '.site-header',
+        'body > nav:first-of-type',
+        'body > header:first-of-type',
+        '.container-fluid > .navbar',
+        '.fixed-top',
+        '.navbar-fixed-top'
+    ];
+    
+    // Remove each navbar element
+    navbarSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+            // Check if it's not our sidebar
+            if (!element.classList.contains('sidebar')) {
+                element.style.display = 'none';
+                element.style.visibility = 'hidden';
+                element.style.height = '0';
+                element.style.overflow = 'hidden';
+                element.remove(); // Completely remove from DOM
+                console.log(`✅ Removed: ${selector}`);
+            }
+        });
+    });
+    
+    // Reset body padding
+    document.body.style.paddingTop = '0';
+    document.body.style.marginTop = '0';
+    document.documentElement.style.paddingTop = '0';
+    
+    console.log('✨ Base navbar removal complete!');
+});
+
+// Run immediately as well (backup)
+window.addEventListener('load', function() {
+    const allNavs = document.querySelectorAll('header, .navbar, nav.navbar');
+    allNavs.forEach(nav => {
+        if (!nav.classList.contains('sidebar')) {
+            nav.remove();
+        }
+    });
+});
     </script>
     {% endblock %}
