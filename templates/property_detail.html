@@ -807,7 +807,20 @@
     }
 
     /* ===== SIDEBAR (Same as Dashboard) ===== */
-   
+    .sidebar {
+    background: var(--bg-primary);
+    width: 280px;
+    min-width: 280px;
+    box-shadow: var(--shadow-2);
+    border-right: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: hidden;
+    display: flex;
+    flex-direction: column;
+}
 
     .sidebar h3 {
         font-weight: 700;
@@ -869,9 +882,28 @@
         color: var(--danger) !important;
     }
 
+
+
     .sidebar .nav-link.text-danger:hover {
-        background: rgba(239, 68, 68, 0.1);
-    }
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Remove sidebar scrolling completely */
+.nav-links {
+    flex-grow: 1;
+    overflow-y: hidden;
+}
+
+.sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+.sidebar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+
 
     /* ===== MAIN CONTENT ===== */
     .main-content {
@@ -2196,68 +2228,7 @@
         isolation: isolate; /* CRITICAL FIX: Creates new stacking context */
     }
 
-   /* ===== SIDEBAR FIX - NO SCROLLING ===== */
-.sidebar {
-    background: var(--bg-primary);
-    width: 280px;
-    min-width: 280px;
-    box-shadow: var(--shadow-2);
-    border-right: 1px solid var(--border-color);
-    transition: all 0.3s ease;
-    position: fixed; /* Changed from sticky to fixed */
-    top: 0;
-    left: 0;
-    height: 100vh;
-    overflow-y: visible !important; /* Force no scrolling */
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Remove scrollbar completely */
-.sidebar::-webkit-scrollbar {
-    display: none !important;
-}
-
-.sidebar {
-    -ms-overflow-style: none !important;  /* IE and Edge */
-    scrollbar-width: none !important;  /* Firefox */
-}
-
-/* Ensure nav links container doesn't scroll */
-.sidebar .nav-links {
-    flex-grow: 1;
-    overflow-y: visible !important;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Make sure bottom section is always visible */
-.sidebar .mt-auto {
-    margin-top: auto;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 1001; /* Higher z-index to ensure visibility */
-}
-
-/* Main content adjustment */
-.main-content {
-    background: var(--bg-secondary);
-    min-height: 100vh;
-    margin-left: 280px; /* Match sidebar width */
-    width: calc(100% - 280px);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow-y: auto; /* Only main content scrolls */
-}
-
-/* Ensure all sidebar content is visible */
-.sidebar .nav-link {
-    position: relative;
-    z-index: 1;
-}
-
-/* Mobile responsive fixes */
+    /* ===== MOBILE RESPONSIVE FIXES ===== */
 @media (max-width: 992px) {
     .sidebar {
         position: fixed;
@@ -2266,35 +2237,10 @@
         z-index: 1050;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
-        overflow-y: auto !important; /* Allow scrolling on mobile */
+        overflow-y: auto;
     }
-    
-    .sidebar.mobile-open {
-        transform: translateX(0);
-    }
-    
-    .main-content {
-        margin-left: 0;
-        width: 100%;
-    }
-    
-    /* Mobile overlay */
-    .mobile-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1040;
-        display: none;
-    }
-    
-    .mobile-overlay.active {
-        display: block;
-    }
-    
-    /* Mobile menu toggle button */
+
+       /* Mobile menu toggle button */
     .mobile-menu-toggle {
         position: fixed;
         top: 1rem;
@@ -2312,7 +2258,33 @@
         font-size: 1.2rem;
         box-shadow: var(--shadow-3);
     }
+
+    
+
+.sidebar {
+    background: var(--bg-primary);
+    width: 280px;
+    min-width: 280px;
+    box-shadow: var(--shadow-2);
+    border-right: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 1000;
 }
+
+.main-content {
+    background: var(--bg-secondary);
+    min-height: 100vh;
+    margin-left: 280px; /* Match sidebar width */
+    width: calc(100% - 280px);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
 /* ===== BACK NAVIGATION FIX ===== */
 .back-navigation-bar {
     background: var(--bg-primary);
@@ -2508,7 +2480,7 @@
         width: 100%;
         justify-content: center;
     }
-
+}
 
 @media (max-width: 480px) {
     /* Extra small devices */
@@ -3400,7 +3372,6 @@ html, body {
         }
     }
 
-
     /* ===== CUSTOM SCROLLBAR ===== */
     .sidebar::-webkit-scrollbar,
     .thumbnail-wrapper::-webkit-scrollbar,
@@ -3590,36 +3561,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 // ===== MOBILE MENU FUNCTIONALITY =====
-// ===== MOBILE MENU FUNCTIONALITY =====
 function initializeMobileMenu() {
-    const mobileMenuToggle = document.createElement('button');
-    mobileMenuToggle.className = 'mobile-menu-toggle';
-    mobileMenuToggle.innerHTML = '<i class="bi bi-list"></i>';
-    mobileMenuToggle.style.cssText = `
-        position: fixed;
-        top: 1rem;
-        left: 1rem;
-        z-index: 1060;
-        background: var(--fb-primary);
-        color: white;
-        border: none;
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        box-shadow: var(--shadow-3);
-    `;
-    
-    const mobileOverlay = document.createElement('div');
-    mobileOverlay.className = 'mobile-overlay';
-    
-    document.body.appendChild(mobileOverlay);
-    document.body.appendChild(mobileMenuToggle);
-    
-    const sidebar = document.querySelector('.sidebar');
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const sidebar = document.getElementById('mainSidebar');
+    const mobileOverlay = document.getElementById('mobileOverlay');
     
     if (mobileMenuToggle && sidebar) {
         mobileMenuToggle.addEventListener('click', function() {
@@ -3643,25 +3588,10 @@ function initializeMobileMenu() {
                 document.body.style.overflow = '';
             });
         });
-        
-        // Show mobile menu toggle on small screens
-        function checkScreenSize() {
-            if (window.innerWidth <= 992) {
-                mobileMenuToggle.style.display = 'flex';
-                sidebar.style.transform = 'translateX(-100%)';
-            } else {
-                mobileMenuToggle.style.display = 'none';
-                sidebar.style.transform = 'translateX(0)';
-                mobileOverlay.classList.remove('active');
-            }
-        }
-        
-        checkScreenSize();
-        window.addEventListener('resize', checkScreenSize);
     }
 }
 
-// Initialize when page loads
+// Initialize mobile menu when DOM loads
 document.addEventListener('DOMContentLoaded', function() {
     initializeMobileMenu();
 });
