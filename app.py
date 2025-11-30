@@ -34,31 +34,39 @@ if not app.secret_key:
         raise ValueError("SECRET_KEY environment variable is required for production")
 
 app.config['SECURITY_PASSWORD_SALT'] = os.environ.get('SECURITY_PASSWORD_SALT', app.secret_key + '-salt')
-# Database setup with PostgreSQL support for Render
+# Database setup with PostgreSQL support for Render - FIXED
+# Database setup with PostgreSQL support for Render - FIXED VERSION
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 database_url = os.environ.get('DATABASE_URL')
 
+print(f"🔍 [DATABASE] Initial DATABASE_URL from env: {database_url}")
+
 if not database_url:
-    # FIXED: Use absolute path with proper Windows formatting
-    db_path = os.path.join(BASE_DIR, 'boardify.db')
+    # Use SQLite if no database URL is provided (local development)
+    db_path = os.path.join(BASE_DIR, 'instance', 'boardify.db')
     database_url = f"sqlite:///{db_path}"
-    print(f"📊 Using SQLite database at: {db_path}")  # Optional: see where it's created
+    print(f"📊 [DATABASE] Using SQLite database at: {db_path}")
+else:
+    # Fix PostgreSQL URL for Render (postgres:// to postgresql://)
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        print(f"🔄 [DATABASE] Fixed PostgreSQL URL: {database_url[:50]}...")
+    else:
+        print(f"📊 [DATABASE] Using provided database URL: {database_url[:50]}...")
 
-# Fix PostgreSQL URL for Render (postgres:// to postgresql://)
-if database_url and database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+# Set the database URL
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Enhanced database configuration for production
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_recycle': 300,
+    'pool_pre_ping': True,
     'pool_timeout': 30,
     'max_overflow': 10,
 }
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,
-    'pool_recycle': 300,
-}
+print(f"✅ [DATABASE] Final database URL configured")
 
 # File upload configuration
 app.config['MAX_IMAGE_COUNT'] = 10
@@ -98,32 +106,24 @@ EMAIL_ENABLED = bool(os.environ.get('RESEND_API_KEY'))
 
 ts = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
-# Import models AFTER app configuration
-try:
-    from models import db, User, Property, Booking, Billing, Message, Policy, HelpSupport, PropertyImage, Review
-except ImportError as e:
-    print(f"❌ Error importing models: {e}")
-    raise
-
-# Initialize database and migrations
+# Initialize database and migrations FIRST
 db.init_app(app)
 migrate = Migrate(app, db)
 
+# Initialize database within app context
 with app.app_context():
     try:
-        # Check if migrations folder exists
-        if not os.path.exists('migrations'):
-            from flask_migrate import init
-            init()
-
-             # Test database connection
-        from sqlalchemy import text
+        # Test database connection first
         db.session.execute(text('SELECT 1'))
+        print("✅ Database connection successful")
         
+        # Create tables if they don't exist
         db.create_all()
-        print("✅ Database tables created successfully")
+        print("✅ Database tables created/verified successfully")
+        
     except Exception as e:
         print(f"⚠️ Database initialization error: {e}")
+        # Don't crash the app, just continue
 
 # Login manager setup
 login_manager = LoginManager(app)
@@ -604,6 +604,32 @@ def add_security_headers(response):
     return response
 
 
+@app.route('/debug-database-url')
+def debug_database_url():
+    """Debug the database URL issue"""
+    debug_info = {
+        'environment_database_url': os.environ.get('DATABASE_URL'),
+        'configured_database_url': app.config.get('SQLALCHEMY_DATABASE_URI'),
+        'database_url_type': type(app.config.get('SQLALCHEMY_DATABASE_URI')),
+        'render_environment': bool(os.environ.get('RENDER'))
+    }
+    
+    # Check if URL is parseable
+    try:
+        from sqlalchemy.engine import make_url
+        url = make_url(app.config.get('SQLALCHEMY_DATABASE_URI'))
+        debug_info['url_parsing'] = 'SUCCESS'
+        debug_info['url_details'] = {
+            'drivername': url.drivername,
+            'host': url.host,
+            'port': url.port,
+            'database': url.database,
+            'username': url.username
+        }
+    except Exception as e:
+        debug_info['url_parsing'] = f'FAILED: {str(e)}'
+    
+    return jsonify(debug_info)
 
 # ========== ROUTES ==========
 
@@ -1719,6 +1745,23 @@ def deep_email_debug():
 #         "mail_password_set": bool(app.config.get('MAIL_PASSWORD')),
 #         "render_external_url": os.environ.get('RENDER_EXTERNAL_URL')
 #     })
+
+@app.route('/test-db-connection')
+def test_db_connection():
+    """Test database connection"""
+    try:
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1'))
+        return jsonify({
+            'status': '✅ Database connection successful',
+            'database_url_preview': app.config['SQLALCHEMY_DATABASE_URI'][:50] + '...' if app.config['SQLALCHEMY_DATABASE_URI'] else 'None'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': '❌ Database connection failed',
+            'error': str(e),
+            'database_url': app.config.get('SQLALCHEMY_DATABASE_URI')
+        }), 500
 
 @app.route('/properties')
 @login_required
