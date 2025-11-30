@@ -606,30 +606,38 @@ def add_security_headers(response):
 
 @app.route('/debug-database-url')
 def debug_database_url():
-    """Debug the database URL issue"""
-    debug_info = {
-        'environment_database_url': os.environ.get('DATABASE_URL'),
-        'configured_database_url': app.config.get('SQLALCHEMY_DATABASE_URI'),
-        'database_url_type': type(app.config.get('SQLALCHEMY_DATABASE_URI')),
-        'render_environment': bool(os.environ.get('RENDER'))
-    }
-    
-    # Check if URL is parseable
+    """Debug the database URL issue - FIXED VERSION"""
     try:
-        from sqlalchemy.engine import make_url
-        url = make_url(app.config.get('SQLALCHEMY_DATABASE_URI'))
-        debug_info['url_parsing'] = 'SUCCESS'
-        debug_info['url_details'] = {
-            'drivername': url.drivername,
-            'host': url.host,
-            'port': url.port,
-            'database': url.database,
-            'username': url.username
+        debug_info = {
+            'environment_database_url_set': bool(os.environ.get('DATABASE_URL')),
+            'environment_database_url_preview': os.environ.get('DATABASE_URL', '')[:50] + '...' if os.environ.get('DATABASE_URL') else 'NOT_SET',
+            'configured_database_url_preview': str(app.config.get('SQLALCHEMY_DATABASE_URI', ''))[:50] + '...' if app.config.get('SQLALCHEMY_DATABASE_URI') else 'NOT_SET',
+            'render_environment': bool(os.environ.get('RENDER'))
         }
+        
+        # Check if URL is parseable - with better error handling
+        try:
+            from sqlalchemy.engine import make_url
+            db_url = app.config.get('SQLALCHEMY_DATABASE_URI')
+            if db_url:
+                url = make_url(str(db_url))  # Ensure it's a string
+                debug_info['url_parsing'] = 'SUCCESS'
+                debug_info['url_details'] = {
+                    'drivername': str(url.drivername),
+                    'host': str(url.host) if url.host else 'None',
+                    'port': str(url.port) if url.port else 'None',
+                    'database': str(url.database) if url.database else 'None',
+                    'username': str(url.username) if url.username else 'None'
+                }
+            else:
+                debug_info['url_parsing'] = 'FAILED: No database URL configured'
+        except Exception as e:
+            debug_info['url_parsing'] = f'FAILED: {str(e)}'
+        
+        return jsonify(debug_info)
+        
     except Exception as e:
-        debug_info['url_parsing'] = f'FAILED: {str(e)}'
-    
-    return jsonify(debug_info)
+        return jsonify({'error': f'Debug route failed: {str(e)}'}), 500
 
 # ========== ROUTES ==========
 
@@ -638,22 +646,21 @@ def debug_database_url():
 
 @app.route('/health')
 def health_check():
-    """Health check endpoint for monitoring"""
+    """Health check endpoint for Render"""
     try:
         from sqlalchemy import text
         db.session.execute(text('SELECT 1'))
-        db_status = "healthy"
+        return jsonify({
+            "status": "healthy",
+            "database": "connected", 
+            "timestamp": datetime.utcnow().isoformat()
+        })
     except Exception as e:
-        print(f"Database health check error: {e}")
-        db_status = "unhealthy"
-    
-    return jsonify({
-        "status": "healthy" if db_status == "healthy" else "degraded",
-        "service": "boardify.app",
-        "database": db_status,
-        "email": "enabled" if EMAIL_ENABLED else "disabled",
-        "timestamp": datetime.utcnow().isoformat()
-    })
+        return jsonify({
+            "status": "unhealthy",
+            "database": "disconnected",
+            "error": str(e)
+        }), 500
 @app.route('/')
 def home():
     """Home page - redirect based on login status"""
@@ -2795,13 +2802,7 @@ def my_bookings_tenant():
         flash("Error loading your bookings. Please try again.", "danger")
         return render_template('my_bookings_tenant.html', bookings=[], user=user)
 
-    # ❌ REMOVE THIS DUPLICATE BLOCK:
-    except Exception as e:
-        print(f"❌ [MY_BOOKINGS] Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        flash("Error loading your bookings. Please try again.", "danger")
-        return render_template('my_bookings_tenant.html', bookings=[], user=user)
+
     
 @app.route('/billing')
 @login_required

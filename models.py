@@ -4,6 +4,7 @@ from flask_login import UserMixin
 import secrets
 import string
 
+
 db = SQLAlchemy()
 
 def generate_booking_reference():
