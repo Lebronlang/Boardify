@@ -1810,23 +1810,24 @@ def property_detail(property_id):
         print(f"✅ [PROPERTY_DETAIL] Property found: {property.title}")
         
         # Initialize safe defaults
-        user_booking = None
+        user_booking = []
         user_review = None
         can_review = False
         reviews = []
         avg_rating = 0
         review_count = 0
         
-        if 'user_id' in session and session.get('user_role') == 'tenant':
-            user_id = session['user_id']
+        # Check if user is authenticated using current_user (Flask-Login)
+        if current_user.is_authenticated and current_user.role == 'tenant':
+            user_id = current_user.id
             print(f"👤 [PROPERTY_DETAIL] Loading tenant data for user: {user_id}")
             
-            # Get user bookings safely - convert to list first
+            # Get user bookings safely
             try:
                 user_booking = Booking.query.filter_by(
                     property_id=property.id,
                     tenant_id=user_id
-                ).all()  # This returns a list, not AppenderQuery
+                ).all()
                 print(f"📅 [PROPERTY_DETAIL] User bookings: {len(user_booking)}")
             except Exception as e:
                 print(f"⚠️ [PROPERTY_DETAIL] Error getting user bookings: {e}")
@@ -1845,90 +1846,80 @@ def property_detail(property_id):
             
             # Check if user can review
             try:
-                can_review = Booking.query.filter(
+                has_approved_booking = Booking.query.filter(
                     Booking.property_id == property_id,
                     Booking.tenant_id == user_id,
                     Booking.status == 'approved'
-                ).first() is not None and not user_review
+                ).first() is not None
+                
+                can_review = has_approved_booking and not user_review
                 print(f"📝 [PROPERTY_DETAIL] Can review: {can_review}")
             except Exception as e:
                 print(f"⚠️ [PROPERTY_DETAIL] Error checking review eligibility: {e}")
                 can_review = False
 
-        # Calculate slots safely - FIXED: Convert AppenderQuery to list first
+        # Calculate slots safely
         try:
-            total_slots = property.slots if property.slots is not None else 10
+            # Use capacity field instead of slots
+            total_slots = property.capacity if hasattr(property, 'capacity') and property.capacity else 1
             
-            # FIX: Convert property.bookings to list before iterating
-            bookings_list = list(property.bookings)  # Convert AppenderQuery to list
-            approved_bookings_count = sum(1 for booking in bookings_list if getattr(booking, 'status', None) == 'approved')
+            # Count approved bookings
+            approved_bookings_count = Booking.query.filter_by(
+                property_id=property_id,
+                status='approved'
+            ).count()
             
             slots_left = max(0, total_slots - approved_bookings_count)
             print(f"🎯 [PROPERTY_DETAIL] Slots: {slots_left}/{total_slots} available")
         except Exception as e:
             print(f"⚠️ [PROPERTY_DETAIL] Error calculating slots: {e}")
-            total_slots = 10
-            slots_left = 10
+            total_slots = 1
+            slots_left = 1
 
         # Get reviews safely
         try:
-            reviews = Review.query.filter_by(property_id=property_id).join(User).order_by(Review.created_at.desc()).all()
+            reviews = Review.query.filter_by(property_id=property_id).all()
             review_count = len(reviews)
             
             if reviews:
-                avg_rating = sum(getattr(review, 'rating', 0) for review in reviews) / len(reviews)
-            print(f"⭐ [PROPERTY_DETAIL] Reviews: {review_count}, Avg rating: {avg_rating}")
+                avg_rating = sum(review.rating for review in reviews) / len(reviews)
+            print(f"⭐ [PROPERTY_DETAIL] Reviews: {review_count}, Avg rating: {avg_rating:.1f}")
         except Exception as e:
             print(f"⚠️ [PROPERTY_DETAIL] Error getting reviews: {e}")
             reviews = []
             review_count = 0
             avg_rating = 0
 
-        # Handle images safely - SIMPLIFIED VERSION (No JavaScript)
+        # Handle images safely - SIMPLIFIED APPROACH
         image_urls = []
         try:
-            # Method 1: Check if property.images exists and has images
+            # Method 1: Check if property has images relationship
             if hasattr(property, 'images') and property.images:
-                # FIX: Convert AppenderQuery to list first
-                images_list = list(property.images)  # Convert to list
-                for img in images_list:
-                    if hasattr(img, 'filename') and img.filename:
-                        # Check if file actually exists
-                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
-                        if os.path.exists(file_path):
-                            image_url = url_for('static', filename='uploads/' + img.filename)
-                            image_urls.append(image_url)
-                            print(f"🖼️ [PROPERTY_DETAIL] Added image: {img.filename}")
-                        else:
-                            print(f"⚠️ [PROPERTY_DETAIL] Image file not found: {img.filename}")
+                for img in property.images:
+                    if hasattr(img, 'image_url') and img.image_url:
+                        # Construct full URL path
+                        image_url = f"/static/uploads/{img.image_url}"
+                        image_urls.append(image_url)
+                        print(f"🖼️ [PROPERTY_DETAIL] Added image: {img.image_url}")
             
-            # Method 2: If no images from relationship, try main image
+            # Method 2: If no images from relationship, check for single image field
             if not image_urls and hasattr(property, 'image') and property.image:
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], property.image)
-                if os.path.exists(file_path):
-                    image_urls.append(url_for('static', filename='uploads/' + property.image))
-                    print(f"🖼️ [PROPERTY_DETAIL] Using main image: {property.image}")
-                else:
-                    print(f"⚠️ [PROPERTY_DETAIL] Main image not found: {property.image}")
+                image_url = f"/static/uploads/{property.image}"
+                image_urls.append(image_url)
+                print(f"🖼️ [PROPERTY_DETAIL] Using main image: {property.image}")
             
-            # Method 3: Fallback to default image
+            # Method 3: Fallback to placeholder
             if not image_urls:
-                default_image = 'default.jpg'
-                default_path = os.path.join(app.config['UPLOAD_FOLDER'], default_image)
-                if os.path.exists(default_path):
-                    image_urls.append(url_for('static', filename='uploads/' + default_image))
-                    print("🖼️ [PROPERTY_DETAIL] Using default image")
-                else:
-                    # Last resort - use a placeholder
-                    image_urls.append(url_for('static', filename='img/placeholder-property.jpg'))
-                    print("🖼️ [PROPERTY_DETAIL] Using placeholder image")
+                placeholder_url = "/static/images/placeholder-property.jpg"
+                image_urls.append(placeholder_url)
+                print("🖼️ [PROPERTY_DETAIL] Using placeholder image")
                     
             print(f"🖼️ [PROPERTY_DETAIL] Total images: {len(image_urls)}")
                     
         except Exception as e:
             print(f"❌ [PROPERTY_DETAIL] Error processing images: {e}")
             # Fallback to placeholder
-            image_urls = [url_for('static', filename='img/placeholder-property.jpg')]
+            image_urls = ["/static/images/placeholder-property.jpg"]
 
         # Get owner safely
         owner = None
@@ -1939,9 +1930,9 @@ def property_detail(property_id):
             print(f"⚠️ [PROPERTY_DETAIL] Error getting owner: {e}")
             # Create a dummy owner object to prevent template errors
             class DummyOwner:
-                name = "Unknown Owner"
-                email = ""
-                phone = ""
+                name = "Property Owner"
+                email = "contact@example.com"
+                phone = "Not available"
             owner = DummyOwner()
 
         print("✅ [PROPERTY_DETAIL] All data loaded successfully")

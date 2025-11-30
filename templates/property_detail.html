@@ -2535,6 +2535,28 @@
     }
 }
 
+/* Add this to your CSS section */
+.gallery-main-image:not([src*="/static/uploads"]),
+.thumbnail-image:not([src*="/static/uploads"]) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    position: relative;
+}
+
+.gallery-main-image:not([src*="/static/uploads"])::after,
+.thumbnail-image:not([src*="/static/uploads"])::after {
+    content: "🏠 Image Not Available";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-size: 1.2rem;
+}
 /* ===== ORIENTATION SPECIFIC FIXES ===== */
 @media (max-width: 768px) and (orientation: landscape) {
     .main-gallery-container {
@@ -3986,3 +4008,5 @@ document.addEventListener('DOMContentLoaded', function() {
 // ===== CONSOLE LOG FOR DEBUGGING =====
 console.log('🏠 Boardify Property Detail Page Loaded - Facebook Blue Theme');
 console.log('✨ All features initialized successfully!');
+    </script>
+{% endblock %}
